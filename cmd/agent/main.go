@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+const (
+	updateMetricsInterval = 2 * time.Second
+	sendMetricsInterval   = 10 * time.Second
+)
+
 func main() {
 	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(getRuntimeMetricsConfig())
 	customMetricsProvider := metrics.NewCustomMetricsProvider()
@@ -17,9 +22,9 @@ func main() {
 	defer cancel()
 
 	getMetricsWorker := worker.NewPeriodicWorker(
-		worker.PeriodicWorkerConfig{Duration: 2 * time.Second}, aggregateMetricsProvider.Update)
+		worker.PeriodicWorkerConfig{Duration: updateMetricsInterval}, aggregateMetricsProvider.Update)
 	showMetricsWorker := worker.NewPeriodicWorker(
-		worker.PeriodicWorkerConfig{Duration: 3 * time.Second}, func(workerContext context.Context) error {
+		worker.PeriodicWorkerConfig{Duration: sendMetricsInterval}, func(workerContext context.Context) error {
 			for _, runtimeMetric := range aggregateMetricsProvider.GetMetrics(workerContext) {
 				fmt.Printf("%v\t\t%v\r\n", runtimeMetric.GetName(), runtimeMetric.StringValue())
 			}
