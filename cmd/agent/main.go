@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"go-yandex-aka-prometheus/internal/metrics"
+	"go-yandex-aka-prometheus/internal/worker"
+	"time"
 )
 
 func main() {
@@ -44,7 +47,19 @@ func main() {
 		panic(err.Error())
 	}
 
-	for _, runtimeMetric := range runtimeMetricsProvider.GetMetrics() {
-		fmt.Printf("%v\t\t%v\r\n", runtimeMetric.GetName(), runtimeMetric.StringValue())
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	getMetricsWorker := worker.NewPeriodicWorker(worker.PeriodicWorkerConfig{Duration: 2 * time.Second}, runtimeMetricsProvider.Update)
+	showMetricsWorker := worker.NewPeriodicWorker(worker.PeriodicWorkerConfig{Duration: 3 * time.Second}, func() error {
+		for _, runtimeMetric := range runtimeMetricsProvider.GetMetrics() {
+			fmt.Printf("%v\t\t%v\r\n", runtimeMetric.GetName(), runtimeMetric.StringValue())
+		}
+
+		// TODO: handle errors
+		return nil
+	})
+
+	go getMetricsWorker.StartWork(ctx)
+	showMetricsWorker.StartWork(ctx)
 }
