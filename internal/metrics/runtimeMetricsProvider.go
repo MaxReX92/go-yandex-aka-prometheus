@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"runtime"
@@ -26,7 +27,7 @@ func NewRuntimeMetricsProvider(config RuntimeMetricsProviderConfig) RuntimeMetri
 	return RuntimeMetricsProvider{metrics: metrics}
 }
 
-func (p *RuntimeMetricsProvider) Update() error {
+func (p *RuntimeMetricsProvider) Update(context.Context) error {
 	stats := runtime.MemStats{}
 	runtime.ReadMemStats(&stats)
 
@@ -42,7 +43,7 @@ func (p *RuntimeMetricsProvider) Update() error {
 	return nil
 }
 
-func (p *RuntimeMetricsProvider) GetMetrics() []Metric {
+func (p *RuntimeMetricsProvider) GetMetrics(context.Context) []Metric {
 	return p.metrics
 }
 

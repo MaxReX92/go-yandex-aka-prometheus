@@ -1,6 +1,9 @@
 package metrics
 
-import "math/rand"
+import (
+	"context"
+	"math/rand"
+)
 
 type CustomMetricsProvider struct {
 	poolMetric   CounterMetric
@@ -20,14 +23,14 @@ func NewCustomMetricsProvider() CustomMetricsProvider {
 	}
 }
 
-func (c *CustomMetricsProvider) GetMetrics() []Metric {
+func (c *CustomMetricsProvider) GetMetrics(context.Context) []Metric {
 	return []Metric{
 		&c.poolMetric,
 		&c.randomMetric,
 	}
 }
 
-func (c *CustomMetricsProvider) Update() error {
+func (c *CustomMetricsProvider) Update(context.Context) error {
 	c.poolMetric.SetValue(1)
 	c.randomMetric.SetValue(rand.Float64())
 	return nil

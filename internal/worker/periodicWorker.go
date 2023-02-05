@@ -11,10 +11,10 @@ type PeriodicWorkerConfig struct {
 
 type PeriodicWorker struct {
 	duration time.Duration
-	workFunc func() error
+	workFunc func(ctx context.Context) error
 }
 
-func NewPeriodicWorker(config PeriodicWorkerConfig, workFunc func() error) PeriodicWorker {
+func NewPeriodicWorker(config PeriodicWorkerConfig, workFunc func(ctx context.Context) error) PeriodicWorker {
 	return PeriodicWorker{
 		duration: config.Duration,
 		workFunc: workFunc,
@@ -27,7 +27,7 @@ func (w *PeriodicWorker) StartWork(ctx context.Context) {
 	for true {
 		select {
 		case <-ticker.C:
-			err := w.workFunc()
+			err := w.workFunc(ctx)
 			if err != nil {
 				// TODO: log
 			}

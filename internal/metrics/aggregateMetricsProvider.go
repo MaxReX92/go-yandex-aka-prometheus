@@ -1,5 +1,7 @@
 package metrics
 
+import "context"
+
 type AggregateMetricsProvider struct {
 	providers []MetricsProvider
 }
@@ -10,18 +12,18 @@ func NewAggregateMetricsProvider(providers []MetricsProvider) AggregateMetricsPr
 	}
 }
 
-func (a *AggregateMetricsProvider) GetMetrics() []Metric {
+func (a *AggregateMetricsProvider) GetMetrics(context.Context) []Metric {
 	resultMetrics := []Metric{}
 	for _, provider := range a.providers {
-		resultMetrics = append(resultMetrics, provider.GetMetrics()...)
+		resultMetrics = append(resultMetrics, provider.GetMetrics(nil)...)
 	}
 
 	return resultMetrics
 }
 
-func (a *AggregateMetricsProvider) Update() error {
+func (a *AggregateMetricsProvider) Update(ctx context.Context) error {
 	for _, provider := range a.providers {
-		err := provider.Update()
+		err := provider.Update(ctx)
 		if err != nil {
 			return err
 		}

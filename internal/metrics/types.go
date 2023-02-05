@@ -1,5 +1,7 @@
 package metrics
 
+import "context"
+
 type Metric interface {
 	GetName() string
 	GetType() string
@@ -8,6 +10,6 @@ type Metric interface {
 }
 
 type MetricsProvider interface {
-	GetMetrics() []Metric
-	Update() error
+	GetMetrics(ctx context.Context) []Metric
+	Update(ctx context.Context) error
 }
