@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"go-yandex-aka-prometheus/internal"
+	"go-yandex-aka-prometheus/internal/client"
 	"go-yandex-aka-prometheus/internal/metrics"
 	"go-yandex-aka-prometheus/internal/worker"
 	"time"
@@ -14,7 +14,7 @@ const (
 )
 
 func main() {
-	metricPusher := internal.NewMetricsPusher(getMetricPusherConfig())
+	metricPusher := client.NewMetricsPusher(getMetricPusherConfig())
 	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(getRuntimeMetricsConfig())
 	customMetricsProvider := metrics.NewCustomMetricsProvider()
 	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider(
@@ -67,8 +67,8 @@ func getRuntimeMetricsConfig() metrics.RuntimeMetricsProviderConfig {
 	}
 }
 
-func getMetricPusherConfig() internal.MetricsPusherConfig {
-	return internal.MetricsPusherConfig{
+func getMetricPusherConfig() client.MetricsPusherConfig {
+	return client.MetricsPusherConfig{
 		MetricsServerUrl: "127.0.0.1:8080",
 	}
 }
