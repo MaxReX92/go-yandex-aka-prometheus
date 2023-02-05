@@ -42,17 +42,15 @@ func main() {
 	}
 
 	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(config)
-	err := runtimeMetricsProvider.Update()
-	if err != nil {
-		panic(err.Error())
-	}
+	customMetricsProvider := metrics.NewCustomMetricsProvider()
+	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider([]metrics.MetricsProvider{&runtimeMetricsProvider, &customMetricsProvider})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	getMetricsWorker := worker.NewPeriodicWorker(worker.PeriodicWorkerConfig{Duration: 2 * time.Second}, runtimeMetricsProvider.Update)
+	getMetricsWorker := worker.NewPeriodicWorker(worker.PeriodicWorkerConfig{Duration: 2 * time.Second}, aggregateMetricsProvider.Update)
 	showMetricsWorker := worker.NewPeriodicWorker(worker.PeriodicWorkerConfig{Duration: 3 * time.Second}, func() error {
-		for _, runtimeMetric := range runtimeMetricsProvider.GetMetrics() {
+		for _, runtimeMetric := range aggregateMetricsProvider.GetMetrics() {
 			fmt.Printf("%v\t\t%v\r\n", runtimeMetric.GetName(), runtimeMetric.StringValue())
 		}
 

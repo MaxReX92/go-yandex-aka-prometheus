@@ -26,7 +26,7 @@ func NewRuntimeMetricsProvider(config RuntimeMetricsProviderConfig) RuntimeMetri
 	return RuntimeMetricsProvider{metrics: metrics}
 }
 
-func (p RuntimeMetricsProvider) Update() error {
+func (p *RuntimeMetricsProvider) Update() error {
 	stats := runtime.MemStats{}
 	runtime.ReadMemStats(&stats)
 
@@ -42,7 +42,7 @@ func (p RuntimeMetricsProvider) Update() error {
 	return nil
 }
 
-func (p RuntimeMetricsProvider) GetMetrics() []Metric {
+func (p *RuntimeMetricsProvider) GetMetrics() []Metric {
 	return p.metrics
 }
 

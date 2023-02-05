@@ -20,14 +20,14 @@ func NewCustomMetricsProvider() CustomMetricsProvider {
 	}
 }
 
-func (c CustomMetricsProvider) GetMetrics() []Metric {
+func (c *CustomMetricsProvider) GetMetrics() []Metric {
 	return []Metric{
 		&c.poolMetric,
 		&c.randomMetric,
 	}
 }
 
-func (c CustomMetricsProvider) Update() error {
+func (c *CustomMetricsProvider) Update() error {
 	c.poolMetric.SetValue(1)
 	c.randomMetric.SetValue(rand.Float64())
 	return nil
