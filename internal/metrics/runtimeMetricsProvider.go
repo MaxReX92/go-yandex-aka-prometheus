@@ -3,7 +3,7 @@ package metrics
 import (
 	"context"
 	"errors"
-	"go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"reflect"
 	"runtime"
 )

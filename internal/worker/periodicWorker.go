@@ -2,7 +2,7 @@ package worker
 
 import (
 	"context"
-	"go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"time"
 )
 
