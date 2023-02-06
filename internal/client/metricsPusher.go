@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/metrics"
@@ -13,20 +12,20 @@ import (
 )
 
 type MetricsPusherConfig struct {
-	MetricsServerUrl string
+	MetricsServerURL string
 	PushTimeout      time.Duration
 }
 
 type MetricsPusher struct {
 	client           http.Client
-	metricsServerUrl string
+	metricsServerURL string
 	pushTimeout      time.Duration
 }
 
 func NewMetricsPusher(config MetricsPusherConfig) MetricsPusher {
 	return MetricsPusher{
 		client:           http.Client{},
-		metricsServerUrl: strings.TrimRight(config.MetricsServerUrl, "/"),
+		metricsServerURL: strings.TrimRight(config.MetricsServerURL, "/"),
 		pushTimeout:      config.PushTimeout,
 	}
 }
@@ -43,7 +42,7 @@ func (p *MetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) erro
 		metricValue := metric.StringValue()
 
 		// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
-		url := fmt.Sprintf("%v/update/%v/%v/%v", p.metricsServerUrl, metricType, metricName, metricValue)
+		url := fmt.Sprintf("%v/update/%v/%v/%v", p.metricsServerURL, metricType, metricName, metricValue)
 		request, err := http.NewRequestWithContext(pushCtx, "POST", url, nil)
 		if err != nil {
 			logger.ErrorFormat("Fail to create push request: %v", err.Error())
@@ -67,7 +66,7 @@ func (p *MetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) erro
 		stringContent := string(content)
 		if response.StatusCode != http.StatusOK {
 			logger.ErrorFormat("Unexpected response status code: %v %v", response.Status, stringContent)
-			return errors.New(fmt.Sprintf("Fail to push metric: %v", stringContent))
+			return fmt.Errorf("Fail to push metric: %v", stringContent)
 		}
 
 		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v %v",

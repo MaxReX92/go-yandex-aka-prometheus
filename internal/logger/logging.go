@@ -6,7 +6,7 @@ import (
 )
 
 func Info(message string) {
-	log.Println(fmt.Sprintf("[INFO]: %v", message))
+	log.Printf("[INFO]: %v\r\n", message)
 }
 
 func InfoFormat(format string, v ...any) {
@@ -14,7 +14,7 @@ func InfoFormat(format string, v ...any) {
 }
 
 func Warn(message string) {
-	log.Println(fmt.Sprintf("[WARN]: %v", message))
+	log.Printf("[WARN]: %v\r\n", message)
 }
 
 func WarnFormat(format string, v ...any) {
@@ -22,7 +22,7 @@ func WarnFormat(format string, v ...any) {
 }
 
 func Error(message string) {
-	log.Println(fmt.Sprintf("[ERROR]: %v", message))
+	log.Printf("[ERROR]: %v\r\n", message)
 }
 
 func ErrorFormat(format string, v ...any) {

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	listenUrl = "127.0.0.1:8080"
+	listenURL = "127.0.0.1:8080"
 )
 
 func main() {
@@ -21,8 +21,8 @@ func main() {
 	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(storage.GetMetrics())) })
 	http.HandleFunc("/", http.NotFound)
 
-	logger.Info("Start listen " + listenUrl)
-	err := http.ListenAndServe(listenUrl, nil)
+	logger.Info("Start listen " + listenURL)
+	err := http.ListenAndServe(listenURL, nil)
 	if err != nil {
 		logger.Error(err.Error())
 	}

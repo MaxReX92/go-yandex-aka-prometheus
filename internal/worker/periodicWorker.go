@@ -24,8 +24,7 @@ func NewPeriodicWorker(config PeriodicWorkerConfig, workFunc func(ctx context.Co
 
 func (w *PeriodicWorker) StartWork(ctx context.Context) {
 	ticker := time.NewTicker(w.duration)
-
-	for true {
+	for {
 		select {
 		case <-ticker.C:
 			err := w.workFunc(ctx)
@@ -34,7 +33,7 @@ func (w *PeriodicWorker) StartWork(ctx context.Context) {
 			}
 		case <-ctx.Done():
 			logger.ErrorFormat("Periodic worker canceled")
-			break
+			return
 		}
 	}
 }
