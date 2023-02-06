@@ -67,7 +67,7 @@ func (p *MetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) erro
 		stringContent := string(content)
 		if response.StatusCode != http.StatusOK {
 			logger.ErrorFormat("Unexpected response status code: %v %v", response.Status, stringContent)
-			return errors.New(fmt.Sprintf("Fail to push metric: %v", content))
+			return errors.New(fmt.Sprintf("Fail to push metric: %v", stringContent))
 		}
 
 		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v %v",
