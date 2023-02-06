@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"context"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"go-yandex-aka-prometheus/internal/logger"
 )
 
 type AggregateMetricsProvider struct {
