@@ -40,6 +40,7 @@ func (p *MetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) erro
 		if err != nil {
 			return err
 		}
+		request.Header.Add("Content-Type", "text/plain")
 
 		response, err := p.client.Do(request)
 		defer response.Body.Close()
