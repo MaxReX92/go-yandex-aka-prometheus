@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	pushTimeout           = 10 * time.Second
 	serverUrl             = "http://127.0.0.1:8080"
 	sendMetricsInterval   = 3 * time.Second
 	updateMetricsInterval = 2 * time.Second
@@ -71,5 +72,6 @@ func getRuntimeMetricsConfig() metrics.RuntimeMetricsProviderConfig {
 func getMetricPusherConfig() client.MetricsPusherConfig {
 	return client.MetricsPusherConfig{
 		MetricsServerUrl: serverUrl,
+		PushTimeout:      pushTimeout,
 	}
 }

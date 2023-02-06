@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"go-yandex-aka-prometheus/internal/logger"
 	"math/rand"
 )
 
@@ -31,7 +32,13 @@ func (c *CustomMetricsProvider) GetMetrics(context.Context) []Metric {
 }
 
 func (c *CustomMetricsProvider) Update(context.Context) error {
+	logger.Info("Start collect custom metrics")
+
 	c.poolMetric.SetValue(1)
+	logger.InfoFormat("Updated metric: %v. value: %v", c.poolMetric.GetName(), c.poolMetric.StringValue())
+
 	c.randomMetric.SetValue(rand.Float64())
+	logger.InfoFormat("Updated metric: %v. value: %v", c.randomMetric.GetName(), c.randomMetric.StringValue())
+
 	return nil
 }

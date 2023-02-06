@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"go-yandex-aka-prometheus/internal/logger"
 	"time"
 )
 
@@ -29,10 +30,10 @@ func (w *PeriodicWorker) StartWork(ctx context.Context) {
 		case <-ticker.C:
 			err := w.workFunc(ctx)
 			if err != nil {
-				// TODO: log
+				logger.ErrorFormat("Periodic worker error: %v", err.Error())
 			}
 		case <-ctx.Done():
-			// TODO: log
+			logger.ErrorFormat("Periodic worker canceled")
 			break
 		}
 	}

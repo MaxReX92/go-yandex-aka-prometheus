@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"go-yandex-aka-prometheus/internal/logger"
 	"net/http"
 )
 
@@ -13,9 +13,14 @@ func main() {
 
 	// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
 	http.HandleFunc("/update/", handleMetric)
-	log.Fatal(http.ListenAndServe(listenUrl, nil))
+
+	logger.Info("Start listen " + listenUrl)
+	err := http.ListenAndServe(listenUrl, nil)
+	if err != nil {
+		logger.Error(err.Error())
+	}
 }
 
 func handleMetric(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.RequestURI)
+	logger.Info(r.RequestURI)
 }
