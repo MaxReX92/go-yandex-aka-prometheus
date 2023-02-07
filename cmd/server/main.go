@@ -71,6 +71,12 @@ func handleMetric(w http.ResponseWriter, r *http.Request, storage storage.Metric
 		}
 	}
 
+	w.Header().Add("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte("ok"))
+	if err != nil {
+		logger.ErrorFormat("Fail to write response: %v", err.Error())
+	}
 	logger.InfoFormat("Updated metric: %v. value: %v", metricName, stringValue)
 }
 
