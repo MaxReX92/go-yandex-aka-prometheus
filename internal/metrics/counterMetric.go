@@ -1,24 +1,33 @@
 package metrics
 
-import "strconv"
+import (
+	"go-yandex-aka-prometheus/internal/parser"
+)
 
-type CounterMetric struct {
+type counterMetric struct {
 	name  string
 	value int64
 }
 
-func (m *CounterMetric) GetType() string {
+func NewCounterMetric(name string) Metric {
+	return &counterMetric{
+		name:  name,
+		value: 0,
+	}
+}
+
+func (m *counterMetric) GetType() string {
 	return "counter"
 }
 
-func (m *CounterMetric) GetName() string {
+func (m *counterMetric) GetName() string {
 	return m.name
 }
 
-func (m *CounterMetric) StringValue() string {
-	return strconv.FormatInt(m.value, 10)
+func (m *counterMetric) StringValue() string {
+	return parser.IntToString(m.value)
 }
 
-func (m *CounterMetric) SetValue(value float64) {
+func (m *counterMetric) SetValue(value float64) {
 	m.value = m.value + int64(value)
 }

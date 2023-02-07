@@ -6,32 +6,26 @@ import (
 	"math/rand"
 )
 
-type CustomMetricsProvider struct {
-	poolMetric   CounterMetric
-	randomMetric GaugeMetric
+type customMetricsProvider struct {
+	poolMetric   Metric
+	randomMetric Metric
 }
 
-func NewCustomMetricsProvider() CustomMetricsProvider {
-	return CustomMetricsProvider{
-		poolMetric: CounterMetric{
-			name:  "PollCount",
-			value: 0,
-		},
-		randomMetric: GaugeMetric{
-			name:  "RandomValue",
-			value: 0,
-		},
+func NewCustomMetricsProvider() MetricsProvider {
+	return &customMetricsProvider{
+		poolMetric:   NewCounterMetric("PollCount"),
+		randomMetric: NewGaugeMetric("RandomValue"),
 	}
 }
 
-func (c *CustomMetricsProvider) GetMetrics(context.Context) []Metric {
+func (c *customMetricsProvider) GetMetrics(context.Context) []Metric {
 	return []Metric{
-		&c.poolMetric,
-		&c.randomMetric,
+		c.poolMetric,
+		c.randomMetric,
 	}
 }
 
-func (c *CustomMetricsProvider) Update(context.Context) error {
+func (c *customMetricsProvider) Update(context.Context) error {
 	logger.Info("Start collect custom metrics")
 
 	c.poolMetric.SetValue(1)

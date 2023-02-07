@@ -1,24 +1,33 @@
 package metrics
 
-import "fmt"
+import (
+	"go-yandex-aka-prometheus/internal/parser"
+)
 
-type GaugeMetric struct {
+type gaugeMetric struct {
 	name  string
 	value float64
 }
 
-func (m *GaugeMetric) GetType() string {
+func NewGaugeMetric(name string) Metric {
+	return &gaugeMetric{
+		name:  name,
+		value: 0,
+	}
+}
+
+func (m *gaugeMetric) GetType() string {
 	return "gauge"
 }
 
-func (m *GaugeMetric) GetName() string {
+func (m *gaugeMetric) GetName() string {
 	return m.name
 }
 
-func (m *GaugeMetric) StringValue() string {
-	return fmt.Sprintf("%g", m.value)
+func (m *gaugeMetric) StringValue() string {
+	return parser.FloatToString(m.value)
 }
 
-func (m *GaugeMetric) SetValue(value float64) {
+func (m *gaugeMetric) SetValue(value float64) {
 	m.value = value
 }

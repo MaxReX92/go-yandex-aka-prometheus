@@ -5,17 +5,17 @@ import (
 	"go-yandex-aka-prometheus/internal/logger"
 )
 
-type AggregateMetricsProvider struct {
+type aggregateMetricsProvider struct {
 	providers []MetricsProvider
 }
 
-func NewAggregateMetricsProvider(providers []MetricsProvider) AggregateMetricsProvider {
-	return AggregateMetricsProvider{
+func NewAggregateMetricsProvider(providers []MetricsProvider) MetricsProvider {
+	return &aggregateMetricsProvider{
 		providers: providers,
 	}
 }
 
-func (a *AggregateMetricsProvider) GetMetrics(ctx context.Context) []Metric {
+func (a *aggregateMetricsProvider) GetMetrics(ctx context.Context) []Metric {
 	resultMetrics := []Metric{}
 	for _, provider := range a.providers {
 		resultMetrics = append(resultMetrics, provider.GetMetrics(ctx)...)
@@ -24,7 +24,7 @@ func (a *AggregateMetricsProvider) GetMetrics(ctx context.Context) []Metric {
 	return resultMetrics
 }
 
-func (a *AggregateMetricsProvider) Update(ctx context.Context) error {
+func (a *aggregateMetricsProvider) Update(ctx context.Context) error {
 	for _, provider := range a.providers {
 		err := provider.Update(ctx)
 		if err != nil {

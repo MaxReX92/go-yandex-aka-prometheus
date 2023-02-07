@@ -16,21 +16,21 @@ type MetricsPusherConfig struct {
 	PushTimeout      time.Duration
 }
 
-type MetricsPusher struct {
+type httpMetricsPusher struct {
 	client           http.Client
 	metricsServerURL string
 	pushTimeout      time.Duration
 }
 
 func NewMetricsPusher(config MetricsPusherConfig) MetricsPusher {
-	return MetricsPusher{
+	return &httpMetricsPusher{
 		client:           http.Client{},
 		metricsServerURL: strings.TrimRight(config.MetricsServerURL, "/"),
 		pushTimeout:      config.PushTimeout,
 	}
 }
 
-func (p *MetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) error {
+func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) error {
 	logger.InfoFormat("Push %v metrics", len(metrics))
 
 	pushCtx, cancel := context.WithTimeout(ctx, p.pushTimeout)

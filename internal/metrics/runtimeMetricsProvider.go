@@ -12,23 +12,20 @@ type RuntimeMetricsProviderConfig struct {
 	MetricsList []string
 }
 
-type RuntimeMetricsProvider struct {
+type runtimeMetricsProvider struct {
 	metrics []Metric
 }
 
-func NewRuntimeMetricsProvider(config RuntimeMetricsProviderConfig) RuntimeMetricsProvider {
+func NewRuntimeMetricsProvider(config RuntimeMetricsProviderConfig) MetricsProvider {
 	metrics := []Metric{}
 	for _, metricName := range config.MetricsList {
-		metrics = append(metrics, &GaugeMetric{
-			name:  metricName,
-			value: 0,
-		})
+		metrics = append(metrics, NewGaugeMetric(metricName))
 	}
 
-	return RuntimeMetricsProvider{metrics: metrics}
+	return &runtimeMetricsProvider{metrics: metrics}
 }
 
-func (p *RuntimeMetricsProvider) Update(context.Context) error {
+func (p *runtimeMetricsProvider) Update(context.Context) error {
 	logger.Info("Start collect runtime metrics")
 	stats := runtime.MemStats{}
 	runtime.ReadMemStats(&stats)
@@ -48,7 +45,7 @@ func (p *RuntimeMetricsProvider) Update(context.Context) error {
 	return nil
 }
 
-func (p *RuntimeMetricsProvider) GetMetrics(context.Context) []Metric {
+func (p *runtimeMetricsProvider) GetMetrics(context.Context) []Metric {
 	return p.metrics
 }
 

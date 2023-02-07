@@ -20,7 +20,7 @@ func main() {
 	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(getRuntimeMetricsConfig())
 	customMetricsProvider := metrics.NewCustomMetricsProvider()
 	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider(
-		[]metrics.MetricsProvider{&runtimeMetricsProvider, &customMetricsProvider})
+		[]metrics.MetricsProvider{runtimeMetricsProvider, customMetricsProvider})
 
 	getMetricsWorker := worker.NewPeriodicWorker(
 		worker.PeriodicWorkerConfig{Duration: updateMetricsInterval}, aggregateMetricsProvider.Update)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"go-yandex-aka-prometheus/internal/logger"
+	"go-yandex-aka-prometheus/internal/parser"
 	"go-yandex-aka-prometheus/internal/storage"
 	"net/http"
 	"strings"
@@ -13,7 +14,7 @@ const (
 
 func main() {
 
-	metricsStorage := storage.NewMemStorage()
+	metricsStorage := storage.NewInMemoryStorage()
 
 	// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
 	http.HandleFunc("/update/gauge/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, metricsStorage) })
@@ -40,9 +41,26 @@ func handleMetric(w http.ResponseWriter, r *http.Request, storage storage.Metric
 
 	switch parts[2] {
 	case "gauge":
-		storage.AddGaugeMetricValue(metricName, stringValue)
+		{
+			value, err := parser.ToFloat64(stringValue)
+			if err != nil {
+				//todo: badrequest
+				return
+			}
+
+			storage.AddGaugeMetricValue(metricName, value)
+		}
 	case "counter":
-		storage.AddCounterMetricValue(metricName, stringValue)
+		{
+			value, err := parser.ToInt64(stringValue)
+			if err != nil {
+				//todo: badrequest
+				return
+			}
+
+			storage.AddCounterMetricValue(metricName, value)
+		}
+
 	default:
 		{
 			notFound(w)
