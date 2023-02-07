@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/parser"
 	"go-yandex-aka-prometheus/internal/storage"
@@ -44,7 +45,8 @@ func handleMetric(w http.ResponseWriter, r *http.Request, storage storage.Metric
 		{
 			value, err := parser.ToFloat64(stringValue)
 			if err != nil {
-				//todo: badrequest
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(fmt.Sprintf("Value parsing fail %v: %v", stringValue, err.Error())))
 				return
 			}
 
@@ -54,7 +56,8 @@ func handleMetric(w http.ResponseWriter, r *http.Request, storage storage.Metric
 		{
 			value, err := parser.ToInt64(stringValue)
 			if err != nil {
-				//todo: badrequest
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(fmt.Sprintf("Value parsing fail %v: %v", stringValue, err.Error())))
 				return
 			}
 

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/metrics"
 	"strings"
 	"sync"
@@ -57,4 +58,5 @@ func ensureMetricUpdate(metricsMap map[string]metrics.Metric, name string, value
 	}
 
 	currentMetric.SetValue(value)
+	logger.InfoFormat("Updated metric: %v. value: %v", name, currentMetric.StringValue())
 }
