@@ -6,35 +6,35 @@ import (
 	"sync"
 )
 
-type MetricsStorage struct {
+type memStorage struct {
 	gaugeMetrics   map[string]string
 	counterMetrics map[string]string
 	lock           sync.RWMutex
 }
 
-func NewMetricsStorage() MetricsStorage {
-	return MetricsStorage{
+func NewMemStorage() MetricsStorage {
+	return &memStorage{
 		gaugeMetrics:   map[string]string{},
 		counterMetrics: map[string]string{},
 		lock:           sync.RWMutex{},
 	}
 }
 
-func (s *MetricsStorage) AddGaugeMetricValue(name string, stringValue string) {
+func (s *memStorage) AddGaugeMetricValue(name string, stringValue string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	s.gaugeMetrics[name] = stringValue
 }
 
-func (s *MetricsStorage) AddCounterMetricValue(name string, stringValue string) {
+func (s *memStorage) AddCounterMetricValue(name string, stringValue string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	s.counterMetrics[name] = stringValue
 }
 
-func (s *MetricsStorage) GetMetrics() string {
+func (s *memStorage) GetMetrics() string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 

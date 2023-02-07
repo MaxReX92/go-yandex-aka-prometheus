@@ -13,11 +13,11 @@ const (
 
 func main() {
 
-	metricsStorage := storage.NewMetricsStorage()
+	metricsStorage := storage.NewMemStorage()
 
 	// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
-	http.HandleFunc("/update/gauge/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, &metricsStorage) })
-	http.HandleFunc("/update/counter/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, &metricsStorage) })
+	http.HandleFunc("/update/gauge/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, metricsStorage) })
+	http.HandleFunc("/update/counter/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, metricsStorage) })
 	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(metricsStorage.GetMetrics())) })
 	http.HandleFunc("/", http.NotFound)
 
@@ -28,7 +28,7 @@ func main() {
 	}
 }
 
-func handleMetric(w http.ResponseWriter, r *http.Request, storage *storage.MetricsStorage) {
+func handleMetric(w http.ResponseWriter, r *http.Request, storage storage.MetricsStorage) {
 	parts := strings.Split(r.RequestURI, "/")
 	if len(parts) != 5 {
 		notFound(w)
