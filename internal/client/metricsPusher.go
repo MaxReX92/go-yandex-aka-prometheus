@@ -43,7 +43,7 @@ func (p *MetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) erro
 
 		// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
 		url := fmt.Sprintf("%v/update/%v/%v/%v", p.metricsServerURL, metricType, metricName, metricValue)
-		request, err := http.NewRequestWithContext(pushCtx, "POST", url, nil)
+		request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, url, nil)
 		if err != nil {
 			logger.ErrorFormat("Fail to create push request: %v", err.Error())
 			return err
