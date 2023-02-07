@@ -33,6 +33,11 @@ func main() {
 
 func handleMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+			return
+		}
+
 		parts := strings.Split(r.RequestURI, "/")
 		if len(parts) != 5 {
 			writeResponse(w, 404, "404 page not found")
@@ -71,12 +76,7 @@ func handleMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r 
 			}
 		}
 
-		w.Header().Add("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte("ok"))
-		if err != nil {
-			logger.ErrorFormat("Fail to write response: %v", err.Error())
-		}
+		writeResponse(w, http.StatusOK, "ok")
 		logger.InfoFormat("Updated metric: %v. value: %v", metricName, stringValue)
 	}
 }

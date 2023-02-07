@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/metrics"
 	"strings"
 	"sync"
@@ -53,10 +52,9 @@ func (s *inMemoryStorage) GetMetrics() string {
 func ensureMetricUpdate(metricsMap map[string]metrics.Metric, name string, value float64, metricFactory func(string) metrics.Metric) {
 	currentMetric, ok := metricsMap[name]
 	if !ok {
-		currentMetric := metricFactory(name)
+		currentMetric = metricFactory(name)
 		metricsMap[name] = currentMetric
 	}
 
 	currentMetric.SetValue(value)
-	logger.InfoFormat("Updated metric: %v. value: %v", name, currentMetric.StringValue())
 }
