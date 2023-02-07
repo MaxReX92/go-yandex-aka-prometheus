@@ -2,7 +2,7 @@ package main
 
 import (
 	"go-yandex-aka-prometheus/internal/logger"
-	"go-yandex-aka-prometheus/internal/metrics"
+	"go-yandex-aka-prometheus/internal/storage"
 	"net/http"
 	"strings"
 )
@@ -13,12 +13,12 @@ const (
 
 func main() {
 
-	storage := metrics.NewMetricsStorage()
+	metricsStorage := storage.NewMetricsStorage()
 
 	// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
-	http.HandleFunc("/update/gauge/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, &storage) })
-	http.HandleFunc("/update/counter/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, &storage) })
-	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(storage.GetMetrics())) })
+	http.HandleFunc("/update/gauge/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, &metricsStorage) })
+	http.HandleFunc("/update/counter/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, &metricsStorage) })
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(metricsStorage.GetMetrics())) })
 	http.HandleFunc("/", http.NotFound)
 
 	logger.Info("Start listen " + listenURL)
@@ -28,7 +28,7 @@ func main() {
 	}
 }
 
-func handleMetric(w http.ResponseWriter, r *http.Request, storage *metrics.MetricsStorage) {
+func handleMetric(w http.ResponseWriter, r *http.Request, storage *storage.MetricsStorage) {
 	parts := strings.Split(r.RequestURI, "/")
 	if len(parts) != 5 {
 		notFound(w)
