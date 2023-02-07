@@ -18,9 +18,10 @@ func main() {
 	metricsStorage := storage.NewInMemoryStorage()
 
 	// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
-	http.HandleFunc("/update/gauge/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, metricsStorage) })
-	http.HandleFunc("/update/counter/", func(w http.ResponseWriter, r *http.Request) { handleMetric(w, r, metricsStorage) })
-	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(metricsStorage.GetMetrics())) })
+	http.HandleFunc("/update/", handleMetric(metricsStorage))
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		writeResponse(w, http.StatusOK, metricsStorage.GetMetrics())
+	})
 	http.HandleFunc("/", http.NotFound)
 
 	logger.Info("Start listen " + listenURL)
@@ -30,61 +31,61 @@ func main() {
 	}
 }
 
-func handleMetric(w http.ResponseWriter, r *http.Request, storage storage.MetricsStorage) {
-	parts := strings.Split(r.RequestURI, "/")
-	if len(parts) != 5 {
-		notFound(w)
-		return
-	}
-
-	metricName := parts[3]
-	stringValue := parts[4]
-
-	switch parts[2] {
-	case "gauge":
-		{
-			value, err := parser.ToFloat64(stringValue)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(fmt.Sprintf("Value parsing fail %v: %v", stringValue, err.Error())))
-				return
-			}
-
-			storage.AddGaugeMetricValue(metricName, value)
-		}
-	case "counter":
-		{
-			value, err := parser.ToInt64(stringValue)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(fmt.Sprintf("Value parsing fail %v: %v", stringValue, err.Error())))
-				return
-			}
-
-			storage.AddCounterMetricValue(metricName, value)
-		}
-
-	default:
-		{
-			notFound(w)
+func handleMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		parts := strings.Split(r.RequestURI, "/")
+		if len(parts) != 5 {
+			writeResponse(w, 404, "404 page not found")
 			return
 		}
-	}
 
-	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("ok"))
-	if err != nil {
-		logger.ErrorFormat("Fail to write response: %v", err.Error())
+		metricName := parts[3]
+		stringValue := parts[4]
+
+		switch parts[2] {
+		case "gauge":
+			{
+				value, err := parser.ToFloat64(stringValue)
+				if err != nil {
+					writeResponse(w, http.StatusBadRequest, fmt.Sprintf("Value parsing fail %v: %v", stringValue, err.Error()))
+					return
+				}
+
+				storage.AddGaugeMetricValue(metricName, value)
+			}
+		case "counter":
+			{
+				value, err := parser.ToInt64(stringValue)
+				if err != nil {
+					writeResponse(w, http.StatusBadRequest, fmt.Sprintf("Value parsing fail %v: %v", stringValue, err.Error()))
+					return
+				}
+
+				storage.AddCounterMetricValue(metricName, value)
+			}
+
+		default:
+			{
+				writeResponse(w, 404, "404 page not found")
+				return
+			}
+		}
+
+		w.Header().Add("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte("ok"))
+		if err != nil {
+			logger.ErrorFormat("Fail to write response: %v", err.Error())
+		}
+		logger.InfoFormat("Updated metric: %v. value: %v", metricName, stringValue)
 	}
-	logger.InfoFormat("Updated metric: %v. value: %v", metricName, stringValue)
 }
 
-func notFound(w http.ResponseWriter) {
-	w.WriteHeader(404)
-	_, err := w.Write([]byte("404 page not found"))
+func writeResponse(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Add("Content-Type", "text/plain")
+	w.WriteHeader(statusCode)
+	_, err := w.Write([]byte(message))
 	if err != nil {
 		logger.ErrorFormat("Fail to write response: %v", err.Error())
-		return
 	}
 }
