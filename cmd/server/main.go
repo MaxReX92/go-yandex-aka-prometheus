@@ -40,7 +40,7 @@ func handleMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r 
 
 		parts := strings.Split(r.RequestURI, "/")
 		if len(parts) != 5 {
-			writeResponse(w, 404, "404 page not found")
+			writeResponse(w, http.StatusNotFound, "404 page not found")
 			return
 		}
 
@@ -71,7 +71,7 @@ func handleMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r 
 
 		default:
 			{
-				writeResponse(w, 404, "404 page not found")
+				writeResponse(w, http.StatusNotImplemented, fmt.Sprintf("Unknown metric type:", parts[2]))
 				return
 			}
 		}
