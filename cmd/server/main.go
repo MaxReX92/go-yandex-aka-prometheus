@@ -71,7 +71,7 @@ func handleMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r 
 
 		default:
 			{
-				writeResponse(w, http.StatusNotImplemented, fmt.Sprintf("Unknown metric type:", parts[2]))
+				writeResponse(w, http.StatusNotImplemented, fmt.Sprintf("Unknown metric type: %v", parts[2]))
 				return
 			}
 		}
