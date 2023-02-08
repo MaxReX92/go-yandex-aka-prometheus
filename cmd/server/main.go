@@ -38,7 +38,7 @@ func handleMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r 
 			return
 		}
 
-		parts := strings.Split(r.RequestURI, "/")
+		parts := strings.Split(r.URL.Path, "/")
 		if len(parts) != 5 {
 			writeResponse(w, http.StatusNotFound, "404 page not found")
 			return
