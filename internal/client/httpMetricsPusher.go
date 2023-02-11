@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-type MetricsPusherConfig struct {
-	MetricsServerURL string
-	PushTimeout      time.Duration
+type MetricsPusherConfig interface {
+	MetricsServerURL() string
+	PushMetricsTimeout() time.Duration
 }
 
 type httpMetricsPusher struct {
@@ -25,8 +25,8 @@ type httpMetricsPusher struct {
 func NewMetricsPusher(config MetricsPusherConfig) MetricsPusher {
 	return &httpMetricsPusher{
 		client:           http.Client{},
-		metricsServerURL: strings.TrimRight(config.MetricsServerURL, "/"),
-		pushTimeout:      config.PushTimeout,
+		metricsServerURL: strings.TrimRight(config.MetricsServerURL(), "/"),
+		pushTimeout:      config.PushMetricsTimeout(),
 	}
 }
 

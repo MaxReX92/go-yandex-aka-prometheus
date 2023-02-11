@@ -8,8 +8,8 @@ import (
 	"runtime"
 )
 
-type RuntimeMetricsProviderConfig struct {
-	MetricsList []string
+type RuntimeMetricsProviderConfig interface {
+	MetricsList() []string
 }
 
 type runtimeMetricsProvider struct {
@@ -18,7 +18,7 @@ type runtimeMetricsProvider struct {
 
 func NewRuntimeMetricsProvider(config RuntimeMetricsProviderConfig) MetricsProvider {
 	metrics := []Metric{}
-	for _, metricName := range config.MetricsList {
+	for _, metricName := range config.MetricsList() {
 		metrics = append(metrics, NewGaugeMetric(metricName))
 	}
 

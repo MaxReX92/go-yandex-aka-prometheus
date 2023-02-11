@@ -16,28 +16,30 @@ const (
 )
 
 func main() {
-	metricPusher := client.NewMetricsPusher(getMetricPusherConfig())
-	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(getRuntimeMetricsConfig())
+	conf := createConfig()
+	metricPusher := client.NewMetricsPusher(conf)
+	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(conf)
 	customMetricsProvider := metrics.NewCustomMetricsProvider()
-	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider(
-		[]metrics.MetricsProvider{runtimeMetricsProvider, customMetricsProvider})
-
-	getMetricsWorker := worker.NewPeriodicWorker(
-		worker.PeriodicWorkerConfig{Duration: updateMetricsInterval}, aggregateMetricsProvider.Update)
-	pushMetricsWorker := worker.NewPeriodicWorker(
-		worker.PeriodicWorkerConfig{Duration: sendMetricsInterval}, func(workerContext context.Context) error {
-			return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics(workerContext))
-		})
+	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider([]metrics.MetricsProvider{runtimeMetricsProvider, customMetricsProvider})
+	getMetricsWorker := worker.NewPeriodicWorker(aggregateMetricsProvider.Update)
+	pushMetricsWorker := worker.NewPeriodicWorker(func(workerContext context.Context) error {
+		return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics(workerContext))
+	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go getMetricsWorker.StartWork(ctx)
-	pushMetricsWorker.StartWork(ctx)
+
+	go getMetricsWorker.StartWork(ctx, updateMetricsInterval)
+	pushMetricsWorker.StartWork(ctx, sendMetricsInterval)
 }
 
-func getRuntimeMetricsConfig() metrics.RuntimeMetricsProviderConfig {
-	return metrics.RuntimeMetricsProviderConfig{
-		MetricsList: []string{
+func createConfig() *config {
+	return &config{
+		serverURL:             serverURL,
+		pushTimeout:           pushTimeout,
+		sendMetricsInterval:   sendMetricsInterval,
+		updateMetricsInterval: updateMetricsInterval,
+		collectMetricsList: []string{
 			"Alloc",
 			"BuckHashSys",
 			"Frees",
@@ -66,12 +68,5 @@ func getRuntimeMetricsConfig() metrics.RuntimeMetricsProviderConfig {
 			"Sys",
 			"TotalAlloc",
 		},
-	}
-}
-
-func getMetricPusherConfig() client.MetricsPusherConfig {
-	return client.MetricsPusherConfig{
-		MetricsServerURL: serverURL,
-		PushTimeout:      pushTimeout,
 	}
 }

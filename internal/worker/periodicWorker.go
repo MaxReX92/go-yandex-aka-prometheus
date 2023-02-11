@@ -6,24 +6,18 @@ import (
 	"time"
 )
 
-type PeriodicWorkerConfig struct {
-	Duration time.Duration
-}
-
 type PeriodicWorker struct {
-	duration time.Duration
 	workFunc func(ctx context.Context) error
 }
 
-func NewPeriodicWorker(config PeriodicWorkerConfig, workFunc func(ctx context.Context) error) PeriodicWorker {
+func NewPeriodicWorker(workFunc func(ctx context.Context) error) PeriodicWorker {
 	return PeriodicWorker{
-		duration: config.Duration,
 		workFunc: workFunc,
 	}
 }
 
-func (w *PeriodicWorker) StartWork(ctx context.Context) {
-	ticker := time.NewTicker(w.duration)
+func (w *PeriodicWorker) StartWork(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
 	for {
 		select {
 		case <-ticker.C:
