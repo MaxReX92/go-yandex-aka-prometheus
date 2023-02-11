@@ -24,10 +24,13 @@ func (m *gaugeMetric) GetName() string {
 	return m.name
 }
 
-func (m *gaugeMetric) StringValue() string {
+func (m *gaugeMetric) GetStringValue() string {
 	return parser.FloatToString(m.value)
 }
 
 func (m *gaugeMetric) SetValue(value float64) {
 	m.value = value
+}
+
+func (m *gaugeMetric) Flush() {
 }

@@ -15,10 +15,10 @@ func NewAggregateMetricsProvider(providers []MetricsProvider) MetricsProvider {
 	}
 }
 
-func (a *aggregateMetricsProvider) GetMetrics(ctx context.Context) []Metric {
+func (a *aggregateMetricsProvider) GetMetrics() []Metric {
 	resultMetrics := []Metric{}
 	for _, provider := range a.providers {
-		resultMetrics = append(resultMetrics, provider.GetMetrics(ctx)...)
+		resultMetrics = append(resultMetrics, provider.GetMetrics()...)
 	}
 
 	return resultMetrics

@@ -39,7 +39,8 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 	for _, metric := range metrics {
 		metricType := metric.GetType()
 		metricName := metric.GetName()
-		metricValue := metric.StringValue()
+		metricValue := metric.GetStringValue()
+		defer metric.Flush()
 
 		// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
 		url := fmt.Sprintf("%v/update/%v/%v/%v", p.metricsServerURL, metricType, metricName, metricValue)
@@ -70,7 +71,7 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 		}
 
 		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v %v",
-			metricName, metric.StringValue(), response.Status, stringContent)
+			metricName, metric.GetStringValue(), response.Status, stringContent)
 	}
 	return nil
 }

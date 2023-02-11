@@ -24,10 +24,14 @@ func (m *counterMetric) GetName() string {
 	return m.name
 }
 
-func (m *counterMetric) StringValue() string {
+func (m *counterMetric) GetStringValue() string {
 	return parser.IntToString(m.value)
 }
 
 func (m *counterMetric) SetValue(value float64) {
 	m.value = m.value + int64(value)
+}
+
+func (m *counterMetric) Flush() {
+	m.value = 0
 }

@@ -44,13 +44,13 @@ func (s *inMemoryStorage) GetMetrics() string {
 	for _, metricName := range s.names {
 		metric, ok := s.counterMetrics[metricName]
 		if ok {
-			builder.WriteString(fmt.Sprintf("%v: %v\r\n", metricName, metric.StringValue()))
+			builder.WriteString(fmt.Sprintf("%v: %v\r\n", metricName, metric.GetStringValue()))
 			continue
 		}
 
 		metric, ok = s.gaugeMetrics[metricName]
 		if ok {
-			builder.WriteString(fmt.Sprintf("%v: %v\r\n", metricName, metric.StringValue()))
+			builder.WriteString(fmt.Sprintf("%v: %v\r\n", metricName, metric.GetStringValue()))
 		}
 	}
 

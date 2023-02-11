@@ -18,7 +18,7 @@ func NewCustomMetricsProvider() MetricsProvider {
 	}
 }
 
-func (c *customMetricsProvider) GetMetrics(context.Context) []Metric {
+func (c *customMetricsProvider) GetMetrics() []Metric {
 	return []Metric{
 		c.poolMetric,
 		c.randomMetric,
@@ -29,10 +29,10 @@ func (c *customMetricsProvider) Update(context.Context) error {
 	logger.Info("Start collect custom metrics")
 
 	c.poolMetric.SetValue(1)
-	logger.InfoFormat("Updated metric: %v. value: %v", c.poolMetric.GetName(), c.poolMetric.StringValue())
+	logger.InfoFormat("Updated metric: %v. value: %v", c.poolMetric.GetName(), c.poolMetric.GetStringValue())
 
 	c.randomMetric.SetValue(rand.Float64())
-	logger.InfoFormat("Updated metric: %v. value: %v", c.randomMetric.GetName(), c.randomMetric.StringValue())
+	logger.InfoFormat("Updated metric: %v. value: %v", c.randomMetric.GetName(), c.randomMetric.GetStringValue())
 
 	return nil
 }

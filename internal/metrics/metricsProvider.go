@@ -3,6 +3,6 @@ package metrics
 import "context"
 
 type MetricsProvider interface {
-	GetMetrics(ctx context.Context) []Metric
+	GetMetrics() []Metric
 	Update(ctx context.Context) error
 }

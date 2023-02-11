@@ -23,7 +23,7 @@ func main() {
 	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider([]metrics.MetricsProvider{runtimeMetricsProvider, customMetricsProvider})
 	getMetricsWorker := worker.NewPeriodicWorker(aggregateMetricsProvider.Update)
 	pushMetricsWorker := worker.NewPeriodicWorker(func(workerContext context.Context) error {
-		return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics(workerContext))
+		return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics())
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
