@@ -1,90 +1,116 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/parser"
 	"go-yandex-aka-prometheus/internal/storage"
 	"net/http"
-	"strings"
 )
 
 const (
 	listenURL = "127.0.0.1:8080"
 )
 
+type metricInfo struct {
+	metricName  string
+	metricValue string
+}
+
 func main() {
-
 	metricsStorage := storage.NewInMemoryStorage()
-
-	// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
-	http.HandleFunc("/update/", handleMetric(metricsStorage))
-	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		writeResponse(w, http.StatusOK, metricsStorage.GetMetrics())
-	})
-	http.HandleFunc("/", http.NotFound)
+	router := initRouter(metricsStorage)
 
 	logger.Info("Start listen " + listenURL)
-	err := http.ListenAndServe(listenURL, nil)
+	err := http.ListenAndServe(listenURL, router)
 	if err != nil {
 		logger.Error(err.Error())
 	}
 }
 
-func handleMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+func initRouter(metricsStorage storage.MetricsStorage) *chi.Mux {
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Route("/update", func(r chi.Router) {
+		r.Route("/gauge/{metricName}/{metricValue}", func(r chi.Router) {
+			r.Use(fillMetricContext)
+			r.Post("/", handleGaugeMetric(metricsStorage))
+		})
+		r.Route("/counter/{metricName}/{metricValue}", func(r chi.Router) {
+			r.Use(fillMetricContext)
+			r.Post("/", handleCounterMetric(metricsStorage))
+		})
+		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
+		})
+	})
+
+	return router
+}
+
+func fillMetricContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		metricContext := &metricInfo{
+			metricName:  chi.URLParam(r, "metricName"),
+			metricValue: chi.URLParam(r, "metricValue"),
+		}
+
+		ctx := context.WithValue(r.Context(), "metricInfo", metricContext)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func handleGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			writeResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		ctx := r.Context()
+		metricContext, ok := ctx.Value("metricInfo").(*metricInfo)
+		if !ok {
+			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
 		}
 
-		parts := strings.Split(r.URL.Path, "/")
-		if len(parts) != 5 {
-			writeResponse(w, http.StatusNotFound, "404 page not found")
+		value, err := parser.ToFloat64(metricContext.metricValue)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", metricContext.metricValue, err.Error()), http.StatusBadRequest)
 			return
 		}
 
-		metricName := parts[3]
-		stringValue := parts[4]
+		storage.AddGaugeMetricValue(metricContext.metricName, value)
 
-		switch parts[2] {
-		case "gauge":
-			{
-				value, err := parser.ToFloat64(stringValue)
-				if err != nil {
-					writeResponse(w, http.StatusBadRequest, fmt.Sprintf("Value parsing fail %v: %v", stringValue, err.Error()))
-					return
-				}
-
-				storage.AddGaugeMetricValue(metricName, value)
-			}
-		case "counter":
-			{
-				value, err := parser.ToInt64(stringValue)
-				if err != nil {
-					writeResponse(w, http.StatusBadRequest, fmt.Sprintf("Value parsing fail %v: %v", stringValue, err.Error()))
-					return
-				}
-
-				storage.AddCounterMetricValue(metricName, value)
-			}
-
-		default:
-			{
-				writeResponse(w, http.StatusNotImplemented, fmt.Sprintf("Unknown metric type: %v", parts[2]))
-				return
-			}
-		}
-
-		writeResponse(w, http.StatusOK, "ok")
-		logger.InfoFormat("Updated metric: %v. value: %v", metricName, stringValue)
+		successResponse(w)
+		logger.InfoFormat("Updated metric: %v. value: %v", metricContext.metricName, metricContext.metricValue)
 	}
 }
 
-func writeResponse(w http.ResponseWriter, statusCode int, message string) {
+func handleCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		metricContext, ok := ctx.Value("metricInfo").(*metricInfo)
+		if !ok {
+			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
+			return
+		}
+
+		value, err := parser.ToInt64(metricContext.metricValue)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", metricContext.metricValue, err.Error()), http.StatusBadRequest)
+			return
+		}
+
+		storage.AddCounterMetricValue(metricContext.metricName, value)
+
+		successResponse(w)
+		logger.InfoFormat("Updated metric: %v. value: %v", metricContext.metricName, metricContext.metricValue)
+	}
+}
+
+func successResponse(w http.ResponseWriter) {
 	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(statusCode)
-	_, err := w.Write([]byte(message))
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte("ok"))
 	if err != nil {
 		logger.ErrorFormat("Fail to write response: %v", err.Error())
 	}

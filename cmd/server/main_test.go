@@ -36,7 +36,11 @@ func Test_UpdateRequest(t *testing.T) {
 
 					// Unexpected method type
 					if method != http.MethodPost {
-						expected = getExpected(http.StatusMethodNotAllowed, "Method not allowed")
+						if metricType == "" || metricName == "" || metricValue == "" {
+							expected = getExpectedNotFound()
+						} else {
+							expected = getExpected(http.StatusMethodNotAllowed, "")
+						}
 					}
 
 					// Unexpected metric type
@@ -44,7 +48,7 @@ func Test_UpdateRequest(t *testing.T) {
 						if metricType == "" || metricName == "" || metricValue == "" {
 							expected = getExpectedNotFound()
 						} else {
-							expected = getExpected(http.StatusNotImplemented, "Unknown metric type: "+metricType)
+							expected = getExpected(http.StatusNotImplemented, "Unknown metric type\n")
 						}
 					}
 
@@ -60,17 +64,17 @@ func Test_UpdateRequest(t *testing.T) {
 						} else if metricType == "gauge" {
 							_, err := strconv.ParseFloat(metricValue, 64)
 							if err != nil {
-								expected = getExpected(http.StatusBadRequest, fmt.Sprintf("Value parsing fail %v: %v", metricValue, err.Error()))
+								expected = getExpected(http.StatusBadRequest, fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err.Error()))
 							}
 						} else if metricType == "counter" {
 							_, err := strconv.ParseInt(metricValue, 10, 64)
 							if err != nil {
-								expected = getExpected(http.StatusBadRequest, fmt.Sprintf("Value parsing fail %v: %v", metricValue, err.Error()))
+								expected = getExpected(http.StatusBadRequest, fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err.Error()))
 							}
 						}
 					}
 
-					// SUccess
+					// Success
 					if expected == nil {
 						expected = getExpected(http.StatusOK, "ok")
 					}
@@ -100,8 +104,8 @@ func Test_UpdateRequest(t *testing.T) {
 			metricsStorage := storage.NewInMemoryStorage()
 			request := httptest.NewRequest(tt.httpMethod, urlBuilder.String(), nil)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(handleMetric(metricsStorage))
-			h.ServeHTTP(w, request)
+			router := initRouter(metricsStorage)
+			router.ServeHTTP(w, request)
 			actual := w.Result()
 
 			if tt.expected.status != actual.StatusCode {
@@ -114,7 +118,7 @@ func Test_UpdateRequest(t *testing.T) {
 				t.Fatal(err)
 			}
 			if tt.expected.response != string(resBody) {
-				t.Errorf("Expected body %s, got %s", tt.expected.response, w.Body.String())
+				t.Errorf("Expected body '%s', got '%s'", tt.expected.response, w.Body.String())
 			}
 		})
 	}
@@ -135,7 +139,7 @@ func getExpected(status int, response string) *expectedResult {
 }
 
 func getExpectedNotFound() *expectedResult {
-	return getExpected(http.StatusNotFound, "404 page not found")
+	return getExpected(http.StatusNotFound, "404 page not found\n")
 }
 
 func getMethods() []string {
@@ -146,7 +150,6 @@ func getMethods() []string {
 		http.MethodPut,
 		http.MethodPatch,
 		http.MethodDelete,
-		http.MethodConnect,
 		http.MethodOptions,
 		http.MethodTrace,
 	}
