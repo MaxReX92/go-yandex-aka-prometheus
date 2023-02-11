@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"go-yandex-aka-prometheus/internal/logger"
 	"reflect"
@@ -56,7 +55,7 @@ func getFieldValue(stats *runtime.MemStats, fieldName string) (float64, error) {
 
 	value, ok := convertValue(f)
 	if !ok {
-		return value, errors.New(fmt.Sprintf("Field name %v was not found", fieldName))
+		return value, fmt.Errorf("Field name %v was not found", fieldName)
 	}
 
 	return value, nil
