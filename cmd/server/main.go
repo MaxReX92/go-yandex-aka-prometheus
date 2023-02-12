@@ -47,6 +47,14 @@ func initRouter(metricsStorage storage.MetricsStorage) *chi.Mux {
 			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
 		})
 	})
+	router.Route("/", func(r chi.Router) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			successResponse(w, "text/html", metricsStorage.GetMetrics())
+		})
+		r.Get("/metrics", func(w http.ResponseWriter, r *http.Request) {
+			successResponse(w, "text/html", metricsStorage.GetMetrics())
+		})
+	})
 
 	return router
 }
@@ -80,7 +88,7 @@ func handleGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWrite
 
 		storage.AddGaugeMetricValue(metricContext.metricName, value)
 
-		successResponse(w)
+		successResponse(w, "text/plain", "ok")
 		logger.InfoFormat("Updated metric: %v. value: %v", metricContext.metricName, metricContext.metricValue)
 	}
 }
@@ -102,15 +110,15 @@ func handleCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWri
 
 		storage.AddCounterMetricValue(metricContext.metricName, value)
 
-		successResponse(w)
+		successResponse(w, "text/plain", "ok")
 		logger.InfoFormat("Updated metric: %v. value: %v", metricContext.metricName, metricContext.metricValue)
 	}
 }
 
-func successResponse(w http.ResponseWriter) {
-	w.Header().Add("Content-Type", "text/plain")
+func successResponse(w http.ResponseWriter, contentType string, message string) {
+	w.Header().Add("Content-Type", contentType)
 	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("ok"))
+	_, err := w.Write([]byte(message))
 	if err != nil {
 		logger.ErrorFormat("Fail to write response: %v", err.Error())
 	}
