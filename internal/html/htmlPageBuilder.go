@@ -1,5 +1,5 @@
 package html
 
-type HtmlPageBuilder interface {
+type HTMLPageBuilder interface {
 	BuildMetricsPage(metricsByType map[string]map[string]string) string
 }

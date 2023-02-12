@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"go-yandex-aka-prometheus/internal/html"
-	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/storage"
 	"io"
 	"net/http"
@@ -114,7 +113,7 @@ func Test_UpdateRequest(t *testing.T) {
 
 			assert.Equal(t, tt.expected.status, actual.StatusCode)
 
-			defer closeBody(actual.Body)
+			defer actual.Body.Close()
 			resBody, err := io.ReadAll(actual.Body)
 			if err != nil {
 				t.Fatal(err)
@@ -168,7 +167,7 @@ func Test_GetMetricValue(t *testing.T) {
 
 			if tt.expectSuccess {
 				assert.Equal(t, http.StatusOK, actual.StatusCode)
-				defer closeBody(actual.Body)
+				defer actual.Body.Close()
 				body, err := io.ReadAll(actual.Body)
 				if err != nil {
 					t.Fatal(err)
@@ -177,7 +176,7 @@ func Test_GetMetricValue(t *testing.T) {
 				assert.Equal(t, "100", string(body))
 			} else {
 				assert.Equal(t, http.StatusNotFound, actual.StatusCode)
-				defer closeBody(actual.Body)
+				defer actual.Body.Close()
 				body, err := io.ReadAll(actual.Body)
 				if err != nil {
 					t.Fatal(err)
@@ -242,12 +241,5 @@ func getMetricValue() []string {
 		"100.001",
 		"test",
 		"",
-	}
-}
-
-func closeBody(body io.ReadCloser) {
-	err := body.Close()
-	if err != nil {
-		logger.ErrorFormat("Fail to close response body: %v", err.Error())
 	}
 }

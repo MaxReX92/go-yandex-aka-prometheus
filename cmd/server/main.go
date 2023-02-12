@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	listenURL = "127.0.0.1:8080"
+	listenURL     = "127.0.0.1:8080"
+	metricInfoKey = "metricInfo"
 )
 
 type metricInfo struct {
@@ -34,7 +35,7 @@ func main() {
 	}
 }
 
-func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HtmlPageBuilder) *chi.Mux {
+func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTMLPageBuilder) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Route("/update", func(r chi.Router) {
@@ -77,7 +78,7 @@ func fillMetricContext(next http.Handler) http.Handler {
 			metricValue: chi.URLParam(r, "metricValue"),
 		}
 
-		ctx := context.WithValue(r.Context(), "metricInfo", metricContext)
+		ctx := context.WithValue(r.Context(), metricInfoKey, metricContext)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -85,7 +86,7 @@ func fillMetricContext(next http.Handler) http.Handler {
 func updateGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		metricContext, ok := ctx.Value("metricInfo").(*metricInfo)
+		metricContext, ok := ctx.Value(metricInfoKey).(*metricInfo)
 		if !ok {
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
@@ -107,7 +108,7 @@ func updateGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWrite
 func updateCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		metricContext, ok := ctx.Value("metricInfo").(*metricInfo)
+		metricContext, ok := ctx.Value(metricInfoKey).(*metricInfo)
 		if !ok {
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
@@ -129,7 +130,7 @@ func updateCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWri
 func handleMetricValue(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		metricContext, ok := ctx.Value("metricInfo").(*metricInfo)
+		metricContext, ok := ctx.Value(metricInfoKey).(*metricInfo)
 		if !ok {
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return

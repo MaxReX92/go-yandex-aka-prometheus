@@ -9,7 +9,7 @@ import (
 type simplePageBuilder struct {
 }
 
-func NewSimplePageBuilder() HtmlPageBuilder {
+func NewSimplePageBuilder() HTMLPageBuilder {
 	return &simplePageBuilder{}
 }
 
