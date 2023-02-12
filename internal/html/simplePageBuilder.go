@@ -25,17 +25,18 @@ func (s simplePageBuilder) BuildMetricsPage(metricsByType map[string]map[string]
 	}
 	sort.Strings(metricTypes)
 
-	for _, metricsList := range metricsByType {
+	for _, metricType := range metricTypes {
+		metricsList := metricsByType[metricType]
 		metricNames := make([]string, len(metricsList))
 		j := 0
-		for key := range metricsList {
-			metricNames[j] = key
+		for metricName := range metricsList {
+			metricNames[j] = metricName
 			j++
 		}
 		sort.Strings(metricNames)
 
-		for _, key := range metricNames {
-			sb.WriteString(fmt.Sprintf("%v: %v", key, metricsList[key]))
+		for _, metricName := range metricNames {
+			sb.WriteString(fmt.Sprintf("%v: %v", metricName, metricsList[metricName]))
 			sb.WriteString("<br>")
 		}
 	}
