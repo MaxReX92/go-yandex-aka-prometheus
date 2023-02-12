@@ -2,7 +2,6 @@ package html
 
 import (
 	"fmt"
-	"go-yandex-aka-prometheus/internal/metrics"
 	"sort"
 	"strings"
 )
@@ -14,7 +13,7 @@ func NewSimplePageBuilder() HtmlPageBuilder {
 	return &simplePageBuilder{}
 }
 
-func (s simplePageBuilder) BuildMetricsPage(metricsByType map[string]map[string]metrics.Metric) string {
+func (s simplePageBuilder) BuildMetricsPage(metricsByType map[string]map[string]string) string {
 	sb := strings.Builder{}
 	sb.WriteString("<html>")
 
@@ -36,8 +35,7 @@ func (s simplePageBuilder) BuildMetricsPage(metricsByType map[string]map[string]
 		sort.Strings(metricNames)
 
 		for _, key := range metricNames {
-			metric := metricsList[key]
-			sb.WriteString(fmt.Sprintf("%v: %v", key, metric.GetStringValue()))
+			sb.WriteString(fmt.Sprintf("%v: %v", key, metricsList[key]))
 			sb.WriteString("<br>")
 		}
 	}

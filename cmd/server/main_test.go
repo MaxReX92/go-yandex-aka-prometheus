@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go-yandex-aka-prometheus/internal/html"
 	"go-yandex-aka-prometheus/internal/storage"
 	"io"
 	"net/http"
@@ -102,9 +103,10 @@ func Test_UpdateRequest(t *testing.T) {
 			appendIfNotEmpty(urlBuilder, tt.metricValue)
 
 			metricsStorage := storage.NewInMemoryStorage()
+			htmlPageBuilder := html.NewSimplePageBuilder()
 			request := httptest.NewRequest(tt.httpMethod, urlBuilder.String(), nil)
 			w := httptest.NewRecorder()
-			router := initRouter(metricsStorage)
+			router := initRouter(metricsStorage, htmlPageBuilder)
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 

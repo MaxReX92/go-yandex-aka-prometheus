@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"go-yandex-aka-prometheus/internal/html"
 	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/parser"
 	"go-yandex-aka-prometheus/internal/storage"
@@ -22,7 +23,8 @@ type metricInfo struct {
 
 func main() {
 	metricsStorage := storage.NewInMemoryStorage()
-	router := initRouter(metricsStorage)
+	htmlPageBuilder := html.NewSimplePageBuilder()
+	router := initRouter(metricsStorage, htmlPageBuilder)
 
 	logger.Info("Start listen " + listenURL)
 	err := http.ListenAndServe(listenURL, router)
@@ -31,7 +33,7 @@ func main() {
 	}
 }
 
-func initRouter(metricsStorage storage.MetricsStorage) *chi.Mux {
+func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HtmlPageBuilder) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Route("/update", func(r chi.Router) {
@@ -49,10 +51,10 @@ func initRouter(metricsStorage storage.MetricsStorage) *chi.Mux {
 	})
 	router.Route("/", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			successResponse(w, "text/html", metricsStorage.GetMetrics())
+			successResponse(w, "text/html", htmlPageBuilder.BuildMetricsPage(metricsStorage.GetMetricValues()))
 		})
 		r.Get("/metrics", func(w http.ResponseWriter, r *http.Request) {
-			successResponse(w, "text/html", metricsStorage.GetMetrics())
+			successResponse(w, "text/html", htmlPageBuilder.BuildMetricsPage(metricsStorage.GetMetricValues()))
 		})
 	})
 

@@ -1,71 +1,63 @@
 package storage
 
 import (
-	"fmt"
 	"go-yandex-aka-prometheus/internal/metrics"
-	"sort"
-	"strings"
 	"sync"
 )
 
 type inMemoryStorage struct {
-	names          []string
-	gaugeMetrics   map[string]metrics.Metric
-	counterMetrics map[string]metrics.Metric
-	lock           sync.RWMutex
+	metricsByType map[string]map[string]metrics.Metric
+	lock          sync.RWMutex
 }
 
 func NewInMemoryStorage() MetricsStorage {
 	return &inMemoryStorage{
-		names:          []string{},
-		gaugeMetrics:   map[string]metrics.Metric{},
-		counterMetrics: map[string]metrics.Metric{},
-		lock:           sync.RWMutex{},
+		metricsByType: map[string]map[string]metrics.Metric{},
+		lock:          sync.RWMutex{},
 	}
 }
 
 func (s *inMemoryStorage) AddGaugeMetricValue(name string, value float64) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	ensureMetricUpdate(s.gaugeMetrics, &s.names, name, value, metrics.NewGaugeMetric)
+	s.ensureMetricUpdate("gauge", name, value, metrics.NewGaugeMetric)
 }
 
 func (s *inMemoryStorage) AddCounterMetricValue(name string, value int64) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	ensureMetricUpdate(s.counterMetrics, &s.names, name, float64(value), metrics.NewCounterMetric)
+	s.ensureMetricUpdate("counter", name, float64(value), metrics.NewCounterMetric)
 }
 
-func (s *inMemoryStorage) GetMetrics() string {
+func (s *inMemoryStorage) GetMetricValues() map[string]map[string]string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	builder := strings.Builder{}
-	for _, metricName := range s.names {
-		metric, ok := s.counterMetrics[metricName]
-		if ok {
-			builder.WriteString(fmt.Sprintf("%v: %v\r\n", metricName, metric.GetStringValue()))
-			continue
-		}
+	metricValues := map[string]map[string]string{}
 
-		metric, ok = s.gaugeMetrics[metricName]
-		if ok {
-			builder.WriteString(fmt.Sprintf("%v: %v\r\n", metricName, metric.GetStringValue()))
+	for metricsType, metricsList := range s.metricsByType {
+		values := map[string]string{}
+		metricValues[metricsType] = values
+
+		for metricName, metric := range metricsList {
+			values[metricName] = metric.GetStringValue()
 		}
 	}
 
-	return builder.String()
+	return metricValues
 }
 
-func ensureMetricUpdate(metricsMap map[string]metrics.Metric, keys *[]string, name string, value float64, metricFactory func(string) metrics.Metric) {
-	currentMetric, ok := metricsMap[name]
+func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) {
+	metricsList, ok := s.metricsByType[metricType]
+	if !ok {
+		metricsList = map[string]metrics.Metric{}
+		s.metricsByType[metricType] = metricsList
+	}
+
+	currentMetric, ok := metricsList[name]
 	if !ok {
 		currentMetric = metricFactory(name)
-		metricsMap[name] = currentMetric
-
-		// need revision
-		*keys = append(*keys, name)
-		sort.Strings(*keys)
+		metricsList[name] = currentMetric
 	}
 
 	currentMetric.SetValue(value)
