@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/metrics"
 	"sync"
 )
@@ -34,7 +35,6 @@ func (s *inMemoryStorage) GetMetricValues() map[string]map[string]string {
 	defer s.lock.RUnlock()
 
 	metricValues := map[string]map[string]string{}
-
 	for metricsType, metricsList := range s.metricsByType {
 		values := map[string]string{}
 		metricValues[metricsType] = values
@@ -45,6 +45,25 @@ func (s *inMemoryStorage) GetMetricValues() map[string]map[string]string {
 	}
 
 	return metricValues
+}
+
+func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (string, bool) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	metricsByName, ok := s.metricsByType[metricType]
+	if !ok {
+		logger.ErrorFormat("Metrics with type %v not found", metricType)
+		return "", false
+	}
+
+	metric, ok := metricsByName[metricName]
+	if !ok {
+		logger.ErrorFormat("Metrics with name %v and type %v not found", metricName, metricType)
+		return "", false
+	}
+
+	return metric.GetStringValue(), true
 }
 
 func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) {

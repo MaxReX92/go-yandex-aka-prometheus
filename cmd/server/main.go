@@ -17,6 +17,7 @@ const (
 )
 
 type metricInfo struct {
+	metricType  string
 	metricName  string
 	metricValue string
 }
@@ -39,16 +40,23 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.Html
 	router.Route("/update", func(r chi.Router) {
 		r.Route("/gauge/{metricName}/{metricValue}", func(r chi.Router) {
 			r.Use(fillMetricContext)
-			r.Post("/", handleGaugeMetric(metricsStorage))
+			r.Post("/", updateGaugeMetric(metricsStorage))
 		})
 		r.Route("/counter/{metricName}/{metricValue}", func(r chi.Router) {
 			r.Use(fillMetricContext)
-			r.Post("/", handleCounterMetric(metricsStorage))
+			r.Post("/", updateCounterMetric(metricsStorage))
 		})
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
 		})
 	})
+	router.Route("/value", func(r chi.Router) {
+		r.Route("/{metricType}/{metricName}", func(r chi.Router) {
+			r.Use(fillMetricContext)
+			r.Get("/", handleMetricValue(metricsStorage))
+		})
+	})
+
 	router.Route("/", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			successResponse(w, "text/html", htmlPageBuilder.BuildMetricsPage(metricsStorage.GetMetricValues()))
@@ -64,6 +72,7 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.Html
 func fillMetricContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		metricContext := &metricInfo{
+			metricType:  chi.URLParam(r, "metricType"),
 			metricName:  chi.URLParam(r, "metricName"),
 			metricValue: chi.URLParam(r, "metricValue"),
 		}
@@ -73,7 +82,7 @@ func fillMetricContext(next http.Handler) http.Handler {
 	})
 }
 
-func handleGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+func updateGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		metricContext, ok := ctx.Value("metricInfo").(*metricInfo)
@@ -95,7 +104,7 @@ func handleGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWrite
 	}
 }
 
-func handleCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+func updateCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		metricContext, ok := ctx.Value("metricInfo").(*metricInfo)
@@ -114,6 +123,25 @@ func handleCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWri
 
 		successResponse(w, "text/plain", "ok")
 		logger.InfoFormat("Updated metric: %v. value: %v", metricContext.metricName, metricContext.metricValue)
+	}
+}
+
+func handleMetricValue(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		metricContext, ok := ctx.Value("metricInfo").(*metricInfo)
+		if !ok {
+			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
+			return
+		}
+
+		value, ok := storage.GetMetricValue(metricContext.metricType, metricContext.metricName)
+		if !ok {
+			http.Error(w, "Metric not found", http.StatusNotFound)
+			return
+		}
+
+		successResponse(w, "text/plain", value)
 	}
 }
 

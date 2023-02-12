@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"go-yandex-aka-prometheus/internal/html"
+	"go-yandex-aka-prometheus/internal/logger"
 	"go-yandex-aka-prometheus/internal/storage"
 	"io"
 	"net/http"
@@ -110,17 +112,78 @@ func Test_UpdateRequest(t *testing.T) {
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
-			if tt.expected.status != actual.StatusCode {
-				t.Errorf("Expected status code %d, got %d", tt.expected.status, w.Code)
-			}
+			assert.Equal(t, tt.expected.status, actual.StatusCode)
 
-			defer actual.Body.Close()
+			defer closeBody(actual.Body)
 			resBody, err := io.ReadAll(actual.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if tt.expected.response != string(resBody) {
-				t.Errorf("Expected body '%s', got '%s'", tt.expected.response, w.Body.String())
+
+			assert.Equal(t, tt.expected.response, string(resBody))
+		})
+	}
+}
+
+func Test_GetMetricValue(t *testing.T) {
+	tests := []struct {
+		name          string
+		metricType    string
+		metricName    string
+		expectSuccess bool
+	}{
+		{
+			name:          "type_not_found",
+			metricType:    "not_existed_type",
+			metricName:    "metricName",
+			expectSuccess: false,
+		},
+		{
+			name:          "metric_name_not_found",
+			metricType:    "counter",
+			metricName:    "not_existed_metric_name",
+			expectSuccess: false,
+		},
+		{
+			name:          "success_get_value",
+			metricType:    "counter",
+			metricName:    "metricName",
+			expectSuccess: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			url := fmt.Sprintf("http://localhost:8080/value/%v/%v", tt.metricType, tt.metricName)
+
+			htmlPageBuilder := html.NewSimplePageBuilder()
+			metricsStorage := storage.NewInMemoryStorage()
+			metricsStorage.AddCounterMetricValue("metricName", 100)
+
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			w := httptest.NewRecorder()
+			router := initRouter(metricsStorage, htmlPageBuilder)
+			router.ServeHTTP(w, request)
+			actual := w.Result()
+
+			if tt.expectSuccess {
+				assert.Equal(t, http.StatusOK, actual.StatusCode)
+				defer closeBody(actual.Body)
+				body, err := io.ReadAll(actual.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				assert.Equal(t, "100", string(body))
+			} else {
+				assert.Equal(t, http.StatusNotFound, actual.StatusCode)
+				defer closeBody(actual.Body)
+				body, err := io.ReadAll(actual.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				assert.Equal(t, "Metric not found\n", string(body))
 			}
 		})
 	}
@@ -179,5 +242,12 @@ func getMetricValue() []string {
 		"100.001",
 		"test",
 		"",
+	}
+}
+
+func closeBody(body io.ReadCloser) {
+	err := body.Close()
+	if err != nil {
+		logger.ErrorFormat("Fail to close response body: %v", err.Error())
 	}
 }
