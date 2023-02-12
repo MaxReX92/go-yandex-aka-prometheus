@@ -17,6 +17,10 @@ const (
 	metricInfoKey = "metricInfo"
 )
 
+type metricInfoContextKey struct {
+	key string
+}
+
 type metricInfo struct {
 	metricType  string
 	metricName  string
@@ -78,7 +82,7 @@ func fillMetricContext(next http.Handler) http.Handler {
 			metricValue: chi.URLParam(r, "metricValue"),
 		}
 
-		ctx := context.WithValue(r.Context(), metricInfoKey, metricContext)
+		ctx := context.WithValue(r.Context(), metricInfoContextKey{key: metricInfoKey}, metricContext)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -86,7 +90,7 @@ func fillMetricContext(next http.Handler) http.Handler {
 func updateGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		metricContext, ok := ctx.Value(metricInfoKey).(*metricInfo)
+		metricContext, ok := ctx.Value(metricInfoContextKey{key: metricInfoKey}).(*metricInfo)
 		if !ok {
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
@@ -108,7 +112,7 @@ func updateGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWrite
 func updateCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		metricContext, ok := ctx.Value(metricInfoKey).(*metricInfo)
+		metricContext, ok := ctx.Value(metricInfoContextKey{key: metricInfoKey}).(*metricInfo)
 		if !ok {
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
@@ -130,7 +134,7 @@ func updateCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWri
 func handleMetricValue(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		metricContext, ok := ctx.Value(metricInfoKey).(*metricInfo)
+		metricContext, ok := ctx.Value(metricInfoContextKey{key: metricInfoKey}).(*metricInfo)
 		if !ok {
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
