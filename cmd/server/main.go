@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"go-yandex-aka-prometheus/internal/html"
-	"go-yandex-aka-prometheus/internal/logger"
-	"go-yandex-aka-prometheus/internal/parser"
-	"go-yandex-aka-prometheus/internal/storage"
-	"net/http"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/storage"
 )
 
 const (

@@ -2,7 +2,8 @@ package client
 
 import (
 	"context"
-	"go-yandex-aka-prometheus/internal/metrics"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 )
 
 type MetricsPusher interface {

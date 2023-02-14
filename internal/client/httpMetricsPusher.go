@@ -3,12 +3,13 @@ package client
 import (
 	"context"
 	"fmt"
-	"go-yandex-aka-prometheus/internal/logger"
-	"go-yandex-aka-prometheus/internal/metrics"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 )
 
 type MetricsPusherConfig interface {

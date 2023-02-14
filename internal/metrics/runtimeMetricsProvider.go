@@ -3,9 +3,10 @@ package metrics
 import (
 	"context"
 	"fmt"
-	"go-yandex-aka-prometheus/internal/logger"
 	"reflect"
 	"runtime"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
 type RuntimeMetricsProviderConfig interface {

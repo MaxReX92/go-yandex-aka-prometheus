@@ -1,8 +1,9 @@
 package html
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimplePageBuilder_BuildMetricsPage(t *testing.T) {

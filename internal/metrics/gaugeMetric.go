@@ -1,8 +1,6 @@
 package metrics
 
-import (
-	"go-yandex-aka-prometheus/internal/parser"
-)
+import "github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 
 type gaugeMetric struct {
 	name  string

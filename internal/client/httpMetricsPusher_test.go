@@ -2,12 +2,14 @@ package client
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"go-yandex-aka-prometheus/internal/metrics"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 )
 
 type config struct {

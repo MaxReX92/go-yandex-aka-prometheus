@@ -2,8 +2,9 @@ package metrics
 
 import (
 	"context"
-	"go-yandex-aka-prometheus/internal/logger"
 	"math/rand"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
 type customMetricsProvider struct {

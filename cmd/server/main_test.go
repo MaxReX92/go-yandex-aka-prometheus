@@ -2,15 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"go-yandex-aka-prometheus/internal/html"
-	"go-yandex-aka-prometheus/internal/storage"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/storage"
 )
 
 type expectedResult struct {
