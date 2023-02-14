@@ -22,3 +22,4 @@ jobs:
           file: ./unit.txt
           flags: unit
           name: unit
+          token: ${{ secrets.CODECOV_TOKEN }}
