@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	listenURL     = "127.0.0.1:8080"
-	metricInfoKey = "metricInfo"
+	listenURL        = "127.0.0.1:8080"
+	metricContextKey = "metricContextKey"
+	metricResultKey  = "metricResultKey"
 )
 
 type metricInfoContextKey struct {
@@ -40,34 +41,25 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTML
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Route("/update", func(r chi.Router) {
-		r.Route("/gauge/{metricName}/{metricValue}", func(r chi.Router) {
-			r.Use(fillCommonUrlContext)
-			r.With(fillGaugeContext).
-				Post("/", updateGaugeMetric(metricsStorage))
-		})
-		r.Route("/counter/{metricName}/{metricValue}", func(r chi.Router) {
-			r.Use(fillCommonUrlContext)
-			r.With(fillCounterUrlContext).
-				Post("/", updateCounterMetric(metricsStorage))
-		})
+		r.With(fillCommonUrlContext, fillGaugeContext, updateGaugeMetric(metricsStorage)).
+			Post("/gauge/{metricName}/{metricValue}", successUrlResponse())
+		r.With(fillCommonUrlContext, fillCounterUrlContext, updateCounterMetric(metricsStorage)).
+			Post("/counter/{metricName}/{metricValue}", successUrlResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
 		})
 	})
+
 	router.Route("/value", func(r chi.Router) {
-		r.Route("/{metricType}/{metricName}", func(r chi.Router) {
-			r.Use(fillCommonUrlContext)
-			r.Get("/", handleMetricValue(metricsStorage))
-		})
+		r.With(fillCommonUrlContext).
+			Get("/{metricType}/{metricName}", handleMetricValue(metricsStorage))
+
+		// handle json request here
 	})
 
 	router.Route("/", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			successResponse(w, "text/html", htmlPageBuilder.BuildMetricsPage(metricsStorage.GetMetricValues()))
-		})
-		r.Get("/metrics", func(w http.ResponseWriter, r *http.Request) {
-			successResponse(w, "text/html", htmlPageBuilder.BuildMetricsPage(metricsStorage.GetMetricValues()))
-		})
+		r.Get("/", handleMetricsPage(htmlPageBuilder, metricsStorage))
+		r.Get("/metrics", handleMetricsPage(htmlPageBuilder, metricsStorage))
 	})
 
 	return router
@@ -114,41 +106,44 @@ func fillCounterUrlContext(next http.Handler) http.Handler {
 	})
 }
 
-func updateGaugeMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		metricContext, ok := ctx.Value(metricInfoContextKey{key: metricInfoKey}).(*model.Metrics)
-		if !ok {
-			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
-			return
-		}
+func updateGaugeMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
+			if !ok {
+				http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
+				return
+			}
 
-		storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
-		successResponse(w, "text/plain", "ok")
-		logger.InfoFormat("Updated metric: %v. value: %v", metricContext.ID, *metricContext.Value)
+			storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
+			logger.InfoFormat("Updated metric: %v. value: %v", metricContext.ID, *metricContext.Value)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
 
-func updateCounterMetric(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		metricContext, ok := ctx.Value(metricInfoContextKey{key: metricInfoKey}).(*model.Metrics)
-		if !ok {
-			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
-			return
-		}
+func updateCounterMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
+			if !ok {
+				http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
+				return
+			}
 
-		storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
-
-		successResponse(w, "text/plain", "ok")
-		logger.InfoFormat("Updated metric: %v. value: %v", metricContext.ID, *metricContext.Delta)
+			storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
+			logger.InfoFormat("Updated metric: %v. value: %v", metricContext.ID, *metricContext.Delta)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
 
 func handleMetricValue(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		metricContext, ok := ctx.Value(metricInfoContextKey{key: metricInfoKey}).(*model.Metrics)
+		metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
 		if !ok {
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
@@ -164,6 +159,18 @@ func handleMetricValue(storage storage.MetricsStorage) func(w http.ResponseWrite
 	}
 }
 
+func handleMetricsPage(builder html.HTMLPageBuilder, storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		successResponse(w, "text/html", builder.BuildMetricsPage(storage.GetMetricValues()))
+	}
+}
+
+func successUrlResponse() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		successResponse(w, "text/plain", "ok")
+	}
+}
+
 func successResponse(w http.ResponseWriter, contentType string, message string) {
 	w.Header().Add("Content-Type", contentType)
 	w.WriteHeader(http.StatusOK)
@@ -175,10 +182,10 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 
 func ensureMetricContext(r *http.Request) (context.Context, *model.Metrics) {
 	ctx := r.Context()
-	metricContext, ok := ctx.Value(metricInfoContextKey{key: metricInfoKey}).(*model.Metrics)
+	metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
 	if !ok {
 		metricContext = &model.Metrics{}
-		ctx = context.WithValue(r.Context(), metricInfoContextKey{key: metricInfoKey}, metricContext)
+		ctx = context.WithValue(r.Context(), metricInfoContextKey{key: metricContextKey}, metricContext)
 	}
 
 	return ctx, metricContext
