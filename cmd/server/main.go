@@ -42,13 +42,13 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTML
 	router.Route("/update", func(r chi.Router) {
 		r.Route("/gauge/{metricName}/{metricValue}", func(r chi.Router) {
 			r.Use(fillCommonUrlContext)
-			r.Use(fillGaugeContext)
-			r.Post("/", updateGaugeMetric(metricsStorage))
+			r.With(fillGaugeContext).
+				Post("/", updateGaugeMetric(metricsStorage))
 		})
 		r.Route("/counter/{metricName}/{metricValue}", func(r chi.Router) {
 			r.Use(fillCommonUrlContext)
-			r.Use(fillCounterUrlContext)
-			r.Post("/", updateCounterMetric(metricsStorage))
+			r.With(fillCounterUrlContext).
+				Post("/", updateCounterMetric(metricsStorage))
 		})
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
