@@ -32,16 +32,17 @@ func (m *counterMetric) GetStringValue() string {
 	return parser.IntToString(m.value)
 }
 
-func (m *counterMetric) SetValue(value float64) {
-	m.setValue(m.value + int64(value))
+func (m *counterMetric) SetValue(value float64) float64 {
+	return m.setValue(m.value + int64(value))
 }
 
 func (m *counterMetric) Flush() {
 	m.setValue(0)
 }
 
-func (m *counterMetric) setValue(value int64) {
+func (m *counterMetric) setValue(value int64) float64 {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.value = value
+	return float64(m.value)
 }

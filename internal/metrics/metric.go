@@ -4,6 +4,6 @@ type Metric interface {
 	GetName() string
 	GetType() string
 	GetStringValue() string
-	SetValue(value float64)
+	SetValue(value float64) float64
 	Flush()
 }
