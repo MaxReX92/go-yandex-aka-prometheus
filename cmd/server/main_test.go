@@ -38,8 +38,17 @@ func Test_UpdateRequest(t *testing.T) {
 
 					var expected *expectedResult
 
+					// json api
+					if metricType == "" && metricName == "" && metricValue == "" {
+						if method == http.MethodPost {
+							expected = getExpected(400, "Invalid json: EOF\n")
+						} else {
+							expected = getExpected(http.StatusMethodNotAllowed, "")
+						}
+					}
+
 					// Unexpected method type
-					if method != http.MethodPost {
+					if expected == nil && method != http.MethodPost {
 						if metricType == "" || metricName == "" || metricValue == "" {
 							expected = getExpectedNotFound()
 						} else {
