@@ -14,9 +14,7 @@ type counterMetric struct {
 
 func NewCounterMetric(name string) Metric {
 	return &counterMetric{
-		name:  name,
-		value: 0,
-		lock:  sync.RWMutex{},
+		name: name,
 	}
 }
 

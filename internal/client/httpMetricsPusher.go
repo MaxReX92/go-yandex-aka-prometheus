@@ -12,7 +12,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 )
 
-type MetricsPusherConfig interface {
+type metricsPusherConfig interface {
 	MetricsServerURL() string
 	PushMetricsTimeout() time.Duration
 }
@@ -23,7 +23,7 @@ type httpMetricsPusher struct {
 	pushTimeout      time.Duration
 }
 
-func NewMetricsPusher(config MetricsPusherConfig) MetricsPusher {
+func NewMetricsPusher(config metricsPusherConfig) MetricsPusher {
 	return &httpMetricsPusher{
 		client:           http.Client{},
 		metricsServerURL: strings.TrimRight(config.MetricsServerURL(), "/"),

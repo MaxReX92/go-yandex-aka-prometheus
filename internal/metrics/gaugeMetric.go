@@ -14,9 +14,7 @@ type gaugeMetric struct {
 
 func NewGaugeMetric(name string) Metric {
 	return &gaugeMetric{
-		name:  name,
-		value: 0,
-		lock:  sync.RWMutex{},
+		name: name,
 	}
 }
 
