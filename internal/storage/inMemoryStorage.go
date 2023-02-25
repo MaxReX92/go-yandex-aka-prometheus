@@ -19,16 +19,16 @@ func NewInMemoryStorage() MetricsStorage {
 	}
 }
 
-func (s *inMemoryStorage) AddGaugeMetricValue(name string, value float64) {
+func (s *inMemoryStorage) AddGaugeMetricValue(name string, value float64) float64 {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.ensureMetricUpdate("gauge", name, value, metrics.NewGaugeMetric)
+	return s.ensureMetricUpdate("gauge", name, value, metrics.NewGaugeMetric)
 }
 
-func (s *inMemoryStorage) AddCounterMetricValue(name string, value int64) {
+func (s *inMemoryStorage) AddCounterMetricValue(name string, value int64) int64 {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.ensureMetricUpdate("counter", name, float64(value), metrics.NewCounterMetric)
+	return int64(s.ensureMetricUpdate("counter", name, float64(value), metrics.NewCounterMetric))
 }
 
 func (s *inMemoryStorage) GetMetricValues() map[string]map[string]string {
@@ -67,7 +67,7 @@ func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (
 	return metric.GetStringValue(), true
 }
 
-func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) {
+func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) float64 {
 	metricsList, ok := s.metricsByType[metricType]
 	if !ok {
 		metricsList = map[string]metrics.Metric{}
@@ -80,5 +80,5 @@ func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, val
 		metricsList[name] = currentMetric
 	}
 
-	currentMetric.SetValue(value)
+	return currentMetric.SetValue(value)
 }

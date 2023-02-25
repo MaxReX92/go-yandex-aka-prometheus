@@ -107,23 +107,28 @@ func fillCounterUrlContext(next http.Handler) http.Handler {
 }
 
 func updateGaugeMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-			metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
-			if !ok {
-				http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
-				return
-			}
-
-			storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
-			logger.InfoFormat("Updated metric: %v. value: %v", metricContext.ID, *metricContext.Value)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
+	return updateMetric(func(metricContext *model.Metrics) *model.Metrics {
+		res := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
+		return &model.Metrics{
+			ID:    metricContext.ID,
+			MType: metricContext.MType,
+			Value: &res,
+		}
+	})
 }
 
 func updateCounterMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
+	return updateMetric(func(metricContext *model.Metrics) *model.Metrics {
+		res := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
+		return &model.Metrics{
+			ID:    metricContext.ID,
+			MType: metricContext.MType,
+			Delta: &res,
+		}
+	})
+}
+
+func updateMetric(updateAction func(metrics *model.Metrics) *model.Metrics) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -133,9 +138,9 @@ func updateCounterMetric(storage storage.MetricsStorage) func(next http.Handler)
 				return
 			}
 
-			storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
-			logger.InfoFormat("Updated metric: %v. value: %v", metricContext.ID, *metricContext.Delta)
-			next.ServeHTTP(w, r.WithContext(ctx))
+			newValue := updateAction(metricContext)
+			logger.InfoFormat("Updated metric: %v. newValue: %v", metricContext.ID, newValue)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, metricInfoContextKey{key: metricResultKey}, newValue)))
 		})
 	}
 }
