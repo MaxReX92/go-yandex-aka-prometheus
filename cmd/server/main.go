@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -41,6 +42,8 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTML
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Route("/update", func(r chi.Router) {
+		r.With(fillJsonContext, updateTypedMetric(metricsStorage)).
+			Post("/", successJsonResponse())
 		r.With(fillCommonUrlContext, fillGaugeContext, updateGaugeMetric(metricsStorage)).
 			Post("/gauge/{metricName}/{metricValue}", successUrlResponse())
 		r.With(fillCommonUrlContext, fillCounterUrlContext, updateCounterMetric(metricsStorage)).
@@ -106,29 +109,68 @@ func fillCounterUrlContext(next http.Handler) http.Handler {
 	})
 }
 
+func fillJsonContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, metricContext := ensureMetricContext(r)
+		decoder := json.NewDecoder(r.Body)
+		defer r.Body.Close()
+
+		err := decoder.Decode(metricContext)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid json: %v", err.Error()), http.StatusBadRequest)
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func updateTypedMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
+	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, bool) {
+		result := &model.Metrics{
+			ID:    metricContext.ID,
+			MType: metricContext.MType,
+		}
+
+		switch metricContext.MType {
+		case "gauge":
+			newValue := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
+			result.Value = &newValue
+		case "counter":
+			newValue := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
+			result.Delta = &newValue
+		default:
+			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
+			return nil, false
+		}
+
+		return result, true
+	})
+}
+
 func updateGaugeMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return updateMetric(func(metricContext *model.Metrics) *model.Metrics {
+	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, bool) {
 		res := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
 		return &model.Metrics{
 			ID:    metricContext.ID,
 			MType: metricContext.MType,
 			Value: &res,
-		}
+		}, true
 	})
 }
 
 func updateCounterMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return updateMetric(func(metricContext *model.Metrics) *model.Metrics {
+	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, bool) {
 		res := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
 		return &model.Metrics{
 			ID:    metricContext.ID,
 			MType: metricContext.MType,
 			Delta: &res,
-		}
+		}, true
 	})
 }
 
-func updateMetric(updateAction func(metrics *model.Metrics) *model.Metrics) func(next http.Handler) http.Handler {
+func updateMetric(updateAction func(w http.ResponseWriter, metrics *model.Metrics) (*model.Metrics, bool)) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -138,8 +180,12 @@ func updateMetric(updateAction func(metrics *model.Metrics) *model.Metrics) func
 				return
 			}
 
-			newValue := updateAction(metricContext)
-			logger.InfoFormat("Updated metric: %v. newValue: %v", metricContext.ID, newValue)
+			newValue, ok := updateAction(w, metricContext)
+			if !ok {
+				return
+			}
+
+			logger.InfoFormat("Updated metric: %v. newValue: %v", metricContext.ID, *newValue)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, metricInfoContextKey{key: metricResultKey}, newValue)))
 		})
 	}
@@ -173,6 +219,30 @@ func handleMetricsPage(builder html.HTMLPageBuilder, storage storage.MetricsStor
 func successUrlResponse() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		successResponse(w, "text/plain", "ok")
+	}
+}
+
+func successJsonResponse() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		metricUpdateResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
+		if !ok {
+			http.Error(w, "Metric update result not found in context", http.StatusInternalServerError)
+			return
+		}
+
+		result, err := json.Marshal(metricUpdateResult)
+		if err != nil {
+			logger.ErrorFormat("Fail to serialise result: %v", err.Error())
+			http.Error(w, "Fail to serialise result", http.StatusInternalServerError)
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(result)
+		if err != nil {
+			logger.ErrorFormat("Fail to write response: %v", err.Error())
+		}
 	}
 }
 
