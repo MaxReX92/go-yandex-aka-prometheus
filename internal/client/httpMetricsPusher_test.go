@@ -21,7 +21,7 @@ type config struct {
 
 func TestHttpMetricsPusher_Push(t *testing.T) {
 	var counterValue int64 = 100
-	var gaugeValue float64 = 100.001
+	var gaugeValue = 100.001
 
 	tests := []struct {
 		name             string

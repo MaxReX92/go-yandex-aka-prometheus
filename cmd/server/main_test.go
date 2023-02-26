@@ -33,7 +33,7 @@ type modelRequest struct {
 	Value *float64 `json:"value,omitempty"`
 }
 
-type jsonApiRequest struct {
+type jsonAPIRequest struct {
 	httpMethod     string
 	path           string
 	request        *modelRequest
@@ -163,7 +163,7 @@ func Test_UpdateJsonRequest_MethodNotAllowed(t *testing.T) {
 		}
 
 		t.Run("json_"+method+"_methodNotAllowed", func(t *testing.T) {
-			actual := runJsonTest(t, jsonApiRequest{httpMethod: method, path: "update"})
+			actual := runJSONTest(t, jsonAPIRequest{httpMethod: method, path: "update"})
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -193,7 +193,7 @@ func Test_UpdateJsonRequest_MetricName(t *testing.T) {
 			}
 
 			t.Run("json_"+metricName+"_"+metricType+"_metricName", func(t *testing.T) {
-				actual := runJsonTest(t, jsonApiRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
+				actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 				assert.Equal(t, expected, actual)
 			})
 		}
@@ -223,7 +223,7 @@ func Test_UpdateJsonRequest_MetricType(t *testing.T) {
 		}
 
 		t.Run("json_"+metricType+"_metricType", func(t *testing.T) {
-			actual := runJsonTest(t, jsonApiRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
+			actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -249,7 +249,7 @@ func Test_UpdateJsonRequest_CounterMetricValue(t *testing.T) {
 		}
 
 		t.Run("json_"+valueString+"_counterMetricValue", func(t *testing.T) {
-			actual := runJsonTest(t, jsonApiRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
+			actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -275,7 +275,7 @@ func Test_UpdateJsonRequest_GaugeMetricValue(t *testing.T) {
 		}
 
 		t.Run("json_"+valueString+"_gaugeMetricValue", func(t *testing.T) {
-			actual := runJsonTest(t, jsonApiRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
+			actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -353,7 +353,7 @@ func Test_GetMetricJsonRequest_MethodNotAllowed(t *testing.T) {
 		}
 
 		t.Run("json_"+method+"_methodNotAllowed", func(t *testing.T) {
-			actual := runJsonTest(t, jsonApiRequest{httpMethod: method, path: "value"})
+			actual := runJSONTest(t, jsonAPIRequest{httpMethod: method, path: "value"})
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -386,7 +386,7 @@ func Test_GetMetricJsonRequest_MetricName(t *testing.T) {
 			}
 
 			t.Run("json_"+metricName+"_"+metricType+"_metricName", func(t *testing.T) {
-				actual := runJsonTest(t, jsonApiRequest{
+				actual := runJSONTest(t, jsonAPIRequest{
 					httpMethod:     http.MethodPost,
 					path:           "value",
 					request:        &requestObj,
@@ -425,7 +425,7 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 		}
 
 		t.Run("json_"+metricType+"_metricType", func(t *testing.T) {
-			actual := runJsonTest(t, jsonApiRequest{
+			actual := runJSONTest(t, jsonAPIRequest{
 				httpMethod:     http.MethodPost,
 				path:           "value",
 				request:        &requestObj,
@@ -437,7 +437,7 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 	}
 }
 
-func runJsonTest(t *testing.T, apiRequest jsonApiRequest) *callResult {
+func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 
 	var buffer bytes.Buffer
 	metricsStorage := storage.NewInMemoryStorage()

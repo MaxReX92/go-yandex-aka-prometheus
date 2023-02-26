@@ -42,23 +42,23 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTML
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Route("/update", func(r chi.Router) {
-		r.With(fillJsonContext, updateTypedMetric(metricsStorage)).
-			Post("/", successJsonResponse())
-		r.With(fillCommonUrlContext, fillGaugeContext, updateGaugeMetric(metricsStorage)).
-			Post("/gauge/{metricName}/{metricValue}", successUrlResponse())
-		r.With(fillCommonUrlContext, fillCounterUrlContext, updateCounterMetric(metricsStorage)).
-			Post("/counter/{metricName}/{metricValue}", successUrlResponse())
+		r.With(fillJSONContext, updateTypedMetric(metricsStorage)).
+			Post("/", successJSONResponse())
+		r.With(fillCommonURLContext, fillGaugeContext, updateGaugeMetric(metricsStorage)).
+			Post("/gauge/{metricName}/{metricValue}", successURLResponse())
+		r.With(fillCommonURLContext, fillCounterURLContext, updateCounterMetric(metricsStorage)).
+			Post("/counter/{metricName}/{metricValue}", successURLResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
 		})
 	})
 
 	router.Route("/value", func(r chi.Router) {
-		r.With(fillJsonContext, fillMetricValue(metricsStorage)).
-			Post("/", successJsonResponse())
+		r.With(fillJSONContext, fillMetricValue(metricsStorage)).
+			Post("/", successJSONResponse())
 
-		r.With(fillCommonUrlContext, fillMetricValue(metricsStorage)).
-			Get("/{metricType}/{metricName}", successUrlValueResponse())
+		r.With(fillCommonURLContext, fillMetricValue(metricsStorage)).
+			Get("/{metricType}/{metricName}", successURLValueResponse())
 	})
 
 	router.Route("/", func(r chi.Router) {
@@ -69,7 +69,7 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTML
 	return router
 }
 
-func fillCommonUrlContext(next http.Handler) http.Handler {
+func fillCommonURLContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, metricContext := ensureMetricContext(r)
 
@@ -95,7 +95,7 @@ func fillGaugeContext(next http.Handler) http.Handler {
 	})
 }
 
-func fillCounterUrlContext(next http.Handler) http.Handler {
+func fillCounterURLContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, metricContext := ensureMetricContext(r)
 		strValue := chi.URLParam(r, "metricValue")
@@ -110,7 +110,7 @@ func fillCounterUrlContext(next http.Handler) http.Handler {
 	})
 }
 
-func fillJsonContext(next http.Handler) http.Handler {
+func fillJSONContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, metricContext := ensureMetricContext(r)
 		decoder := json.NewDecoder(r.Body)
@@ -247,7 +247,7 @@ func fillMetricValue(storage storage.MetricsStorage) func(next http.Handler) htt
 	}
 }
 
-func successUrlValueResponse() func(w http.ResponseWriter, r *http.Request) {
+func successURLValueResponse() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		metricValueResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
@@ -277,13 +277,13 @@ func handleMetricsPage(builder html.HTMLPageBuilder, storage storage.MetricsStor
 	}
 }
 
-func successUrlResponse() func(w http.ResponseWriter, r *http.Request) {
+func successURLResponse() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		successResponse(w, "text/plain", "ok")
 	}
 }
 
-func successJsonResponse() func(w http.ResponseWriter, r *http.Request) {
+func successJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		metricUpdateResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
