@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,30 +15,40 @@ import (
 )
 
 type config struct {
-	connetionString string
-	timeout         time.Duration
+	connectionString string
+	timeout          time.Duration
 }
 
 func TestHttpMetricsPusher_Push(t *testing.T) {
+	var counterValue int64 = 100
+	var gaugeValue float64 = 100.001
+
 	tests := []struct {
-		name          string
-		metricsToPush []metrics.Metric
-		expectedURLs  map[string]bool
+		name             string
+		metricsToPush    []metrics.Metric
+		expectedRequests []model.Metrics
 	}{
 		{
-			name:          "empty_metrics_list",
-			metricsToPush: []metrics.Metric{},
-			expectedURLs:  map[string]bool{},
+			name:             "empty_metrics_list",
+			metricsToPush:    []metrics.Metric{},
+			expectedRequests: []model.Metrics{},
 		},
 		{
 			name: "simple_metrics",
 			metricsToPush: []metrics.Metric{
-				createCounterMetric("counterMetric1", 100),
-				createGaugeMetric("gaugeMetric1", 100.001),
+				createCounterMetric("counterMetric1", counterValue),
+				createGaugeMetric("gaugeMetric1", gaugeValue),
 			},
-			expectedURLs: map[string]bool{
-				"/update/counter/counterMetric1/100": false,
-				"/update/gauge/gaugeMetric1/100.001": false,
+			expectedRequests: []model.Metrics{
+				{
+					ID:    "counterMetric1",
+					MType: "counter",
+					Delta: &counterValue,
+				}, {
+					ID:    "gaugeMetric1",
+					MType: "gauge",
+					Value: &gaugeValue,
+				},
 			},
 		},
 	}
@@ -45,24 +57,33 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+
+			called := map[string]bool{}
+			for _, request := range tt.expectedRequests {
+				called[request.ID+request.MType] = false
+			}
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_, ok := tt.expectedURLs[r.URL.Path]
-				assert.Truef(t, ok, "Unexpected url call: %v", r.URL)
-				assert.Equal(t, "text/plain", r.Header.Get("Content-Type"))
-				tt.expectedURLs[r.URL.Path] = true
+				assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+
+				defer r.Body.Close()
+				modelRequest := &model.Metrics{}
+				err := json.NewDecoder(r.Body).Decode(modelRequest)
+				assert.NoError(t, err)
+				called[modelRequest.ID+modelRequest.MType] = true
 			}))
 			defer server.Close()
 
 			pusher := NewMetricsPusher(&config{
-				connetionString: server.URL,
-				timeout:         10 * time.Second,
+				connectionString: server.URL,
+				timeout:          10 * time.Second,
 			})
 
 			err := pusher.Push(ctx, tt.metricsToPush)
 			assert.NoError(t, err)
 
-			for url, called := range tt.expectedURLs {
-				assert.True(t, called, "Url %v was not called", url)
+			for key, call := range called {
+				assert.True(t, call, "Metric was not pushed, %v", key)
 			}
 		})
 	}
@@ -82,7 +103,7 @@ func createGaugeMetric(name string, value float64) metrics.Metric {
 }
 
 func (c *config) MetricsServerURL() string {
-	return c.connetionString
+	return c.connectionString
 }
 
 func (c *config) PushMetricsTimeout() time.Duration {

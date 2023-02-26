@@ -1,8 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 	"io"
 	"net/http"
 	"strings"
@@ -38,19 +41,27 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 	defer cancel()
 
 	for _, metric := range metrics {
-		metricType := metric.GetType()
-		metricName := metric.GetName()
-		metricValue := metric.GetStringValue()
-		defer metric.Flush()
 
-		// http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>;
-		url := fmt.Sprintf("%v/update/%v/%v/%v", p.metricsServerURL, metricType, metricName, metricValue)
-		request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, url, nil)
+		metricName := metric.GetName()
+		modelRequest, err := createModelRequest(metric)
+		if err != nil {
+			logger.ErrorFormat("Fail to create model request: %v", err.Error())
+			return err
+		}
+
+		var buffer bytes.Buffer
+		err = json.NewEncoder(&buffer).Encode(modelRequest)
+		if err != nil {
+			logger.ErrorFormat("Fail to serialize model request: %v", err.Error())
+			return err
+		}
+
+		request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, p.metricsServerURL+"/update", &buffer)
 		if err != nil {
 			logger.ErrorFormat("Fail to create push request: %v", err.Error())
 			return err
 		}
-		request.Header.Add("Content-Type", "text/plain")
+		request.Header.Add("Content-Type", "application/json")
 
 		response, err := p.client.Do(request)
 		if err != nil {
@@ -71,8 +82,28 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 			return fmt.Errorf("fail to push metric: %v", stringContent)
 		}
 
+		metric.Flush()
 		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v %v",
 			metricName, metric.GetStringValue(), response.Status, stringContent)
 	}
 	return nil
+}
+
+func createModelRequest(metric metrics.Metric) (*model.Metrics, error) {
+	modelRequest := &model.Metrics{
+		ID:    metric.GetName(),
+		MType: metric.GetType(),
+	}
+
+	metricValue := metric.GetValue()
+	if modelRequest.MType == "counter" {
+		counterValue := int64(metricValue)
+		modelRequest.Delta = &counterValue
+	} else if modelRequest.MType == "gauge" {
+		modelRequest.Value = &metricValue
+	} else {
+		return nil, fmt.Errorf("unknown metric type: %v", modelRequest.MType)
+	}
+
+	return modelRequest, nil
 }
