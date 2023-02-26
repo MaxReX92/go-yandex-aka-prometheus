@@ -184,16 +184,16 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 		counterMetrics   []keyValue[int64]
 		gaugeMetrics     []keyValue[float64]
 		expectedOk       bool
-		expectedCounters []keyValue[string]
-		expectedGauges   []keyValue[string]
+		expectedCounters []keyValue[float64]
+		expectedGauges   []keyValue[float64]
 	}{
 		{
 			name:             "empty_metrics",
 			counterMetrics:   []keyValue[int64]{},
 			gaugeMetrics:     []keyValue[float64]{},
 			expectedOk:       false,
-			expectedCounters: []keyValue[string]{{key: "not_existed_metric", value: ""}},
-			expectedGauges:   []keyValue[string]{{key: "not_existed_metric", value: ""}},
+			expectedCounters: []keyValue[float64]{{key: "not_existed_metric", value: 0}},
+			expectedGauges:   []keyValue[float64]{{key: "not_existed_metric", value: 0}},
 		},
 		{
 			name: "metric_not_found",
@@ -206,8 +206,8 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 				{key: "metricName5", value: 300.003},
 				{key: "metricName6", value: -400.004}},
 			expectedOk:       false,
-			expectedCounters: []keyValue[string]{{key: "not_existed_metric", value: ""}},
-			expectedGauges:   []keyValue[string]{{key: "not_existed_metric", value: ""}},
+			expectedCounters: []keyValue[float64]{{key: "not_existed_metric", value: 0}},
+			expectedGauges:   []keyValue[float64]{{key: "not_existed_metric", value: 0}},
 		},
 		{
 			name: "success_values",
@@ -220,14 +220,14 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 				{key: "metricName5", value: 300.003},
 				{key: "metricName6", value: -400.004}},
 			expectedOk: true,
-			expectedCounters: []keyValue[string]{
-				{key: "metricName1", value: "100"},
-				{key: "metricName2", value: "300"},
-				{key: "metricName3", value: "-400"}},
-			expectedGauges: []keyValue[string]{
-				{key: "metricName4", value: "100.001"},
-				{key: "metricName5", value: "300.003"},
-				{key: "metricName6", value: "-400.004"}},
+			expectedCounters: []keyValue[float64]{
+				{key: "metricName1", value: 100},
+				{key: "metricName2", value: 300},
+				{key: "metricName3", value: -400}},
+			expectedGauges: []keyValue[float64]{
+				{key: "metricName4", value: 100.001},
+				{key: "metricName5", value: 300.003},
+				{key: "metricName6", value: -400.004}},
 		},
 	}
 

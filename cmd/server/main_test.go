@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,8 +12,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/storage"
 )
 
@@ -31,6 +31,14 @@ type modelRequest struct {
 	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+}
+
+type jsonApiRequest struct {
+	httpMethod     string
+	path           string
+	request        *modelRequest
+	counterMetrics map[string]int64
+	gaugeMetrics   map[string]float64
 }
 
 type testDescription struct {
@@ -155,7 +163,7 @@ func Test_UpdateJsonRequest_MethodNotAllowed(t *testing.T) {
 		}
 
 		t.Run("json_"+method+"_methodNotAllowed", func(t *testing.T) {
-			actual := runJsonTest(t, method, nil)
+			actual := runJsonTest(t, jsonApiRequest{httpMethod: method, path: "update"})
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -185,7 +193,7 @@ func Test_UpdateJsonRequest_MetricName(t *testing.T) {
 			}
 
 			t.Run("json_"+metricName+"_"+metricType+"_metricName", func(t *testing.T) {
-				actual := runJsonTest(t, http.MethodPost, &requestObj)
+				actual := runJsonTest(t, jsonApiRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 				assert.Equal(t, expected, actual)
 			})
 		}
@@ -215,7 +223,7 @@ func Test_UpdateJsonRequest_MetricType(t *testing.T) {
 		}
 
 		t.Run("json_"+metricType+"_metricType", func(t *testing.T) {
-			actual := runJsonTest(t, http.MethodPost, &requestObj)
+			actual := runJsonTest(t, jsonApiRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -241,7 +249,7 @@ func Test_UpdateJsonRequest_CounterMetricValue(t *testing.T) {
 		}
 
 		t.Run("json_"+valueString+"_counterMetricValue", func(t *testing.T) {
-			actual := runJsonTest(t, http.MethodPost, &requestObj)
+			actual := runJsonTest(t, jsonApiRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 			assert.Equal(t, expected, actual)
 		})
 	}
@@ -267,13 +275,13 @@ func Test_UpdateJsonRequest_GaugeMetricValue(t *testing.T) {
 		}
 
 		t.Run("json_"+valueString+"_gaugeMetricValue", func(t *testing.T) {
-			actual := runJsonTest(t, http.MethodPost, &requestObj)
+			actual := runJsonTest(t, jsonApiRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 			assert.Equal(t, expected, actual)
 		})
 	}
 }
 
-func Test_GetMetricValue(t *testing.T) {
+func Test_GetMetricUrlRequest(t *testing.T) {
 	tests := []struct {
 		name          string
 		metricType    string
@@ -337,19 +345,122 @@ func Test_GetMetricValue(t *testing.T) {
 	}
 }
 
-func runJsonTest(t *testing.T, httpMethod string, requestObj *modelRequest) *callResult {
+func Test_GetMetricJsonRequest_MethodNotAllowed(t *testing.T) {
+	expected := expectedNotAllowed()
+	for _, method := range getMethods() {
+		if method == http.MethodPost {
+			continue
+		}
+
+		t.Run("json_"+method+"_methodNotAllowed", func(t *testing.T) {
+			actual := runJsonTest(t, jsonApiRequest{httpMethod: method, path: "value"})
+			assert.Equal(t, expected, actual)
+		})
+	}
+}
+
+func Test_GetMetricJsonRequest_MetricName(t *testing.T) {
+	for _, metricType := range []string{"counter", "gauge"} {
+		for _, metricName := range getMetricName() {
+			requestObj := modelRequest{
+				ID:    metricName,
+				MType: metricType,
+			}
+
+			var expected *callResult
+			var counterMetrics map[string]int64
+			var gaugeMetrics map[string]float64
+
+			if metricName == "" {
+				expected = expectedBadRequest("metric name is missed\n")
+			} else {
+				if metricType == "counter" {
+					delta := int64(100)
+					counterMetrics = map[string]int64{requestObj.ID: delta}
+					expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", &delta, nil)
+				} else if metricType == "gauge" {
+					value := float64(100)
+					gaugeMetrics = map[string]float64{requestObj.ID: value}
+					expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
+				}
+			}
+
+			t.Run("json_"+metricName+"_"+metricType+"_metricName", func(t *testing.T) {
+				actual := runJsonTest(t, jsonApiRequest{
+					httpMethod:     http.MethodPost,
+					path:           "value",
+					request:        &requestObj,
+					counterMetrics: counterMetrics,
+					gaugeMetrics:   gaugeMetrics,
+				})
+				assert.Equal(t, expected, actual)
+			})
+		}
+	}
+}
+
+func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
+	for _, metricType := range getMetricType() {
+		requestObj := modelRequest{
+			ID:    "testMetricName",
+			MType: metricType,
+		}
+
+		var expected *callResult
+		var counterMetrics map[string]int64
+		var gaugeMetrics map[string]float64
+
+		if metricType == "" {
+			expected = expectedBadRequest("metric type is missed\n")
+		} else if metricType == "counter" {
+			delta := int64(100)
+			counterMetrics = map[string]int64{requestObj.ID: delta}
+			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", &delta, nil)
+		} else if metricType == "gauge" {
+			value := float64(100)
+			gaugeMetrics = map[string]float64{requestObj.ID: value}
+			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
+		} else {
+			expected = expectedNotFoundMessage("Metric not found\n")
+		}
+
+		t.Run("json_"+metricType+"_metricType", func(t *testing.T) {
+			actual := runJsonTest(t, jsonApiRequest{
+				httpMethod:     http.MethodPost,
+				path:           "value",
+				request:        &requestObj,
+				counterMetrics: counterMetrics,
+				gaugeMetrics:   gaugeMetrics,
+			})
+			assert.Equal(t, expected, actual)
+		})
+	}
+}
+
+func runJsonTest(t *testing.T, apiRequest jsonApiRequest) *callResult {
 
 	var buffer bytes.Buffer
 	metricsStorage := storage.NewInMemoryStorage()
+	if apiRequest.counterMetrics != nil {
+		for name, value := range apiRequest.counterMetrics {
+			metricsStorage.AddCounterMetricValue(name, value)
+		}
+	}
+	if apiRequest.gaugeMetrics != nil {
+		for name, value := range apiRequest.gaugeMetrics {
+			metricsStorage.AddGaugeMetricValue(name, value)
+		}
+	}
+
 	htmlPageBuilder := html.NewSimplePageBuilder()
 
-	if requestObj != nil {
+	if apiRequest.request != nil {
 		encoder := json.NewEncoder(&buffer)
-		err := encoder.Encode(requestObj)
+		err := encoder.Encode(apiRequest.request)
 		require.NoError(t, err)
 	}
 
-	request := httptest.NewRequest(httpMethod, "http://localhost:8080/update", &buffer)
+	request := httptest.NewRequest(apiRequest.httpMethod, "http://localhost:8080/"+apiRequest.path, &buffer)
 	w := httptest.NewRecorder()
 	router := initRouter(metricsStorage, htmlPageBuilder)
 	router.ServeHTTP(w, request)
@@ -377,7 +488,11 @@ func appendIfNotEmpty(builder *strings.Builder, str string) {
 }
 
 func expectedNotFound() *callResult {
-	return getExpected(http.StatusNotFound, "404 page not found\n")
+	return expectedNotFoundMessage("404 page not found\n")
+}
+
+func expectedNotFoundMessage(message string) *callResult {
+	return getExpected(http.StatusNotFound, message)
 }
 
 func expectedNotAllowed() *callResult {

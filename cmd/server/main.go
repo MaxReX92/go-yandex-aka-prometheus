@@ -54,10 +54,11 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTML
 	})
 
 	router.Route("/value", func(r chi.Router) {
-		r.With(fillCommonUrlContext).
-			Get("/{metricType}/{metricName}", handleMetricValue(metricsStorage))
+		r.With(fillJsonContext, fillMetricValue(metricsStorage)).
+			Post("/", successJsonResponse())
 
-		// handle json request here
+		r.With(fillCommonUrlContext, fillMetricValue(metricsStorage)).
+			Get("/{metricType}/{metricName}", successUrlValueResponse())
 	})
 
 	router.Route("/", func(r chi.Router) {
@@ -209,22 +210,64 @@ func updateMetric(updateAction func(w http.ResponseWriter, metrics *model.Metric
 	}
 }
 
-func handleMetricValue(storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+func fillMetricValue(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
+			if !ok {
+				http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
+				return
+			}
+
+			metricValue, ok := storage.GetMetricValue(metricContext.MType, metricContext.ID)
+			if !ok {
+				http.Error(w, "Metric not found", http.StatusNotFound)
+				return
+			}
+
+			resultValue := &model.Metrics{
+				ID:    metricContext.ID,
+				MType: metricContext.MType,
+			}
+
+			switch metricContext.MType {
+			case "counter":
+				counterValue := int64(metricValue)
+				resultValue.Delta = &counterValue
+			case "gauge":
+				resultValue.Value = &metricValue
+			default:
+				http.Error(w, "Unknown metric type", http.StatusInternalServerError)
+				return
+			}
+
+			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, metricInfoContextKey{key: metricResultKey}, resultValue)))
+		})
+	}
+}
+
+func successUrlValueResponse() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
+		metricValueResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
 		if !ok {
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
 		}
 
-		value, ok := storage.GetMetricValue(metricContext.MType, metricContext.ID)
-		if !ok {
-			http.Error(w, "Metric not found", http.StatusNotFound)
+		var result string
+		switch metricValueResult.MType {
+		case "counter":
+			result = parser.IntToString(*metricValueResult.Delta)
+		case "gauge":
+			result = parser.FloatToString(*metricValueResult.Value)
+		default:
+			http.Error(w, "Unknown metric type", http.StatusInternalServerError)
 			return
 		}
 
-		successResponse(w, "text/plain", value)
+		successResponse(w, "text/plain", result)
 	}
 }
 

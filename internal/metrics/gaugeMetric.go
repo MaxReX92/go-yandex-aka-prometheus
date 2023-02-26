@@ -26,6 +26,12 @@ func (m *gaugeMetric) GetName() string {
 	return m.name
 }
 
+func (m *gaugeMetric) GetValue() float64 {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	return m.value
+}
+
 func (m *gaugeMetric) GetStringValue() string {
 	m.lock.RLock()
 	defer m.lock.RUnlock()

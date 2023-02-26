@@ -48,23 +48,23 @@ func (s *inMemoryStorage) GetMetricValues() map[string]map[string]string {
 	return metricValues
 }
 
-func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (string, bool) {
+func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (float64, bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
 	metricsByName, ok := s.metricsByType[metricType]
 	if !ok {
 		logger.ErrorFormat("Metrics with type %v not found", metricType)
-		return "", false
+		return 0, false
 	}
 
 	metric, ok := metricsByName[metricName]
 	if !ok {
 		logger.ErrorFormat("Metrics with name %v and type %v not found", metricName, metricType)
-		return "", false
+		return 0, false
 	}
 
-	return metric.GetStringValue(), true
+	return metric.GetValue(), true
 }
 
 func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) float64 {

@@ -26,6 +26,12 @@ func (m *counterMetric) GetName() string {
 	return m.name
 }
 
+func (m *counterMetric) GetValue() float64 {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	return float64(m.value)
+}
+
 func (m *counterMetric) GetStringValue() string {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
