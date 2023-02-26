@@ -121,6 +121,16 @@ func fillJsonContext(next http.Handler) http.Handler {
 			return
 		}
 
+		if metricContext.ID == "" {
+			http.Error(w, "metric name is missed", http.StatusBadRequest)
+			return
+		}
+
+		if metricContext.MType == "" {
+			http.Error(w, "metric type is missed", http.StatusBadRequest)
+			return
+		}
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -134,9 +144,17 @@ func updateTypedMetric(storage storage.MetricsStorage) func(next http.Handler) h
 
 		switch metricContext.MType {
 		case "gauge":
+			if metricContext.Value == nil {
+				http.Error(w, "metric value is missed", http.StatusBadRequest)
+				return nil, false
+			}
 			newValue := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
 			result.Value = &newValue
 		case "counter":
+			if metricContext.Delta == nil {
+				http.Error(w, "metric value is missed", http.StatusBadRequest)
+				return nil, false
+			}
 			newValue := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
 			result.Delta = &newValue
 		default:
