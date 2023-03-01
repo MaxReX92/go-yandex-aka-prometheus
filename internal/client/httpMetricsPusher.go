@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 	"io"
 	"net/http"
-	"strings"
+	"net/url"
 	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
@@ -26,12 +27,17 @@ type httpMetricsPusher struct {
 	pushTimeout      time.Duration
 }
 
-func NewMetricsPusher(config metricsPusherConfig) MetricsPusher {
+func NewMetricsPusher(config metricsPusherConfig) (MetricsPusher, error) {
+	serverURL, err := normalizeURL(config.MetricsServerURL())
+	if err != nil {
+		return nil, err
+	}
+
 	return &httpMetricsPusher{
 		client:           http.Client{},
-		metricsServerURL: strings.TrimRight(config.MetricsServerURL(), "/"),
+		metricsServerURL: serverURL.String(),
 		pushTimeout:      config.PushMetricsTimeout(),
-	}
+	}, nil
 }
 
 func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) error {
@@ -106,4 +112,20 @@ func createModelRequest(metric metrics.Metric) (*model.Metrics, error) {
 	}
 
 	return modelRequest, nil
+}
+
+func normalizeURL(urlStr string) (*url.URL, error) {
+	if urlStr == "" {
+		return nil, errors.New("empty url string")
+	}
+
+	result, err := url.ParseRequestURI(urlStr)
+	if err != nil {
+		result, err = url.ParseRequestURI("http://" + urlStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
 }

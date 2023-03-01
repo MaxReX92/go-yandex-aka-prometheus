@@ -23,8 +23,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	metricPusher, err := client.NewMetricsPusher(conf)
+	if err != nil {
+		panic(err)
+	}
 
-	metricPusher := client.NewMetricsPusher(conf)
 	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(conf)
 	customMetricsProvider := metrics.NewCustomMetricsProvider()
 	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider([]metrics.MetricsProvider{runtimeMetricsProvider, customMetricsProvider})
