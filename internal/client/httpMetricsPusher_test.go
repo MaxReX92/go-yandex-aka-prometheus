@@ -74,12 +74,13 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			}))
 			defer server.Close()
 
-			pusher := NewMetricsPusher(&config{
+			pusher, err := NewMetricsPusher(&config{
 				connectionString: server.URL,
 				timeout:          10 * time.Second,
 			})
+			assert.NoError(t, err)
 
-			err := pusher.Push(ctx, tt.metricsToPush)
+			err = pusher.Push(ctx, tt.metricsToPush)
 			assert.NoError(t, err)
 
 			for key, call := range called {
