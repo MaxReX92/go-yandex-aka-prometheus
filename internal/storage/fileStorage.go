@@ -38,3 +38,8 @@ func (s *fileStorage) Restore(rawMetrics string) {
 	//TODO implement me
 	panic("implement me")
 }
+
+func (s *fileStorage) Close() {
+	//TODO implement me
+	panic("implement me")
+}

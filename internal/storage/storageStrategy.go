@@ -44,3 +44,8 @@ func (s *storageStrategy) Restore(rawMetrics string) {
 	//TODO implement me
 	panic("implement me")
 }
+
+func (s *storageStrategy) Close() {
+	//TODO implement me
+	panic("implement me")
+}
