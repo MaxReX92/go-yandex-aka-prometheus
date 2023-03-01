@@ -59,7 +59,7 @@ func (s *storageStrategy) GetMetricValue(metricType string, metricName string) (
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	return s.inMemoryStorage.GetMetricValue(metricType, metricType)
+	return s.inMemoryStorage.GetMetricValue(metricType, metricName)
 }
 
 func (s *storageStrategy) Restore(rawMetrics string) {
