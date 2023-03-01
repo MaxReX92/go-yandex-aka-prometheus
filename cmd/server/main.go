@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/caarlos0/env/v7"
 	"github.com/go-chi/chi/v5"
@@ -28,7 +29,7 @@ type metricInfoContextKey struct {
 
 type config struct {
 	ServerURL            string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	StoreIntervalSeconds int64  `env:"STORE_INTERVAL" envDefault:"300"`
+	StoreIntervalSeconds int    `env:"STORE_INTERVAL" envDefault:"300"`
 	StoreFile            string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore              bool   `env:"RESTORE" envDefault:"true"`
 }
@@ -343,4 +344,12 @@ func ensureMetricContext(r *http.Request) (context.Context, *model.Metrics) {
 	}
 
 	return ctx, metricContext
+}
+
+func (c *config) StoreFilePath() string {
+	return c.StoreFile
+}
+
+func (c *config) StoreInterval() time.Duration {
+	return time.Duration(c.StoreIntervalSeconds) * time.Second
 }

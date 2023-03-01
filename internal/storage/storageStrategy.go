@@ -1,15 +1,20 @@
 package storage
 
+import "time"
+
 type storageStrategyConfig interface {
+	StoreInterval() time.Duration
 }
 
 type storageStrategy struct {
 	inMemoryStorage MetricsStorage
 	fileStorage     MetricsStorage
+	storeInterval   time.Duration
 }
 
 func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsStorage, fileStorage MetricsStorage) MetricsStorage {
 	return &storageStrategy{
+		storeInterval:   config.StoreInterval(),
 		inMemoryStorage: inMemoryStorage,
 		fileStorage:     fileStorage,
 	}

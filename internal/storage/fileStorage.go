@@ -1,13 +1,17 @@
 package storage
 
 type fileStorageConfig interface {
+	StoreFilePath() string
 }
 
 type fileStorage struct {
+	storeFile string
 }
 
 func NewFileStorage(config fileStorageConfig) MetricsStorage {
-	return &fileStorage{}
+	return &fileStorage{
+		storeFile: config.StoreFilePath(),
+	}
 }
 
 func (f *fileStorage) AddGaugeMetricValue(name string, value float64) float64 {
