@@ -127,5 +127,14 @@ func normalizeURL(urlStr string) (*url.URL, error) {
 		}
 	}
 
+	if result.Scheme == "localhost" {
+		// =)
+		return normalizeURL("http://" + result.String())
+	}
+
+	if result.Scheme == "" {
+		result.Scheme = "http"
+	}
+
 	return result, nil
 }
