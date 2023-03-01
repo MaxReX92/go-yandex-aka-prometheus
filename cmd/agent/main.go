@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/caarlos0/env/v7"
 	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/client"
@@ -9,15 +10,20 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
-const (
-	pushTimeout           = 10 * time.Second
-	serverURL             = "http://127.0.0.1:8080"
-	sendMetricsInterval   = 10 * time.Second
-	updateMetricsInterval = 2 * time.Second
-)
+type config struct {
+	ServerURL             string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
+	PushTimeout           time.Duration `env:"PUSH_TIMEOUT" envDefault:"10s"`
+	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
+	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+	CollectMetricsList    []string
+}
 
 func main() {
-	conf := createConfig()
+	conf, err := createConfig()
+	if err != nil {
+		panic(err)
+	}
+
 	metricPusher := client.NewMetricsPusher(conf)
 	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(conf)
 	customMetricsProvider := metrics.NewCustomMetricsProvider()
@@ -30,64 +36,52 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go getMetricsWorker.StartWork(ctx, updateMetricsInterval)
-	pushMetricsWorker.StartWork(ctx, sendMetricsInterval)
+	go getMetricsWorker.StartWork(ctx, conf.UpdateMetricsInterval)
+	pushMetricsWorker.StartWork(ctx, conf.SendMetricsInterval)
 }
 
-func createConfig() *config {
-	return &config{
-		serverURL:             serverURL,
-		pushTimeout:           pushTimeout,
-		sendMetricsInterval:   sendMetricsInterval,
-		updateMetricsInterval: updateMetricsInterval,
-		collectMetricsList: []string{
-			"Alloc",
-			"BuckHashSys",
-			"Frees",
-			"GCCPUFraction",
-			"GCSys",
-			"HeapAlloc",
-			"HeapIdle",
-			"HeapInuse",
-			"HeapObjects",
-			"HeapReleased",
-			"HeapSys",
-			"LastGC",
-			"Lookups",
-			"MCacheInuse",
-			"MCacheSys",
-			"MSpanInuse",
-			"MSpanSys",
-			"Mallocs",
-			"NextGC",
-			"NumForcedGC",
-			"NumGC",
-			"OtherSys",
-			"PauseTotalNs",
-			"StackInuse",
-			"StackSys",
-			"Sys",
-			"TotalAlloc",
-		},
-	}
-}
-
-type config struct {
-	serverURL             string
-	pushTimeout           time.Duration
-	sendMetricsInterval   time.Duration
-	updateMetricsInterval time.Duration
-	collectMetricsList    []string
+func createConfig() (*config, error) {
+	conf := &config{CollectMetricsList: []string{
+		"Alloc",
+		"BuckHashSys",
+		"Frees",
+		"GCCPUFraction",
+		"GCSys",
+		"HeapAlloc",
+		"HeapIdle",
+		"HeapInuse",
+		"HeapObjects",
+		"HeapReleased",
+		"HeapSys",
+		"LastGC",
+		"Lookups",
+		"MCacheInuse",
+		"MCacheSys",
+		"MSpanInuse",
+		"MSpanSys",
+		"Mallocs",
+		"NextGC",
+		"NumForcedGC",
+		"NumGC",
+		"OtherSys",
+		"PauseTotalNs",
+		"StackInuse",
+		"StackSys",
+		"Sys",
+		"TotalAlloc",
+	}}
+	err := env.Parse(conf)
+	return conf, err
 }
 
 func (c *config) MetricsList() []string {
-	return c.collectMetricsList
+	return c.CollectMetricsList
 }
 
 func (c *config) MetricsServerURL() string {
-	return c.serverURL
+	return c.ServerURL
 }
 
 func (c *config) PushMetricsTimeout() time.Duration {
-	return c.pushTimeout
+	return c.PushTimeout
 }
