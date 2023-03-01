@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-
+	"github.com/caarlos0/env/v7"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"net/http"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
@@ -17,7 +17,6 @@ import (
 )
 
 const (
-	listenURL        = "127.0.0.1:8080"
 	metricContextKey = "metricContextKey"
 	metricResultKey  = "metricResultKey"
 )
@@ -26,16 +25,31 @@ type metricInfoContextKey struct {
 	key string
 }
 
+type config struct {
+	ServerURL string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
+}
+
 func main() {
+	conf, err := createConfig()
+	if err != nil {
+		panic(err)
+	}
+
 	metricsStorage := storage.NewInMemoryStorage()
 	htmlPageBuilder := html.NewSimplePageBuilder()
 	router := initRouter(metricsStorage, htmlPageBuilder)
 
-	logger.Info("Start listen " + listenURL)
-	err := http.ListenAndServe(listenURL, router)
+	logger.Info("Start listen " + conf.ServerURL)
+	err = http.ListenAndServe(conf.ServerURL, router)
 	if err != nil {
 		logger.Error(err.Error())
 	}
+}
+
+func createConfig() (*config, error) {
+	conf := &config{}
+	err := env.Parse(conf)
+	return conf, err
 }
 
 func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTMLPageBuilder) *chi.Mux {
