@@ -88,7 +88,60 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			}
 		})
 	}
+}
 
+func Test_URLNormalization(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		expectedError string
+		expectedURL   string
+	}{
+		{
+			name:          "empty_url",
+			input:         "",
+			expectedError: "empty url string",
+		},
+		{
+			name:        "no_schema_no_port",
+			input:       "127.0.0.1",
+			expectedURL: "http://127.0.0.1",
+		},
+		{
+			name:        "no_schema_port",
+			input:       "127.0.0.1:1234",
+			expectedURL: "http://127.0.0.1:1234",
+		},
+		{
+			name:        "schema_port",
+			input:       "ftp://127.0.0.1:1234",
+			expectedURL: "ftp://127.0.0.1:1234",
+		},
+		{
+			name:        "localhost",
+			input:       "localhost:1234",
+			expectedURL: "http://localhost:1234",
+		},
+		{
+			name:        "valid",
+			input:       "https://ya.ru",
+			expectedURL: "https://ya.ru",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := normalizeURL(tt.input)
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedError, err.Error())
+
+			} else {
+				assert.Equal(t, tt.expectedURL, actual.String())
+			}
+		})
+	}
 }
 
 func createCounterMetric(name string, value int64) metrics.Metric {
