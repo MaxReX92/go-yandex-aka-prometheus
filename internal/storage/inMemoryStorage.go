@@ -67,6 +67,11 @@ func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (
 	return metric.GetValue(), true
 }
 
+func (s *inMemoryStorage) Restore(rawMetrics string) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) float64 {
 	metricsList, ok := s.metricsByType[metricType]
 	if !ok {
