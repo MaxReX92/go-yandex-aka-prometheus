@@ -2,25 +2,24 @@ package storage
 
 import (
 	"sync"
-	"time"
 )
 
 type storageStrategyConfig interface {
-	StoreInterval() time.Duration
+	SyncMode() bool
 }
 
 type storageStrategy struct {
-	inMemoryStorage MetricsStorage
-	fileStorage     MetricsStorage
-	storeInterval   time.Duration
 	lock            sync.RWMutex
+	fileStorage     MetricsStorage
+	inMemoryStorage MetricsStorage
+	syncMode        bool
 }
 
 func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsStorage, fileStorage MetricsStorage) MetricsStorage {
 	return &storageStrategy{
-		storeInterval:   config.StoreInterval(),
-		inMemoryStorage: inMemoryStorage,
 		fileStorage:     fileStorage,
+		inMemoryStorage: inMemoryStorage,
+		syncMode:        config.SyncMode(),
 	}
 }
 
@@ -29,7 +28,7 @@ func (s *storageStrategy) AddGaugeMetricValue(name string, value float64) float6
 	defer s.lock.Unlock()
 
 	result := s.inMemoryStorage.AddGaugeMetricValue(name, value)
-	if s.isSyncMode() {
+	if s.syncMode {
 		s.fileStorage.AddGaugeMetricValue(name, value)
 	}
 
@@ -41,7 +40,7 @@ func (s *storageStrategy) AddCounterMetricValue(name string, value int64) int64 
 	defer s.lock.Unlock()
 
 	result := s.inMemoryStorage.AddCounterMetricValue(name, value)
-	if s.isSyncMode() {
+	if s.syncMode {
 		s.fileStorage.AddCounterMetricValue(name, value)
 	}
 
@@ -62,6 +61,17 @@ func (s *storageStrategy) GetMetricValue(metricType string, metricName string) (
 	return s.inMemoryStorage.GetMetricValue(metricType, metricName)
 }
 
+func (s *storageStrategy) Flush() error {
+	err := s.inMemoryStorage.Flush()
+	if err != nil {
+		return err
+	}
+
+	// in go 1.20
+	// errors.Join()
+	return s.fileStorage.Flush()
+}
+
 func (s *storageStrategy) Restore(rawMetrics string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -72,8 +82,4 @@ func (s *storageStrategy) Restore(rawMetrics string) {
 func (s *storageStrategy) Close() {
 	s.inMemoryStorage.Close()
 	s.fileStorage.Close()
-}
-
-func (s *storageStrategy) isSyncMode() bool {
-	return s.storeInterval == 0
 }

@@ -34,6 +34,12 @@ func (f *fileStorage) GetMetricValue(metricType string, metricName string) (floa
 	panic("implement me")
 }
 
+func (s *fileStorage) Flush() error {
+	//TODO implement me
+	panic("implement me")
+	return nil
+}
+
 func (s *fileStorage) Restore(rawMetrics string) {
 	//TODO implement me
 	panic("implement me")

@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
-
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 	"github.com/caarlos0/env/v7"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"net/http"
+	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
@@ -29,7 +29,7 @@ type metricInfoContextKey struct {
 
 type config struct {
 	ServerURL            string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	StoreIntervalSeconds int    `env:"STORE_INTERVAL" envDefault:"300"`
+	StoreIntervalSeconds int64  `env:"STORE_INTERVAL" envDefault:"300"`
 	StoreFile            string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore              bool   `env:"RESTORE" envDefault:"true"`
 }
@@ -40,11 +40,20 @@ func main() {
 		panic(err)
 	}
 
-	metricsStorage := storage.NewInMemoryStorage()
+	inMemoryStorage := storage.NewInMemoryStorage()
+	fileStorage := storage.NewFileStorage(conf)
+	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
+	backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.Flush() })
 	htmlPageBuilder := html.NewSimplePageBuilder()
-	router := initRouter(metricsStorage, htmlPageBuilder)
+	router := initRouter(storageStrategy, htmlPageBuilder)
 
 	logger.Info("Start listen " + conf.ServerURL)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if !conf.SyncMode() {
+		go backgroundStore.StartWork(ctx, time.Second*time.Duration(conf.StoreIntervalSeconds))
+	}
 	err = http.ListenAndServe(conf.ServerURL, router)
 	if err != nil {
 		logger.Error(err.Error())
@@ -350,6 +359,6 @@ func (c *config) StoreFilePath() string {
 	return c.StoreFile
 }
 
-func (c *config) StoreInterval() time.Duration {
-	return time.Duration(c.StoreIntervalSeconds) * time.Second
+func (c *config) SyncMode() bool {
+	return c.StoreIntervalSeconds == 0
 }
