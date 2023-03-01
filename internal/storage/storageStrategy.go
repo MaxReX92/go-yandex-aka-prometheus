@@ -9,10 +9,10 @@ type storageStrategyConfig interface {
 }
 
 type storageStrategy struct {
-	lock            sync.RWMutex
 	fileStorage     MetricsStorage
 	inMemoryStorage MetricsStorage
 	syncMode        bool
+	lock            sync.RWMutex
 }
 
 func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsStorage, fileStorage MetricsStorage) MetricsStorage {
@@ -59,17 +59,6 @@ func (s *storageStrategy) GetMetricValue(metricType string, metricName string) (
 	defer s.lock.RUnlock()
 
 	return s.inMemoryStorage.GetMetricValue(metricType, metricName)
-}
-
-func (s *storageStrategy) Flush() error {
-	err := s.inMemoryStorage.Flush()
-	if err != nil {
-		return err
-	}
-
-	// in go 1.20
-	// errors.Join()
-	return s.fileStorage.Flush()
 }
 
 func (s *storageStrategy) Restore(rawMetrics string) {

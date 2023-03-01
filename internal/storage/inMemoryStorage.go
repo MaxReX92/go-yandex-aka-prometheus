@@ -67,11 +67,6 @@ func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (
 	return metric.GetValue(), true
 }
 
-func (s *inMemoryStorage) Flush() error {
-	// nothing to do
-	return nil
-}
-
 func (s *inMemoryStorage) Restore(rawMetrics string) {
 	//TODO implement me
 	panic("implement me")
