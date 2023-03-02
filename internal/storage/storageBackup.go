@@ -1,6 +1,6 @@
 package storage
 
 type StorageBackup interface {
-	Create()
-	Restore()
+	CreateBackup() error
+	RestoreFromBackup() error
 }

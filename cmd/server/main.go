@@ -41,7 +41,7 @@ func main() {
 	}
 
 	inMemoryStorage := storage.NewInMemoryStorage()
-	fileStorage := storage.NewFileStorage(conf)
+	fileStorage, _ := storage.NewFileStorage(conf)
 	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
 	backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.Flush() })
 	htmlPageBuilder := html.NewSimplePageBuilder()
@@ -177,14 +177,14 @@ func updateTypedMetric(storage storage.MetricsStorage) func(next http.Handler) h
 				http.Error(w, "metric value is missed", http.StatusBadRequest)
 				return nil, false
 			}
-			newValue := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
+			newValue, _ := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
 			result.Value = &newValue
 		case "counter":
 			if metricContext.Delta == nil {
 				http.Error(w, "metric value is missed", http.StatusBadRequest)
 				return nil, false
 			}
-			newValue := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
+			newValue, _ := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
 			result.Delta = &newValue
 		default:
 			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
@@ -197,7 +197,7 @@ func updateTypedMetric(storage storage.MetricsStorage) func(next http.Handler) h
 
 func updateGaugeMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
 	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, bool) {
-		res := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
+		res, _ := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
 		return &model.Metrics{
 			ID:    metricContext.ID,
 			MType: metricContext.MType,
@@ -208,7 +208,7 @@ func updateGaugeMetric(storage storage.MetricsStorage) func(next http.Handler) h
 
 func updateCounterMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
 	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, bool) {
-		res := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
+		res, _ := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
 		return &model.Metrics{
 			ID:    metricContext.ID,
 			MType: metricContext.MType,

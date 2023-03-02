@@ -8,67 +8,99 @@ type storageStrategyConfig interface {
 	SyncMode() bool
 }
 
-type storageStrategy struct {
+type StorageStrategy struct {
 	fileStorage     MetricsStorage
 	inMemoryStorage MetricsStorage
 	syncMode        bool
 	lock            sync.RWMutex
 }
 
-func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsStorage, fileStorage MetricsStorage) MetricsStorage {
-	return &storageStrategy{
+func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsStorage, fileStorage MetricsStorage) *StorageStrategy {
+	return &StorageStrategy{
 		fileStorage:     fileStorage,
 		inMemoryStorage: inMemoryStorage,
 		syncMode:        config.SyncMode(),
 	}
 }
 
-func (s *storageStrategy) AddGaugeMetricValue(name string, value float64) float64 {
+func (s *StorageStrategy) AddGaugeMetricValue(name string, value float64) (float64, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	result := s.inMemoryStorage.AddGaugeMetricValue(name, value)
-	if s.syncMode {
-		s.fileStorage.AddGaugeMetricValue(name, value)
+	result, err := s.inMemoryStorage.AddGaugeMetricValue(name, value)
+	if err != nil {
+		return result, err
 	}
 
-	return result
+	if s.syncMode {
+		_, err = s.fileStorage.AddGaugeMetricValue(name, result)
+		if err != nil {
+			return result, err
+		}
+	}
+
+	return result, nil
 }
 
-func (s *storageStrategy) AddCounterMetricValue(name string, value int64) int64 {
+func (s *StorageStrategy) AddCounterMetricValue(name string, value int64) (int64, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	result := s.inMemoryStorage.AddCounterMetricValue(name, value)
-	if s.syncMode {
-		s.fileStorage.AddCounterMetricValue(name, value)
+	result, err := s.inMemoryStorage.AddCounterMetricValue(name, value)
+	if err != nil {
+		return result, err
 	}
 
-	return result
+	if s.syncMode {
+		_, err = s.fileStorage.AddCounterMetricValue(name, result)
+		if err != nil {
+			return result, err
+		}
+	}
+
+	return result, nil
 }
 
-func (s *storageStrategy) GetMetricValues() map[string]map[string]string {
+func (s *StorageStrategy) GetMetricValues() (map[string]map[string]string, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
 	return s.inMemoryStorage.GetMetricValues()
 }
 
-func (s *storageStrategy) GetMetricValue(metricType string, metricName string) (float64, bool) {
+func (s *StorageStrategy) GetMetricValue(metricType string, metricName string) (float64, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
 	return s.inMemoryStorage.GetMetricValue(metricType, metricName)
 }
 
-func (s *storageStrategy) Restore(rawMetrics string) {
+func (s *StorageStrategy) Restore(metricValues map[string]map[string]string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.inMemoryStorage.Restore(rawMetrics)
+	return s.inMemoryStorage.Restore(metricValues)
 }
 
-func (s *storageStrategy) Close() {
+func (s *StorageStrategy) Close() {
 	s.inMemoryStorage.Close()
 	s.fileStorage.Close()
+}
+
+func (s *StorageStrategy) CreateBackup() error {
+	currentState, err := s.inMemoryStorage.GetMetricValues()
+	if err != nil {
+		return err
+	}
+
+	return s.fileStorage.Restore(currentState)
+}
+
+func (s *StorageStrategy) RestoreFromBackup() error {
+	restoredState, err := s.fileStorage.GetMetricValues()
+	if err != nil {
+		return err
+	}
+
+	return s.inMemoryStorage.Restore(restoredState)
 }

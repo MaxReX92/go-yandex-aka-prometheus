@@ -63,7 +63,7 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 				storage.AddCounterMetricValue(m.key, m.value)
 			}
 
-			actual := storage.GetMetricValues()
+			actual, _ := storage.GetMetricValues()
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -117,7 +117,7 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 				storage.AddGaugeMetricValue(m.key, m.value)
 			}
 
-			actual := storage.GetMetricValues()
+			actual, _ := storage.GetMetricValues()
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -172,7 +172,7 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 				storage.AddGaugeMetricValue(m.key, m.value)
 			}
 
-			actual := storage.GetMetricValues()
+			actual, _ := storage.GetMetricValues()
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
