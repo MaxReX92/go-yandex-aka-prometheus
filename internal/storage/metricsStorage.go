@@ -7,5 +7,4 @@ type MetricsStorage interface {
 	GetMetricValue(metricType string, metricName string) (float64, error)
 
 	Restore(metricValues map[string]map[string]string) error
-	Close()
 }

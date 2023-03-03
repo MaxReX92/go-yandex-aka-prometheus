@@ -60,7 +60,8 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 			for _, m := range tt.counterMetrics {
-				storage.AddCounterMetricValue(m.key, m.value)
+				_, err := storage.AddCounterMetricValue(m.key, m.value)
+				assert.NoError(t, err)
 			}
 
 			actual, _ := storage.GetMetricValues()
@@ -114,7 +115,8 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 			for _, m := range tt.gaugeMetrics {
-				storage.AddGaugeMetricValue(m.key, m.value)
+				_, err := storage.AddGaugeMetricValue(m.key, m.value)
+				assert.NoError(t, err)
 			}
 
 			actual, _ := storage.GetMetricValues()
@@ -165,11 +167,13 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 			storage := NewInMemoryStorage()
 
 			for _, m := range tt.counterMetrics {
-				storage.AddCounterMetricValue(m.key, m.value)
+				_, err := storage.AddCounterMetricValue(m.key, m.value)
+				assert.NoError(t, err)
 			}
 
 			for _, m := range tt.gaugeMetrics {
-				storage.AddGaugeMetricValue(m.key, m.value)
+				_, err := storage.AddGaugeMetricValue(m.key, m.value)
+				assert.NoError(t, err)
 			}
 
 			actual, _ := storage.GetMetricValues()
@@ -236,30 +240,32 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 			storage := NewInMemoryStorage()
 
 			for _, m := range tt.counterMetrics {
-				storage.AddCounterMetricValue(m.key, m.value)
+				_, err := storage.AddCounterMetricValue(m.key, m.value)
+				assert.NoError(t, err)
 			}
 
 			for _, m := range tt.gaugeMetrics {
-				storage.AddGaugeMetricValue(m.key, m.value)
+				_, err := storage.AddGaugeMetricValue(m.key, m.value)
+				assert.NoError(t, err)
 			}
 
 			for _, expectedCounter := range tt.expectedCounters {
-				actualValue, ok := storage.GetMetricValue("counter", expectedCounter.key)
+				actualValue, err := storage.GetMetricValue("counter", expectedCounter.key)
 				if tt.expectedOk {
-					assert.True(t, ok)
+					assert.NoError(t, err)
 					assert.Equal(t, expectedCounter.value, actualValue)
 				} else {
-					assert.False(t, ok)
+					assert.Error(t, err)
 				}
 			}
 
 			for _, expectedGauge := range tt.expectedGauges {
-				actualValue, ok := storage.GetMetricValue("gauge", expectedGauge.key)
+				actualValue, err := storage.GetMetricValue("gauge", expectedGauge.key)
 				if tt.expectedOk {
-					assert.True(t, ok)
+					assert.NoError(t, err)
 					assert.Equal(t, expectedGauge.value, actualValue)
 				} else {
-					assert.False(t, ok)
+					assert.Error(t, err)
 				}
 			}
 		})

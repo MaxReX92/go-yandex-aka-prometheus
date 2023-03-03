@@ -41,9 +41,9 @@ func main() {
 	}
 
 	inMemoryStorage := storage.NewInMemoryStorage()
-	fileStorage, _ := storage.NewFileStorage(conf)
+	fileStorage := storage.NewFileStorage(conf)
 	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
-	backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.Flush() })
+	backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.CreateBackup() })
 	htmlPageBuilder := html.NewSimplePageBuilder()
 	router := initRouter(storageStrategy, htmlPageBuilder)
 
@@ -248,8 +248,9 @@ func fillMetricValue(storage storage.MetricsStorage) func(next http.Handler) htt
 				return
 			}
 
-			metricValue, ok := storage.GetMetricValue(metricContext.MType, metricContext.ID)
-			if !ok {
+			metricValue, err := storage.GetMetricValue(metricContext.MType, metricContext.ID)
+			if err != nil {
+				logger.ErrorFormat("Fail to get metric value: %v", err)
 				http.Error(w, "Metric not found", http.StatusNotFound)
 				return
 			}
@@ -301,7 +302,11 @@ func successURLValueResponse() func(w http.ResponseWriter, r *http.Request) {
 
 func handleMetricsPage(builder html.HTMLPageBuilder, storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		successResponse(w, "text/html", builder.BuildMetricsPage(storage.GetMetricValues()))
+		values, err := storage.GetMetricValues()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		successResponse(w, "text/html", builder.BuildMetricsPage(values))
 	}
 }
 

@@ -92,10 +92,6 @@ func (s *inMemoryStorage) Restore(metricValues map[string]map[string]string) err
 	return nil
 }
 
-func (s *inMemoryStorage) Close() {
-	// nothing to do
-}
-
 func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) float64 {
 	metricsList, ok := s.metricsByType[metricType]
 	if !ok {

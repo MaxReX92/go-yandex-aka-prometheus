@@ -82,11 +82,6 @@ func (s *StorageStrategy) Restore(metricValues map[string]map[string]string) err
 	return s.inMemoryStorage.Restore(metricValues)
 }
 
-func (s *StorageStrategy) Close() {
-	s.inMemoryStorage.Close()
-	s.fileStorage.Close()
-}
-
 func (s *StorageStrategy) CreateBackup() error {
 	currentState, err := s.inMemoryStorage.GetMetricValues()
 	if err != nil {
