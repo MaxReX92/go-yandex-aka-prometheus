@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
@@ -29,12 +30,14 @@ type metricInfoContextKey struct {
 
 type config struct {
 	ServerURL            string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	StoreIntervalSeconds int64  `env:"STORE_INTERVAL" envDefault:"300"`
-	StoreFile            string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	StoreIntervalSeconds int64  `env:"STORE_INTERVAL" envDefault:"0"`
+	StoreFile            string `env:"STORE_FILE" envDefault:"C:\\Projects\\go-yandex-aka-prometheus\\tmp\\devops-metrics-db.json"`
 	Restore              bool   `env:"RESTORE" envDefault:"true"`
 }
 
 func main() {
+	fmt.Println(os.Getwd())
+
 	conf, err := createConfig()
 	if err != nil {
 		panic(err)
@@ -53,7 +56,7 @@ func main() {
 		logger.Info("Restore metrics from backup")
 		err = storageStrategy.RestoreFromBackup()
 		if err != nil {
-			panic(fmt.Sprintf("Fail to restore from backup: %v", err))
+			logger.ErrorFormat("Fail to restore state from backup: &v", err.Error())
 		}
 	}
 

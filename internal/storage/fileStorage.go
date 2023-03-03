@@ -23,7 +23,7 @@ type fileStorageConfig interface {
 
 type fileStorage struct {
 	filePath string
-	lock     *sync.Mutex
+	lock     sync.Mutex
 }
 
 func NewFileStorage(config fileStorageConfig) MetricsStorage {
