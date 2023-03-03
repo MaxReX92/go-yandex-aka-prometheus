@@ -43,17 +43,27 @@ func main() {
 	inMemoryStorage := storage.NewInMemoryStorage()
 	fileStorage := storage.NewFileStorage(conf)
 	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
-	backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.CreateBackup() })
 	htmlPageBuilder := html.NewSimplePageBuilder()
 	router := initRouter(storageStrategy, htmlPageBuilder)
 
-	logger.Info("Start listen " + conf.ServerURL)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	if conf.Restore {
+		logger.Info("Restore metrics from backup")
+		err = storageStrategy.RestoreFromBackup()
+		if err != nil {
+			panic(fmt.Sprintf("Fail to restore from backup: %v", err))
+		}
+	}
+
 	if !conf.SyncMode() {
+		logger.Info("Start periodic backup serice")
+		backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.CreateBackup() })
 		go backgroundStore.StartWork(ctx, time.Second*time.Duration(conf.StoreIntervalSeconds))
 	}
+
+	logger.Info("Start listen " + conf.ServerURL)
 	err = http.ListenAndServe(conf.ServerURL, router)
 	if err != nil {
 		logger.Error(err.Error())
