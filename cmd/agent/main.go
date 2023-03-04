@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"github.com/caarlos0/env/v7"
 	"time"
 
@@ -11,10 +12,10 @@ import (
 )
 
 type config struct {
-	ServerURL             string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	PushTimeout           time.Duration `env:"PUSH_TIMEOUT" envDefault:"10s"`
-	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
-	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+	ServerURL             string        `env:"ADDRESS"`
+	PushTimeout           time.Duration `env:"PUSH_TIMEOUT"`
+	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL"`
+	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL"`
 	CollectMetricsList    []string
 }
 
@@ -73,6 +74,13 @@ func createConfig() (*config, error) {
 		"Sys",
 		"TotalAlloc",
 	}}
+
+	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Metrics server URL")
+	flag.DurationVar(&conf.PushTimeout, "t", time.Second*10, "Push metrics timeout")
+	flag.DurationVar(&conf.SendMetricsInterval, "r", time.Second*10, "Send metrics interval")
+	flag.DurationVar(&conf.UpdateMetricsInterval, "p", time.Second*2, "Update metrics interval")
+	flag.Parse()
+
 	err := env.Parse(conf)
 	return conf, err
 }

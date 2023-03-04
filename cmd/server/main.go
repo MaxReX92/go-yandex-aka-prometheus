@@ -3,19 +3,21 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
+	"net/http"
+	"time"
+
 	"github.com/caarlos0/env/v7"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"net/http"
-	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/storage"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
 const (
@@ -28,10 +30,10 @@ type metricInfoContextKey struct {
 }
 
 type config struct {
-	ServerURL     string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	StoreInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
-	StoreFile     string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore       bool          `env:"RESTORE" envDefault:"true"`
+	ServerURL     string        `env:"ADDRESS"`
+	StoreInterval time.Duration `env:"STORE_INTERVAL"`
+	StoreFile     string        `env:"STORE_FILE"`
+	Restore       bool          `env:"RESTORE"`
 }
 
 func main() {
@@ -74,6 +76,12 @@ func main() {
 
 func createConfig() (*config, error) {
 	conf := &config{}
+	flag.BoolVar(&conf.Restore, "r", true, "Restore metric values from the server backup file")
+	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
+	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
+	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-db.json", "Backup storage file path")
+	flag.Parse()
+
 	err := env.Parse(conf)
 	return conf, err
 }
