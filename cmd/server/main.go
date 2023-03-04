@@ -56,7 +56,7 @@ func main() {
 		logger.Info("Restore metrics from backup")
 		err = storageStrategy.RestoreFromBackup()
 		if err != nil {
-			logger.ErrorFormat("Fail to restore state from backup: &v", err.Error())
+			logger.ErrorFormat("Fail to restore state from backup: %v", err.Error())
 		}
 	}
 
