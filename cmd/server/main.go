@@ -1,10 +1,12 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -24,6 +26,15 @@ const (
 	metricContextKey = "metricContextKey"
 	metricResultKey  = "metricResultKey"
 )
+
+var compressContentTypes = []string{
+	"application/javascript",
+	"application/json",
+	"text/css",
+	"text/html",
+	"text/plain",
+	"text/xml",
+}
 
 type metricInfoContextKey struct {
 	key string
@@ -89,6 +100,7 @@ func createConfig() (*config, error) {
 func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTMLPageBuilder) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
+	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))
 	router.Route("/update", func(r chi.Router) {
 		r.With(fillJSONContext, updateTypedMetric(metricsStorage)).
 			Post("/", successJSONResponse())
@@ -161,10 +173,22 @@ func fillCounterURLContext(next http.Handler) http.Handler {
 func fillJSONContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, metricContext := ensureMetricContext(r)
-		decoder := json.NewDecoder(r.Body)
-		defer r.Body.Close()
 
-		err := decoder.Decode(metricContext)
+		var reader io.Reader
+		if r.Header.Get(`Content-Encoding`) == `gzip` {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				logger.ErrorFormat("Fail to create gzip reader: %v", err.Error())
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			reader = gz
+			defer gz.Close()
+		} else {
+			reader = r.Body
+		}
+
+		err := json.NewDecoder(reader).Decode(metricContext)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Invalid json: %v", err.Error()), http.StatusBadRequest)
 			return
