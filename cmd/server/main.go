@@ -9,7 +9,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
@@ -29,15 +28,13 @@ type metricInfoContextKey struct {
 }
 
 type config struct {
-	ServerURL            string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	StoreIntervalSeconds int64  `env:"STORE_INTERVAL" envDefault:"300"`
-	StoreFile            string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore              bool   `env:"RESTORE" envDefault:"true"`
+	ServerURL     string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
+	StoreInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
+	StoreFile     string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Restore       bool          `env:"RESTORE" envDefault:"true"`
 }
 
 func main() {
-	fmt.Println(os.Getwd())
-
 	conf, err := createConfig()
 	if err != nil {
 		logger.ErrorFormat("Fail to create config file: %v", err.Error())
@@ -65,7 +62,7 @@ func main() {
 	if !conf.SyncMode() {
 		logger.Info("Start periodic backup serice")
 		backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.CreateBackup() })
-		go backgroundStore.StartWork(ctx, time.Second*time.Duration(conf.StoreIntervalSeconds))
+		go backgroundStore.StartWork(ctx, conf.StoreInterval)
 	}
 
 	logger.Info("Start listen " + conf.ServerURL)
@@ -380,10 +377,10 @@ func (c *config) StoreFilePath() string {
 }
 
 func (c *config) SyncMode() bool {
-	return c.StoreIntervalSeconds == 0
+	return c.StoreInterval == 0
 }
 
 func (c *config) String() string {
-	return fmt.Sprintf("\nServerURL:\t\t%v\nStoreIntervalSeconds:\t%v\nStoreFile:\t\t%v\nRestore:\t\t%v",
-		c.ServerURL, c.StoreIntervalSeconds, c.StoreFile, c.Restore)
+	return fmt.Sprintf("\nServerURL:\t%v\nStoreInterval:\t%v\nStoreFile:\t%v\nRestore:\t%v",
+		c.ServerURL, c.StoreInterval, c.StoreFile, c.Restore)
 }
