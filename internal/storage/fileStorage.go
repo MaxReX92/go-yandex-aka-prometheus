@@ -182,7 +182,7 @@ func (f *fileStorage) workWithFileResult(flag int, work func(file *os.File) (sto
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	fileStream, err := os.OpenFile(f.filePath, flag, 644)
+	fileStream, err := os.OpenFile(f.filePath, flag, 0644)
 	if err != nil {
 		logger.ErrorFormat("Fail to open file: %v", err.Error())
 		return nil, err
