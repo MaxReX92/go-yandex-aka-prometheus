@@ -40,8 +40,10 @@ func main() {
 
 	conf, err := createConfig()
 	if err != nil {
+		logger.ErrorFormat("Fail to create config file: %v", err.Error())
 		panic(err)
 	}
+	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
 	inMemoryStorage := storage.NewInMemoryStorage()
 	fileStorage := storage.NewFileStorage(conf)
@@ -379,4 +381,9 @@ func (c *config) StoreFilePath() string {
 
 func (c *config) SyncMode() bool {
 	return c.StoreIntervalSeconds == 0
+}
+
+func (c *config) String() string {
+	return fmt.Sprintf("\nServerURL:\t\t%v\nStoreIntervalSeconds:\t%v\nStoreFile:\t\t%v\nRestore:\t\t%v",
+		c.ServerURL, c.StoreIntervalSeconds, c.StoreFile, c.Restore)
 }
