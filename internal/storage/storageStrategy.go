@@ -35,7 +35,7 @@ func (s *StorageStrategy) AddGaugeMetricValue(name string, value float64) (float
 	if s.syncMode {
 		_, err = s.fileStorage.AddGaugeMetricValue(name, result)
 		if err != nil {
-			return result, err
+			return 0, err
 		}
 	}
 
@@ -54,7 +54,7 @@ func (s *StorageStrategy) AddCounterMetricValue(name string, value int64) (int64
 	if s.syncMode {
 		_, err = s.fileStorage.AddCounterMetricValue(name, result)
 		if err != nil {
-			return result, err
+			return 0, err
 		}
 	}
 
