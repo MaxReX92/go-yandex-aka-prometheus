@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -178,6 +179,54 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 
 			actual, _ := storage.GetMetricValues()
 			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestInMemoryStorage_Restore(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		values        map[string]map[string]string
+		expectedError error
+	}{
+		{
+			name:          "unknown_metric_type",
+			expectedError: errors.New("unknown metric type from backup: unknownType"),
+			values: map[string]map[string]string{
+				"unknownType": {
+					"metricName1": "300",
+				},
+			},
+		},
+		{
+			name: "success",
+			values: map[string]map[string]string{
+				"counter": {
+					"metricName1": "300",
+					"metricName2": "300",
+					"metricName3": "-400",
+				},
+				"gauge": {
+					"metricName4": "200.002",
+					"metricName5": "300.003",
+					"metricName6": "-400.004",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := NewInMemoryStorage()
+
+			actualError := storage.Restore(tt.values)
+			assert.Equal(t, tt.expectedError, actualError)
+
+			if tt.expectedError == nil {
+				actual, _ := storage.GetMetricValues()
+				assert.Equal(t, tt.values, actual)
+			}
 		})
 	}
 }
