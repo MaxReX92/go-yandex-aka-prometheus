@@ -2,20 +2,22 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
+	"io"
 	"os"
 	"sync"
 )
 
-type backupRecord struct {
+type storageRecord struct {
 	Type  string `json:"type"`
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 
-type backupRecords []*backupRecord
+type storageRecords []*storageRecord
 
 type fileStorageConfig interface {
 	StoreFilePath() string
@@ -27,9 +29,19 @@ type fileStorage struct {
 }
 
 func NewFileStorage(config fileStorageConfig) MetricsStorage {
-	return &fileStorage{
+	result := &fileStorage{
 		filePath: config.StoreFilePath(),
 	}
+
+	if _, err := os.Stat(result.filePath); err != nil && result.filePath != "" && errors.Is(err, os.ErrNotExist) {
+		logger.InfoFormat("Init storage file in %v", result.filePath)
+		err = result.writeRecordsToFile(storageRecords{})
+		if err != nil {
+			logger.ErrorFormat("Fail to init storage file: %v", err)
+		}
+	}
+
+	return result
 }
 
 func (f *fileStorage) AddGaugeMetricValue(name string, value float64) (float64, error) {
@@ -41,7 +53,7 @@ func (f *fileStorage) AddCounterMetricValue(name string, value int64) (int64, er
 }
 
 func (f *fileStorage) GetMetricValue(metricType string, metricName string) (float64, error) {
-	records, err := f.readRecordsFromFile(func(record *backupRecord) bool {
+	records, err := f.readRecordsFromFile(func(record *storageRecord) bool {
 		return record.Type == metricType && record.Name == metricName
 	})
 	if err != nil {
@@ -55,7 +67,7 @@ func (f *fileStorage) GetMetricValue(metricType string, metricName string) (floa
 }
 
 func (f *fileStorage) GetMetricValues() (map[string]map[string]string, error) {
-	records, err := f.readRecordsFromFile(func(record *backupRecord) bool { return true })
+	records, err := f.readRecordsFromFile(func(record *storageRecord) bool { return true })
 	if err != nil {
 		return nil, err
 	}
@@ -75,10 +87,10 @@ func (f *fileStorage) GetMetricValues() (map[string]map[string]string, error) {
 }
 
 func (f *fileStorage) Restore(metricValues map[string]map[string]string) error {
-	var records backupRecords
+	var records storageRecords
 	for metricType, metricsByType := range metricValues {
 		for metricName, metricValue := range metricsByType {
-			records = append(records, &backupRecord{
+			records = append(records, &storageRecord{
 				Type:  metricType,
 				Name:  metricName,
 				Value: metricValue,
@@ -91,15 +103,24 @@ func (f *fileStorage) Restore(metricValues map[string]map[string]string) error {
 
 func (f *fileStorage) updateMetric(metricType string, metricName string, stringValue string) error {
 	// Read and write
-	return f.workWithFile(os.O_RDWR|os.O_CREATE, func(fileStream *os.File) error {
-		records, err := f.readRecords(fileStream, func(record *backupRecord) bool {
-			return record.Type != metricType || record.Name != metricType
+	return f.workWithFile(os.O_CREATE|os.O_RDWR, func(fileStream *os.File) error {
+		records, err := f.readRecords(fileStream, func(record *storageRecord) bool {
+			return record.Type != metricType || record.Name != metricName
 		})
 		if err != nil {
 			return err
 		}
 
-		records = append(records, &backupRecord{
+		_, err = fileStream.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
+		err = fileStream.Truncate(0)
+		if err != nil {
+			return err
+		}
+
+		records = append(records, &storageRecord{
 			Type:  metricType,
 			Name:  metricName,
 			Value: stringValue,
@@ -108,22 +129,22 @@ func (f *fileStorage) updateMetric(metricType string, metricName string, stringV
 	})
 }
 
-func (f *fileStorage) readRecordsFromFile(isValid func(*backupRecord) bool) (backupRecords, error) {
+func (f *fileStorage) readRecordsFromFile(isValid func(*storageRecord) bool) (storageRecords, error) {
 	// ReadOnly
-	return f.workWithFileResult(os.O_RDONLY|os.O_CREATE, func(fileStream *os.File) (backupRecords, error) {
+	return f.workWithFileResult(os.O_CREATE|os.O_RDONLY, func(fileStream *os.File) (storageRecords, error) {
 		return f.readRecords(fileStream, isValid)
 	})
 }
 
-func (f *fileStorage) readRecords(fileStream *os.File, isValid func(*backupRecord) bool) (backupRecords, error) {
-	var records backupRecords
+func (f *fileStorage) readRecords(fileStream *os.File, isValid func(*storageRecord) bool) (storageRecords, error) {
+	var records storageRecords
 	err := json.NewDecoder(fileStream).Decode(&records)
 	if err != nil {
-		logger.ErrorFormat("Fail to decode backup: %v", err)
+		logger.ErrorFormat("Fail to decode storage: %v", err)
 		return nil, err
 	}
 
-	result := backupRecords{}
+	result := storageRecords{}
 	for _, record := range records {
 		if isValid(record) {
 			result = append(result, record)
@@ -133,25 +154,27 @@ func (f *fileStorage) readRecords(fileStream *os.File, isValid func(*backupRecor
 	return result, nil
 }
 
-func (f *fileStorage) writeRecordsToFile(records backupRecords) error {
+func (f *fileStorage) writeRecordsToFile(records storageRecords) error {
 	// WriteOnly
-	return f.workWithFile(os.O_WRONLY|os.O_CREATE, func(fileStream *os.File) error {
+	return f.workWithFile(os.O_CREATE|os.O_WRONLY, func(fileStream *os.File) error {
 		return f.writeRecords(fileStream, records)
 	})
 }
 
-func (f *fileStorage) writeRecords(fileStream *os.File, records backupRecords) error {
-	return json.NewEncoder(fileStream).Encode(records)
+func (f *fileStorage) writeRecords(fileStream *os.File, records storageRecords) error {
+	encoder := json.NewEncoder(fileStream)
+	encoder.SetIndent("", " ")
+	return encoder.Encode(records)
 }
 
 func (f *fileStorage) workWithFile(flag int, work func(file *os.File) error) error {
-	_, err := f.workWithFileResult(flag, func(fileStream *os.File) (backupRecords, error) {
+	_, err := f.workWithFileResult(flag, func(fileStream *os.File) (storageRecords, error) {
 		return nil, work(fileStream)
 	})
 	return err
 }
 
-func (f *fileStorage) workWithFileResult(flag int, work func(file *os.File) (backupRecords, error)) (backupRecords, error) {
+func (f *fileStorage) workWithFileResult(flag int, work func(file *os.File) (storageRecords, error)) (storageRecords, error) {
 	if f.filePath == "" {
 		return nil, nil
 	}
