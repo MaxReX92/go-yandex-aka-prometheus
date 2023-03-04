@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	testError = errors.New("testError")
+	errTest = errors.New("errTest")
 )
 
 func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
@@ -41,28 +41,28 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 		{
 			name:                 "noSync_inMemoryStorage_error",
 			syncMode:             false,
-			inMemoryStorageError: testError,
-			expectedError:        testError,
+			inMemoryStorageError: errTest,
+			expectedError:        errTest,
 		},
 		{
 			name:                 "sync_inMemoryStorage_error",
 			syncMode:             true,
-			inMemoryStorageError: testError,
-			expectedError:        testError,
+			inMemoryStorageError: errTest,
+			expectedError:        errTest,
 		},
 		{
 			name:                  "noSync_fileStorage_error",
 			syncMode:              false,
 			inMemoryStorageResult: metricValueFloat,
-			fileStorageErrorError: testError,
+			fileStorageErrorError: errTest,
 			expectedResult:        metricValueFloat,
 		},
 		{
 			name:                  "sync_fileStorage_error",
 			syncMode:              true,
 			inMemoryStorageResult: metricValueFloat,
-			fileStorageErrorError: testError,
-			expectedError:         testError,
+			fileStorageErrorError: errTest,
+			expectedError:         errTest,
 		},
 		{
 			name:                  "noSync_success",
@@ -127,28 +127,28 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 		{
 			name:                 "noSync_inMemoryStorage_error",
 			syncMode:             false,
-			inMemoryStorageError: testError,
-			expectedError:        testError,
+			inMemoryStorageError: errTest,
+			expectedError:        errTest,
 		},
 		{
 			name:                 "sync_inMemoryStorage_error",
 			syncMode:             true,
-			inMemoryStorageError: testError,
-			expectedError:        testError,
+			inMemoryStorageError: errTest,
+			expectedError:        errTest,
 		},
 		{
 			name:                  "noSync_fileStorage_error",
 			syncMode:              false,
 			inMemoryStorageResult: metricValueInt,
-			fileStorageErrorError: testError,
+			fileStorageErrorError: errTest,
 			expectedResult:        metricValueInt,
 		},
 		{
 			name:                  "sync_fileStorage_error",
 			syncMode:              true,
 			inMemoryStorageResult: metricValueInt,
-			fileStorageErrorError: testError,
-			expectedError:         testError,
+			fileStorageErrorError: errTest,
+			expectedError:         errTest,
 		},
 		{
 			name:                  "noSync_success",
@@ -213,14 +213,14 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 		{
 			name:          "noSync_error",
 			syncMode:      false,
-			storageError:  testError,
-			expectedError: testError,
+			storageError:  errTest,
+			expectedError: errTest,
 		},
 		{
 			name:          "sync_error",
 			syncMode:      true,
-			storageError:  testError,
-			expectedError: testError,
+			storageError:  errTest,
+			expectedError: errTest,
 		},
 		{
 			name:           "noSync_success",
@@ -272,14 +272,14 @@ func TestStorageStrategy_GetMetricValue(t *testing.T) {
 		{
 			name:          "noSync_error",
 			syncMode:      false,
-			storageError:  testError,
-			expectedError: testError,
+			storageError:  errTest,
+			expectedError: errTest,
 		},
 		{
 			name:          "sync_error",
 			syncMode:      true,
-			storageError:  testError,
-			expectedError: testError,
+			storageError:  errTest,
+			expectedError: errTest,
 		},
 		{
 			name:           "noSync_success",
@@ -331,14 +331,14 @@ func TestStorageStrategy_Restore(t *testing.T) {
 		{
 			name:          "noSync_error",
 			syncMode:      false,
-			storageError:  testError,
-			expectedError: testError,
+			storageError:  errTest,
+			expectedError: errTest,
 		},
 		{
 			name:          "sync_error",
 			syncMode:      true,
-			storageError:  testError,
-			expectedError: testError,
+			storageError:  errTest,
+			expectedError: errTest,
 		},
 		{
 			name:     "noSync_success",
@@ -387,28 +387,28 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 		{
 			name:              "noSync_currentState_error",
 			syncMode:          false,
-			currentStateError: testError,
-			expectedError:     testError,
+			currentStateError: errTest,
+			expectedError:     errTest,
 		},
 		{
 			name:              "sync_currentState_error",
 			syncMode:          true,
-			currentStateError: testError,
-			expectedError:     testError,
+			currentStateError: errTest,
+			expectedError:     errTest,
 		},
 		{
 			name:               "noSync_restore_error",
 			syncMode:           false,
 			currentStateValues: values,
-			restoreError:       testError,
-			expectedError:      testError,
+			restoreError:       errTest,
+			expectedError:      errTest,
 		},
 		{
 			name:               "sync_restore_error",
 			syncMode:           true,
 			currentStateValues: values,
-			restoreError:       testError,
-			expectedError:      testError,
+			restoreError:       errTest,
+			expectedError:      errTest,
 		},
 		{
 			name:               "noSync_success",
@@ -464,28 +464,28 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 		{
 			name:              "noSync_currentState_error",
 			syncMode:          false,
-			currentStateError: testError,
-			expectedError:     testError,
+			currentStateError: errTest,
+			expectedError:     errTest,
 		},
 		{
 			name:              "sync_currentState_error",
 			syncMode:          true,
-			currentStateError: testError,
-			expectedError:     testError,
+			currentStateError: errTest,
+			expectedError:     errTest,
 		},
 		{
 			name:               "noSync_restore_error",
 			syncMode:           false,
 			currentStateValues: values,
-			restoreError:       testError,
-			expectedError:      testError,
+			restoreError:       errTest,
+			expectedError:      errTest,
 		},
 		{
 			name:               "sync_restore_error",
 			syncMode:           true,
 			currentStateValues: values,
-			restoreError:       testError,
-			expectedError:      testError,
+			restoreError:       errTest,
+			expectedError:      errTest,
 		},
 		{
 			name:               "noSync_success",
