@@ -3,7 +3,9 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,19 +21,43 @@ type config struct {
 	timeout          time.Duration
 }
 
+type testMetric struct {
+	name       string
+	metricType string
+	value      float64
+}
+
 func TestHttpMetricsPusher_Push(t *testing.T) {
 	var counterValue int64 = 100
 	var gaugeValue = 100.001
 
 	tests := []struct {
-		name             string
-		metricsToPush    []metrics.Metric
-		expectedRequests []model.Metrics
+		name               string
+		metricsToPush      []metrics.Metric
+		expectedRequests   []model.Metrics
+		expectedError      error
+		responseStatusCode int
 	}{
 		{
-			name:             "empty_metrics_list",
-			metricsToPush:    []metrics.Metric{},
-			expectedRequests: []model.Metrics{},
+			name:               "empty_metrics_list",
+			metricsToPush:      []metrics.Metric{},
+			expectedRequests:   []model.Metrics{},
+			responseStatusCode: http.StatusOK,
+		},
+		{
+			name: "unknown_metric_type",
+			metricsToPush: []metrics.Metric{
+				&testMetric{metricType: "invalid_type"},
+			},
+			expectedError: errors.New("unknown metric type: invalid_type"),
+		},
+		{
+			name: "wrong_status_code",
+			metricsToPush: []metrics.Metric{
+				createCounterMetric("counterMetric1", counterValue),
+			},
+			expectedError:      errors.New("fail to push metric: "),
+			responseStatusCode: http.StatusBadRequest,
 		},
 		{
 			name: "simple_metrics",
@@ -50,6 +76,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 					Value: &gaugeValue,
 				},
 			},
+			responseStatusCode: http.StatusOK,
 		},
 	}
 
@@ -71,6 +98,8 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 				err := json.NewDecoder(r.Body).Decode(modelRequest)
 				assert.NoError(t, err)
 				called[modelRequest.ID+modelRequest.MType] = true
+
+				w.WriteHeader(tt.responseStatusCode)
 			}))
 			defer server.Close()
 
@@ -81,7 +110,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = pusher.Push(ctx, tt.metricsToPush)
-			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedError, err)
 
 			for key, call := range called {
 				assert.True(t, call, "Metric was not pushed, %v", key)
@@ -162,4 +191,28 @@ func (c *config) MetricsServerURL() string {
 
 func (c *config) PushMetricsTimeout() time.Duration {
 	return c.timeout
+}
+
+func (t *testMetric) GetName() string {
+	return t.name
+}
+
+func (t *testMetric) GetType() string {
+	return t.metricType
+}
+
+func (t *testMetric) GetValue() float64 {
+	return t.value
+}
+
+func (t *testMetric) GetStringValue() string {
+	return parser.FloatToString(t.value)
+}
+
+func (t *testMetric) SetValue(value float64) float64 {
+	t.value = value
+	return value
+}
+
+func (t *testMetric) Flush() {
 }
