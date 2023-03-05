@@ -7,11 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type val interface {
-	int64 | float64 | string
-}
-
-type keyValue[T val] struct {
+type keyValue[T int64 | float64] struct {
 	key   string
 	value T
 }
