@@ -14,9 +14,7 @@ type gaugeMetric struct {
 
 func NewGaugeMetric(name string) Metric {
 	return &gaugeMetric{
-		name:  name,
-		value: 0,
-		lock:  sync.RWMutex{},
+		name: name,
 	}
 }
 
@@ -28,21 +26,28 @@ func (m *gaugeMetric) GetName() string {
 	return m.name
 }
 
+func (m *gaugeMetric) GetValue() float64 {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	return m.value
+}
+
 func (m *gaugeMetric) GetStringValue() string {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	return parser.FloatToString(m.value)
 }
 
-func (m *gaugeMetric) SetValue(value float64) {
-	m.setValue(value)
+func (m *gaugeMetric) SetValue(value float64) float64 {
+	return m.setValue(value)
 }
 
 func (m *gaugeMetric) Flush() {
 }
 
-func (m *gaugeMetric) setValue(value float64) {
+func (m *gaugeMetric) setValue(value float64) float64 {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.value = value
+	return m.value
 }

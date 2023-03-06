@@ -14,9 +14,7 @@ type counterMetric struct {
 
 func NewCounterMetric(name string) Metric {
 	return &counterMetric{
-		name:  name,
-		value: 0,
-		lock:  sync.RWMutex{},
+		name: name,
 	}
 }
 
@@ -28,22 +26,29 @@ func (m *counterMetric) GetName() string {
 	return m.name
 }
 
+func (m *counterMetric) GetValue() float64 {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	return float64(m.value)
+}
+
 func (m *counterMetric) GetStringValue() string {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	return parser.IntToString(m.value)
 }
 
-func (m *counterMetric) SetValue(value float64) {
-	m.setValue(m.value + int64(value))
+func (m *counterMetric) SetValue(value float64) float64 {
+	return m.setValue(m.value + int64(value))
 }
 
 func (m *counterMetric) Flush() {
 	m.setValue(0)
 }
 
-func (m *counterMetric) setValue(value int64) {
+func (m *counterMetric) setValue(value int64) float64 {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.value = value
+	return float64(m.value)
 }

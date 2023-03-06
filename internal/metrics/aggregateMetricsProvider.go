@@ -10,7 +10,7 @@ type aggregateMetricsProvider struct {
 	providers []MetricsProvider
 }
 
-func NewAggregateMetricsProvider(providers []MetricsProvider) MetricsProvider {
+func NewAggregateMetricsProvider(providers ...MetricsProvider) MetricsProvider {
 	return &aggregateMetricsProvider{
 		providers: providers,
 	}

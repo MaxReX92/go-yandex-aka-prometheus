@@ -19,6 +19,7 @@ func NewPeriodicWorker(workFunc func(ctx context.Context) error) PeriodicWorker 
 
 func (w *PeriodicWorker) StartWork(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:

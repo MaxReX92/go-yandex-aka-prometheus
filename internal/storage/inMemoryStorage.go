@@ -1,9 +1,10 @@
 package storage
 
 import (
+	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"sync"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 )
 
@@ -19,19 +20,19 @@ func NewInMemoryStorage() MetricsStorage {
 	}
 }
 
-func (s *inMemoryStorage) AddGaugeMetricValue(name string, value float64) {
+func (s *inMemoryStorage) AddGaugeMetricValue(name string, value float64) (float64, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.ensureMetricUpdate("gauge", name, value, metrics.NewGaugeMetric)
+	return s.ensureMetricUpdate("gauge", name, value, metrics.NewGaugeMetric), nil
 }
 
-func (s *inMemoryStorage) AddCounterMetricValue(name string, value int64) {
+func (s *inMemoryStorage) AddCounterMetricValue(name string, value int64) (int64, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.ensureMetricUpdate("counter", name, float64(value), metrics.NewCounterMetric)
+	return int64(s.ensureMetricUpdate("counter", name, float64(value), metrics.NewCounterMetric)), nil
 }
 
-func (s *inMemoryStorage) GetMetricValues() map[string]map[string]string {
+func (s *inMemoryStorage) GetMetricValues() (map[string]map[string]string, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -45,29 +46,53 @@ func (s *inMemoryStorage) GetMetricValues() map[string]map[string]string {
 		}
 	}
 
-	return metricValues
+	return metricValues, nil
 }
 
-func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (string, bool) {
+func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (float64, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
 	metricsByName, ok := s.metricsByType[metricType]
 	if !ok {
-		logger.ErrorFormat("Metrics with type %v not found", metricType)
-		return "", false
+		return 0, fmt.Errorf("metrics with type %v not found", metricType)
 	}
 
 	metric, ok := metricsByName[metricName]
 	if !ok {
-		logger.ErrorFormat("Metrics with name %v and type %v not found", metricName, metricType)
-		return "", false
+		return 0, fmt.Errorf("metrics with name %v and type %v not found", metricName, metricType)
 	}
 
-	return metric.GetStringValue(), true
+	return metric.GetValue(), nil
 }
 
-func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) {
+func (s *inMemoryStorage) Restore(metricValues map[string]map[string]string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.metricsByType = map[string]map[string]metrics.Metric{}
+
+	for metricType, metricsByType := range metricValues {
+		metricFactory := metrics.NewGaugeMetric
+		if metricType == "counter" {
+			metricFactory = metrics.NewCounterMetric
+		} else if metricType != "gauge" {
+			return fmt.Errorf("unknown metric type from backup: %v", metricType)
+		}
+
+		for metricName, metricValue := range metricsByType {
+			value, err := parser.ToFloat64(metricValue)
+			if err != nil {
+				return err
+			}
+			s.ensureMetricUpdate(metricType, metricName, value, metricFactory)
+		}
+	}
+
+	return nil
+}
+
+func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) float64 {
 	metricsList, ok := s.metricsByType[metricType]
 	if !ok {
 		metricsList = map[string]metrics.Metric{}
@@ -80,5 +105,5 @@ func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, val
 		metricsList[name] = currentMetric
 	}
 
-	currentMetric.SetValue(value)
+	return currentMetric.SetValue(value)
 }

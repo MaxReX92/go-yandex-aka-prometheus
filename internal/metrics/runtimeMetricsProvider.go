@@ -9,7 +9,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
-type RuntimeMetricsProviderConfig interface {
+type runtimeMetricsProviderConfig interface {
 	MetricsList() []string
 }
 
@@ -17,7 +17,7 @@ type runtimeMetricsProvider struct {
 	metrics []Metric
 }
 
-func NewRuntimeMetricsProvider(config RuntimeMetricsProviderConfig) MetricsProvider {
+func NewRuntimeMetricsProvider(config runtimeMetricsProviderConfig) MetricsProvider {
 	metrics := []Metric{}
 	for _, metricName := range config.MetricsList() {
 		metrics = append(metrics, NewGaugeMetric(metricName))
