@@ -98,12 +98,12 @@ func Test_UpdateUrlRequest(t *testing.T) {
 						} else if metricType == "gauge" {
 							_, err := strconv.ParseFloat(metricValue, 64)
 							if err != nil {
-								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err.Error()))
+								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err))
 							}
 						} else if metricType == "counter" {
 							_, err := strconv.ParseInt(metricValue, 10, 64)
 							if err != nil {
-								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err.Error()))
+								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err))
 							}
 						}
 					}

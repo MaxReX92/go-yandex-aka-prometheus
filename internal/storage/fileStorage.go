@@ -185,13 +185,13 @@ func (f *fileStorage) workWithFileResult(flag int, work func(file *os.File) (sto
 
 	fileStream, err := os.OpenFile(f.filePath, flag, 0644)
 	if err != nil {
-		logger.ErrorFormat("Fail to open file: %v", err.Error())
+		logger.ErrorFormat("Fail to open file: %v", err)
 		return nil, err
 	}
 	defer func(fileStream *os.File) {
 		err = fileStream.Close()
 		if err != nil {
-			logger.ErrorFormat("Fail to close file: %v", err.Error())
+			logger.ErrorFormat("Fail to close file: %v", err)
 		}
 	}(fileStream)
 

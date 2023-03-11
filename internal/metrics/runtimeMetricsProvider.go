@@ -35,7 +35,7 @@ func (p *runtimeMetricsProvider) Update(context.Context) error {
 		metricName := metric.GetName()
 		metricValue, err := getFieldValue(&stats, metricName)
 		if err != nil {
-			logger.ErrorFormat("Fail to get %v runtime metric value: %v", metricName, err.Error())
+			logger.ErrorFormat("Fail to get %v runtime metric value: %v", metricName, err)
 			return err
 		}
 

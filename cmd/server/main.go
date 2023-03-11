@@ -51,7 +51,7 @@ type config struct {
 func main() {
 	conf, err := createConfig()
 	if err != nil {
-		logger.ErrorFormat("Fail to create config file: %v", err.Error())
+		logger.ErrorFormat("Fail to create config file: %v", err)
 		panic(err)
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
@@ -69,7 +69,7 @@ func main() {
 		logger.Info("Restore metrics from backup")
 		err = storageStrategy.RestoreFromBackup()
 		if err != nil {
-			logger.ErrorFormat("Fail to restore state from backup: %v", err.Error())
+			logger.ErrorFormat("Fail to restore state from backup: %v", err)
 		}
 	}
 
@@ -82,7 +82,7 @@ func main() {
 	logger.Info("Start listen " + conf.ServerURL)
 	err = http.ListenAndServe(conf.ServerURL, router)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.ErrorObj(err)
 	}
 }
 
@@ -147,7 +147,7 @@ func fillGaugeContext(next http.Handler) http.Handler {
 		strValue := chi.URLParam(r, "metricValue")
 		value, err := parser.ToFloat64(strValue)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", strValue, err.Error()), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", strValue, err), http.StatusBadRequest)
 			return
 		}
 
@@ -162,7 +162,7 @@ func fillCounterURLContext(next http.Handler) http.Handler {
 		strValue := chi.URLParam(r, "metricValue")
 		value, err := parser.ToInt64(strValue)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", strValue, err.Error()), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", strValue, err), http.StatusBadRequest)
 			return
 		}
 
@@ -179,7 +179,7 @@ func fillJSONContext(next http.Handler) http.Handler {
 		if r.Header.Get(`Content-Encoding`) == `gzip` {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
-				logger.ErrorFormat("Fail to create gzip reader: %v", err.Error())
+				logger.ErrorFormat("Fail to create gzip reader: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -191,7 +191,7 @@ func fillJSONContext(next http.Handler) http.Handler {
 
 		err := json.NewDecoder(reader).Decode(metricContext)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid json: %v", err.Error()), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Invalid json: %v", err), http.StatusBadRequest)
 			return
 		}
 
@@ -388,7 +388,7 @@ func successJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 
 		result, err := json.Marshal(metricUpdateResult)
 		if err != nil {
-			logger.ErrorFormat("Fail to serialise result: %v", err.Error())
+			logger.ErrorFormat("Fail to serialise result: %v", err)
 			http.Error(w, "Fail to serialise result", http.StatusInternalServerError)
 			return
 		}
@@ -397,7 +397,7 @@ func successJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(result)
 		if err != nil {
-			logger.ErrorFormat("Fail to write response: %v", err.Error())
+			logger.ErrorFormat("Fail to write response: %v", err)
 		}
 	}
 }
@@ -407,7 +407,7 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte(message))
 	if err != nil {
-		logger.ErrorFormat("Fail to write response: %v", err.Error())
+		logger.ErrorFormat("Fail to write response: %v", err)
 	}
 }
 
