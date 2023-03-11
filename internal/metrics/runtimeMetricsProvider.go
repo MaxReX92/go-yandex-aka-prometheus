@@ -18,9 +18,10 @@ type runtimeMetricsProvider struct {
 }
 
 func NewRuntimeMetricsProvider(config runtimeMetricsProviderConfig) MetricsProvider {
-	metrics := []Metric{}
-	for _, metricName := range config.MetricsList() {
-		metrics = append(metrics, NewGaugeMetric(metricName))
+	metricsList := config.MetricsList()
+	metrics := make([]Metric, len(metricsList))
+	for i, metricName := range metricsList {
+		metrics[i] = NewGaugeMetric(metricName)
 	}
 
 	return &runtimeMetricsProvider{metrics: metrics}
@@ -35,7 +36,7 @@ func (p *runtimeMetricsProvider) Update(context.Context) error {
 		metricName := metric.GetName()
 		metricValue, err := getFieldValue(&stats, metricName)
 		if err != nil {
-			logger.ErrorFormat("Fail to get %v runtime metric value: %v", metricName, err.Error())
+			logger.ErrorFormat("Fail to get %v runtime metric value: %v", metricName, err)
 			return err
 		}
 

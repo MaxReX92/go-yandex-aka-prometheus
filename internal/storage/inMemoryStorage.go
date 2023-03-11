@@ -2,10 +2,10 @@ package storage
 
 import (
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"sync"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
 type inMemoryStorage struct {

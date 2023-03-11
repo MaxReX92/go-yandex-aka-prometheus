@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
 type config struct {

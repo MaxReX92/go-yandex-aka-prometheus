@@ -25,6 +25,10 @@ func Error(message string) {
 	log.Printf("[ERROR]: %v\r\n", message)
 }
 
+func ErrorObj(err error) {
+	ErrorFormat("%v", err)
+}
+
 func ErrorFormat(format string, v ...any) {
 	Error(fmt.Sprintf(format, v...))
 }

@@ -29,7 +29,7 @@ func (a *aggregateMetricsProvider) Update(ctx context.Context) error {
 	for _, provider := range a.providers {
 		err := provider.Update(ctx)
 		if err != nil {
-			logger.ErrorFormat("Fail to update metrics: %v", err.Error())
+			logger.ErrorFormat("Fail to update metrics: %v", err)
 			return err
 		}
 	}

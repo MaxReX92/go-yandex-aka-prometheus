@@ -1,0 +1,19 @@
+name: linter
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  devopstest:
+    runs-on: ubuntu-latest
+    container: golang:1.19
+    
+    steps:
+      - uses: actions/checkout@v3
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest

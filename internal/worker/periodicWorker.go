@@ -25,7 +25,7 @@ func (w *PeriodicWorker) StartWork(ctx context.Context, interval time.Duration) 
 		case <-ticker.C:
 			err := w.workFunc(ctx)
 			if err != nil {
-				logger.ErrorFormat("Periodic worker error: %v", err.Error())
+				logger.ErrorFormat("Periodic worker error: %v", err)
 			}
 		case <-ctx.Done():
 			logger.ErrorFormat("Periodic worker canceled")

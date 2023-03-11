@@ -98,12 +98,12 @@ func Test_UpdateUrlRequest(t *testing.T) {
 						} else if metricType == "gauge" {
 							_, err := strconv.ParseFloat(metricValue, 64)
 							if err != nil {
-								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err.Error()))
+								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err))
 							}
 						} else if metricType == "counter" {
 							_, err := strconv.ParseInt(metricValue, 10, 64)
 							if err != nil {
-								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err.Error()))
+								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err))
 							}
 						}
 					}
@@ -314,7 +314,8 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			metricsStorage := storage.NewInMemoryStorage()
-			metricsStorage.AddCounterMetricValue("metricName", 100)
+			_, err := metricsStorage.AddCounterMetricValue("metricName", 100)
+			assert.NoError(t, err)
 
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			w := httptest.NewRecorder()
@@ -443,12 +444,14 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	metricsStorage := storage.NewInMemoryStorage()
 	if apiRequest.counterMetrics != nil {
 		for name, value := range apiRequest.counterMetrics {
-			metricsStorage.AddCounterMetricValue(name, value)
+			_, err := metricsStorage.AddCounterMetricValue(name, value)
+			assert.NoError(t, err)
 		}
 	}
 	if apiRequest.gaugeMetrics != nil {
 		for name, value := range apiRequest.gaugeMetrics {
-			metricsStorage.AddGaugeMetricValue(name, value)
+			_, err := metricsStorage.AddGaugeMetricValue(name, value)
+			assert.NoError(t, err)
 		}
 	}
 
@@ -504,7 +507,7 @@ func expectedBadRequest(message string) *callResult {
 }
 
 func expectedNotImplemented() *callResult {
-	return getExpected(http.StatusNotImplemented, "Unknown metric type\n")
+	return getExpected(http.StatusNotImplemented, "unknown metric type\n")
 }
 
 func expectedOk() *callResult {

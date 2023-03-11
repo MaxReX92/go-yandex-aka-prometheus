@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 )
 
 type metricsPusherConfig interface {
@@ -51,34 +51,34 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 		metricName := metric.GetName()
 		modelRequest, err := createModelRequest(metric)
 		if err != nil {
-			logger.ErrorFormat("Fail to create model request: %v", err.Error())
+			logger.ErrorFormat("Fail to create model request: %v", err)
 			return err
 		}
 
 		var buffer bytes.Buffer
 		err = json.NewEncoder(&buffer).Encode(modelRequest)
 		if err != nil {
-			logger.ErrorFormat("Fail to serialize model request: %v", err.Error())
+			logger.ErrorFormat("Fail to serialize model request: %v", err)
 			return err
 		}
 
 		request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, p.metricsServerURL+"/update", &buffer)
 		if err != nil {
-			logger.ErrorFormat("Fail to create push request: %v", err.Error())
+			logger.ErrorFormat("Fail to create push request: %v", err)
 			return err
 		}
 		request.Header.Add("Content-Type", "application/json")
 
 		response, err := p.client.Do(request)
 		if err != nil {
-			logger.ErrorFormat("Fail to push metric: %v", err.Error())
+			logger.ErrorFormat("Fail to push metric: %v", err)
 			return err
 		}
 		defer response.Body.Close()
 
 		content, err := io.ReadAll(response.Body)
 		if err != nil {
-			logger.ErrorFormat("Fail to read response body: %v", err.Error())
+			logger.ErrorFormat("Fail to read response body: %v", err)
 			return err
 		}
 
