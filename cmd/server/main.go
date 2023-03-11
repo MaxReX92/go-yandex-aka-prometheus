@@ -238,7 +238,7 @@ func updateTypedMetric(storage storage.MetricsStorage) func(next http.Handler) h
 
 			result.Delta = &newValue
 		default:
-			return nil, http.StatusNotImplemented, errors.New("Unknown metric type")
+			return nil, http.StatusNotImplemented, errors.New("unknown metric type")
 		}
 
 		return result, 0, nil
