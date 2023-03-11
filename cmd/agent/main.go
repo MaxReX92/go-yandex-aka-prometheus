@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/caarlos0/env/v7"
 	"time"
+
+	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/client"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"

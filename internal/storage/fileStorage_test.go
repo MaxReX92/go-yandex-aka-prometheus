@@ -3,9 +3,10 @@ package storage
 import (
 	"encoding/json"
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type config struct {
