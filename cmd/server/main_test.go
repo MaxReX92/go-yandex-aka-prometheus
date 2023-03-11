@@ -507,7 +507,7 @@ func expectedBadRequest(message string) *callResult {
 }
 
 func expectedNotImplemented() *callResult {
-	return getExpected(http.StatusNotImplemented, "Unknown metric type\n")
+	return getExpected(http.StatusNotImplemented, "unknown metric type\n")
 }
 
 func expectedOk() *callResult {

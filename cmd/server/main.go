@@ -110,7 +110,7 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTML
 		r.With(fillCommonURLContext, fillCounterURLContext, updateCounterMetric(metricsStorage)).
 			Post("/counter/{metricName}/{metricValue}", successURLResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "Unknown metric type", http.StatusNotImplemented)
+			http.Error(w, "unknown metric type", http.StatusNotImplemented)
 		})
 	})
 
@@ -327,7 +327,7 @@ func fillMetricValue(storage storage.MetricsStorage) func(next http.Handler) htt
 			case "gauge":
 				resultValue.Value = &metricValue
 			default:
-				http.Error(w, "Unknown metric type", http.StatusInternalServerError)
+				http.Error(w, "unknown metric type", http.StatusInternalServerError)
 				return
 			}
 
@@ -352,7 +352,7 @@ func successURLValueResponse() func(w http.ResponseWriter, r *http.Request) {
 		case "gauge":
 			result = parser.FloatToString(*metricValueResult.Value)
 		default:
-			http.Error(w, "Unknown metric type", http.StatusInternalServerError)
+			http.Error(w, "unknown metric type", http.StatusInternalServerError)
 			return
 		}
 
