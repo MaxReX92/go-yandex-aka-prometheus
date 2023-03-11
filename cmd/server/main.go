@@ -210,7 +210,7 @@ func fillJSONContext(next http.Handler) http.Handler {
 }
 
 func updateTypedMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, error, int) {
+	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, int, error) {
 		result := &model.Metrics{
 			ID:    metricContext.ID,
 			MType: metricContext.MType,
@@ -219,63 +219,63 @@ func updateTypedMetric(storage storage.MetricsStorage) func(next http.Handler) h
 		switch metricContext.MType {
 		case "gauge":
 			if metricContext.Value == nil {
-				return nil, errors.New("metric value is missed"), http.StatusBadRequest
+				return nil, http.StatusBadRequest, errors.New("metric value is missed")
 			}
 			newValue, err := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
 			if err != nil {
-				return nil, err, http.StatusInternalServerError
+				return nil, http.StatusInternalServerError, err
 			}
 
 			result.Value = &newValue
 		case "counter":
 			if metricContext.Delta == nil {
-				return nil, errors.New("metric value is missed"), http.StatusBadRequest
+				return nil, http.StatusBadRequest, errors.New("metric value is missed")
 			}
 			newValue, err := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
 			if err != nil {
-				return nil, err, http.StatusInternalServerError
+				return nil, http.StatusInternalServerError, err
 			}
 
 			result.Delta = &newValue
 		default:
-			return nil, errors.New("Unknown metric type"), http.StatusNotImplemented
+			return nil, http.StatusNotImplemented, errors.New("Unknown metric type")
 		}
 
-		return result, nil, 0
+		return result, 0, nil
 	})
 }
 
 func updateGaugeMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, error, int) {
+	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, int, error) {
 		res, err := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
 		if err != nil {
-			return nil, err, http.StatusInternalServerError
+			return nil, http.StatusInternalServerError, err
 		}
 
 		return &model.Metrics{
 			ID:    metricContext.ID,
 			MType: metricContext.MType,
 			Value: &res,
-		}, nil, 0
+		}, 0, nil
 	})
 }
 
 func updateCounterMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, error, int) {
+	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, int, error) {
 		res, err := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
 		if err != nil {
-			return nil, err, http.StatusInternalServerError
+			return nil, http.StatusInternalServerError, err
 		}
 
 		return &model.Metrics{
 			ID:    metricContext.ID,
 			MType: metricContext.MType,
 			Delta: &res,
-		}, nil, 0
+		}, 0, nil
 	})
 }
 
-func updateMetric(updateAction func(w http.ResponseWriter, metrics *model.Metrics) (*model.Metrics, error, int)) func(next http.Handler) http.Handler {
+func updateMetric(updateAction func(w http.ResponseWriter, metrics *model.Metrics) (*model.Metrics, int, error)) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -285,7 +285,7 @@ func updateMetric(updateAction func(w http.ResponseWriter, metrics *model.Metric
 				return
 			}
 
-			newValue, err, errorStatus := updateAction(w, metricContext)
+			newValue, errorStatus, err := updateAction(w, metricContext)
 			if err != nil {
 				logger.ErrorFormat("Fail to update metric: %v", err)
 				http.Error(w, err.Error(), errorStatus)
