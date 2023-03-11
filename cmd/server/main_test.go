@@ -314,7 +314,8 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			metricsStorage := storage.NewInMemoryStorage()
-			metricsStorage.AddCounterMetricValue("metricName", 100)
+			_, err := metricsStorage.AddCounterMetricValue("metricName", 100)
+			assert.NoError(t, err)
 
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			w := httptest.NewRecorder()
@@ -443,12 +444,14 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	metricsStorage := storage.NewInMemoryStorage()
 	if apiRequest.counterMetrics != nil {
 		for name, value := range apiRequest.counterMetrics {
-			metricsStorage.AddCounterMetricValue(name, value)
+			_, err := metricsStorage.AddCounterMetricValue(name, value)
+			assert.NoError(t, err)
 		}
 	}
 	if apiRequest.gaugeMetrics != nil {
 		for name, value := range apiRequest.gaugeMetrics {
-			metricsStorage.AddGaugeMetricValue(name, value)
+			_, err := metricsStorage.AddGaugeMetricValue(name, value)
+			assert.NoError(t, err)
 		}
 	}
 
