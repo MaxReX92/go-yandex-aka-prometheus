@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"sync"
 )
 
@@ -55,6 +56,25 @@ func (s *StorageStrategy) AddCounterMetricValue(name string, value int64) (int64
 		_, err = s.fileStorage.AddCounterMetricValue(name, result)
 		if err != nil {
 			return 0, err
+		}
+	}
+
+	return result, nil
+}
+
+func (s *StorageStrategy) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	result, err := s.inMemoryStorage.AddMetricValue(metric)
+	if err != nil {
+		return result, err
+	}
+
+	if s.syncMode {
+		_, err = s.fileStorage.AddMetricValue(result)
+		if err != nil {
+			return nil, err
 		}
 	}
 

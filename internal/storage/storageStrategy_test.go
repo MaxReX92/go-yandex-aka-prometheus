@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -540,6 +541,11 @@ func (s *metricStorageMock) AddGaugeMetricValue(name string, value float64) (flo
 func (s *metricStorageMock) AddCounterMetricValue(name string, value int64) (int64, error) {
 	args := s.Called(name, value)
 	return args.Get(0).(int64), args.Error(1)
+}
+
+func (s *metricStorageMock) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
+	args := s.Called(metric)
+	return args.Get(0).(metrics.Metric), args.Error(1)
 }
 
 func (s *metricStorageMock) GetMetricValues() (map[string]map[string]string, error) {

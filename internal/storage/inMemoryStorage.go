@@ -32,6 +32,26 @@ func (s *inMemoryStorage) AddCounterMetricValue(name string, value int64) (int64
 	return int64(s.ensureMetricUpdate("counter", name, float64(value), metrics.NewCounterMetric)), nil
 }
 
+func (s *inMemoryStorage) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
+	metricType := metric.GetType()
+	metricsList, ok := s.metricsByType[metricType]
+	if !ok {
+		metricsList = map[string]metrics.Metric{}
+		s.metricsByType[metricType] = metricsList
+	}
+
+	metricName := metric.GetName()
+	currentMetric, ok := metricsList[metricName]
+	if ok {
+		currentMetric.SetValue(metric.GetValue())
+	} else {
+		currentMetric = metric
+		metricsList[metricName] = currentMetric
+	}
+
+	return currentMetric, nil
+}
+
 func (s *inMemoryStorage) GetMetricValues() (map[string]map[string]string, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
