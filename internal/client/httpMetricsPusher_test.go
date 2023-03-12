@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"hash"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -25,6 +26,7 @@ type testMetric struct {
 	name       string
 	metricType string
 	value      float64
+	hash       []byte
 }
 
 func TestHttpMetricsPusher_Push(t *testing.T) {
@@ -215,4 +217,8 @@ func (t *testMetric) SetValue(value float64) float64 {
 }
 
 func (t *testMetric) Flush() {
+}
+
+func (t *testMetric) GetHash(hash.Hash) ([]byte, error) {
+	return t.hash, nil
 }
