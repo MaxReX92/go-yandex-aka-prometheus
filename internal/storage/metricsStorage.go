@@ -1,10 +1,10 @@
 package storage
 
-type MetricsStorage interface {
-	AddGaugeMetricValue(name string, value float64) (float64, error)
-	AddCounterMetricValue(name string, value int64) (int64, error)
-	GetMetricValues() (map[string]map[string]string, error)
-	GetMetricValue(metricType string, metricName string) (float64, error)
+import "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 
+type MetricsStorage interface {
+	AddMetricValue(metric metrics.Metric) (metrics.Metric, error)
+	GetMetricValues() (map[string]map[string]string, error)
+	GetMetric(metricType string, metricName string) (metrics.Metric, error)
 	Restore(metricValues map[string]map[string]string) error
 }

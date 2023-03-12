@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -34,11 +36,10 @@ type modelRequest struct {
 }
 
 type jsonAPIRequest struct {
-	httpMethod     string
-	path           string
-	request        *modelRequest
-	counterMetrics map[string]int64
-	gaugeMetrics   map[string]float64
+	httpMethod string
+	path       string
+	request    *modelRequest
+	metrics    []metrics.Metric
 }
 
 type testDescription struct {
@@ -48,6 +49,11 @@ type testDescription struct {
 	metricName  string
 	metricValue string
 	expected    callResult
+}
+
+type testConf struct {
+	key         []byte
+	singEnabled bool
 }
 
 func Test_UpdateUrlRequest(t *testing.T) {
@@ -138,7 +144,11 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			request := httptest.NewRequest(tt.httpMethod, urlBuilder.String(), nil)
 			w := httptest.NewRecorder()
-			router := initRouter(metricsStorage, htmlPageBuilder)
+
+			conf := &testConf{key: nil, singEnabled: false}
+			signer := hash.NewSigner(conf)
+			converter := model.NewMetricsConverter(conf, signer)
+			router := initRouter(metricsStorage, converter, htmlPageBuilder)
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -314,12 +324,16 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			metricsStorage := storage.NewInMemoryStorage()
-			_, err := metricsStorage.AddCounterMetricValue("metricName", 100)
+			_, err := metricsStorage.AddMetricValue(createCounterMetric("metricName", 100))
 			assert.NoError(t, err)
 
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			w := httptest.NewRecorder()
-			router := initRouter(metricsStorage, htmlPageBuilder)
+
+			conf := &testConf{key: nil, singEnabled: false}
+			signer := hash.NewSigner(conf)
+			converter := model.NewMetricsConverter(conf, signer)
+			router := initRouter(metricsStorage, converter, htmlPageBuilder)
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -369,30 +383,28 @@ func Test_GetMetricJsonRequest_MetricName(t *testing.T) {
 			}
 
 			var expected *callResult
-			var counterMetrics map[string]int64
-			var gaugeMetrics map[string]float64
+			metricList := []metrics.Metric{}
 
 			if metricName == "" {
 				expected = expectedBadRequest("metric name is missed\n")
 			} else {
 				if metricType == "counter" {
 					delta := int64(100)
-					counterMetrics = map[string]int64{requestObj.ID: delta}
+					metricList = append(metricList, createCounterMetric(requestObj.ID, float64(delta)))
 					expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", &delta, nil)
 				} else if metricType == "gauge" {
 					value := float64(100)
-					gaugeMetrics = map[string]float64{requestObj.ID: value}
+					metricList = append(metricList, createGaugeMetric(requestObj.ID, value))
 					expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
 				}
 			}
 
 			t.Run("json_"+metricName+"_"+metricType+"_metricName", func(t *testing.T) {
 				actual := runJSONTest(t, jsonAPIRequest{
-					httpMethod:     http.MethodPost,
-					path:           "value",
-					request:        &requestObj,
-					counterMetrics: counterMetrics,
-					gaugeMetrics:   gaugeMetrics,
+					httpMethod: http.MethodPost,
+					path:       "value",
+					request:    &requestObj,
+					metrics:    metricList,
 				})
 				assert.Equal(t, expected, actual)
 			})
@@ -408,18 +420,17 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 		}
 
 		var expected *callResult
-		var counterMetrics map[string]int64
-		var gaugeMetrics map[string]float64
+		metricList := []metrics.Metric{}
 
 		if metricType == "" {
 			expected = expectedBadRequest("metric type is missed\n")
 		} else if metricType == "counter" {
 			delta := int64(100)
-			counterMetrics = map[string]int64{requestObj.ID: delta}
+			metricList = append(metricList, createCounterMetric(requestObj.ID, float64(delta)))
 			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", &delta, nil)
 		} else if metricType == "gauge" {
 			value := float64(100)
-			gaugeMetrics = map[string]float64{requestObj.ID: value}
+			metricList = append(metricList, createGaugeMetric(requestObj.ID, value))
 			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
 		} else {
 			expected = expectedNotFoundMessage("Metric not found\n")
@@ -427,11 +438,10 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 
 		t.Run("json_"+metricType+"_metricType", func(t *testing.T) {
 			actual := runJSONTest(t, jsonAPIRequest{
-				httpMethod:     http.MethodPost,
-				path:           "value",
-				request:        &requestObj,
-				counterMetrics: counterMetrics,
-				gaugeMetrics:   gaugeMetrics,
+				httpMethod: http.MethodPost,
+				path:       "value",
+				request:    &requestObj,
+				metrics:    metricList,
 			})
 			assert.Equal(t, expected, actual)
 		})
@@ -439,22 +449,14 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 }
 
 func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
-
 	var buffer bytes.Buffer
 	metricsStorage := storage.NewInMemoryStorage()
-	if apiRequest.counterMetrics != nil {
-		for name, value := range apiRequest.counterMetrics {
-			_, err := metricsStorage.AddCounterMetricValue(name, value)
+	if apiRequest.metrics != nil {
+		for _, metric := range apiRequest.metrics {
+			_, err := metricsStorage.AddMetricValue(metric)
 			assert.NoError(t, err)
 		}
 	}
-	if apiRequest.gaugeMetrics != nil {
-		for name, value := range apiRequest.gaugeMetrics {
-			_, err := metricsStorage.AddGaugeMetricValue(name, value)
-			assert.NoError(t, err)
-		}
-	}
-
 	htmlPageBuilder := html.NewSimplePageBuilder()
 
 	if apiRequest.request != nil {
@@ -465,7 +467,11 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 
 	request := httptest.NewRequest(apiRequest.httpMethod, "http://localhost:8080/"+apiRequest.path, &buffer)
 	w := httptest.NewRecorder()
-	router := initRouter(metricsStorage, htmlPageBuilder)
+
+	conf := &testConf{}
+	signer := hash.NewSigner(conf)
+	converter := model.NewMetricsConverter(conf, signer)
+	router := initRouter(metricsStorage, converter, htmlPageBuilder)
 	router.ServeHTTP(w, request)
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}
@@ -570,4 +576,26 @@ func getMetricValue() []string {
 		"test",
 		"",
 	}
+}
+
+func createCounterMetric(name string, value float64) metrics.Metric {
+	return createMetric(metrics.NewCounterMetric, name, value)
+}
+
+func createGaugeMetric(name string, value float64) metrics.Metric {
+	return createMetric(metrics.NewGaugeMetric, name, value)
+}
+
+func createMetric(metricFactory func(string) metrics.Metric, name string, value float64) metrics.Metric {
+	metric := metricFactory(name)
+	metric.SetValue(value)
+	return metric
+}
+
+func (t *testConf) SignMetrics() bool {
+	return t.singEnabled
+}
+
+func (t *testConf) GetKey() []byte {
+	return t.key
 }

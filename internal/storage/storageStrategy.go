@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"sync"
 )
 
@@ -23,38 +24,19 @@ func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsSto
 	}
 }
 
-func (s *StorageStrategy) AddGaugeMetricValue(name string, value float64) (float64, error) {
+func (s *StorageStrategy) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	result, err := s.inMemoryStorage.AddGaugeMetricValue(name, value)
+	result, err := s.inMemoryStorage.AddMetricValue(metric)
 	if err != nil {
 		return result, err
 	}
 
 	if s.syncMode {
-		_, err = s.fileStorage.AddGaugeMetricValue(name, result)
+		_, err = s.fileStorage.AddMetricValue(result)
 		if err != nil {
-			return 0, err
-		}
-	}
-
-	return result, nil
-}
-
-func (s *StorageStrategy) AddCounterMetricValue(name string, value int64) (int64, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	result, err := s.inMemoryStorage.AddCounterMetricValue(name, value)
-	if err != nil {
-		return result, err
-	}
-
-	if s.syncMode {
-		_, err = s.fileStorage.AddCounterMetricValue(name, result)
-		if err != nil {
-			return 0, err
+			return nil, err
 		}
 	}
 
@@ -68,11 +50,11 @@ func (s *StorageStrategy) GetMetricValues() (map[string]map[string]string, error
 	return s.inMemoryStorage.GetMetricValues()
 }
 
-func (s *StorageStrategy) GetMetricValue(metricType string, metricName string) (float64, error) {
+func (s *StorageStrategy) GetMetric(metricType string, metricName string) (metrics.Metric, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	return s.inMemoryStorage.GetMetricValue(metricType, metricName)
+	return s.inMemoryStorage.GetMetric(metricType, metricName)
 }
 
 func (s *StorageStrategy) Restore(metricValues map[string]map[string]string) error {

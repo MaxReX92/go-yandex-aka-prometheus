@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"fmt"
+	"hash"
 	"sync"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
@@ -39,15 +41,22 @@ func (m *gaugeMetric) GetStringValue() string {
 }
 
 func (m *gaugeMetric) SetValue(value float64) float64 {
-	return m.setValue(value)
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.value = value
+	return m.value
 }
 
 func (m *gaugeMetric) Flush() {
 }
 
-func (m *gaugeMetric) setValue(value float64) float64 {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	m.value = value
-	return m.value
+func (m *gaugeMetric) GetHash(hash hash.Hash) ([]byte, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	_, err := hash.Write([]byte(fmt.Sprintf("%s:gauge:%f", m.name, m.value)))
+	if err != nil {
+		return nil, err
+	}
+	return hash.Sum(nil), nil
 }
