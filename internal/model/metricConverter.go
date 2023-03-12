@@ -48,12 +48,12 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error
 	}
 
 	if c.signMetrics {
-		signature, err := c.signer.GetSign(metric)
+		signature, err := c.signer.GetSignString(metric)
 		if err != nil {
 			return nil, err
 		}
 
-		modelMetric.Hash = string(signature)
+		modelMetric.Hash = signature
 	}
 
 	return modelMetric, nil
@@ -86,7 +86,7 @@ func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric
 	metric.SetValue(value)
 
 	if c.signMetrics && modelMetric.Hash != "" {
-		ok, err := c.signer.CheckSign(metric, []byte(modelMetric.Hash))
+		ok, err := c.signer.CheckSign(metric, modelMetric.Hash)
 		if err != nil {
 			return nil, err
 		}

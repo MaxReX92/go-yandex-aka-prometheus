@@ -3,6 +3,7 @@ package hash
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"hash"
 	"sync"
@@ -30,6 +31,15 @@ func NewSigner(config SignerConfig) *Signer {
 	}
 }
 
+func (s *Signer) GetSignString(holder HashHolder) (string, error) {
+	sign, err := s.GetSign(holder)
+	if err != nil {
+		return "", nil
+	}
+
+	return hex.EncodeToString(sign), nil
+}
+
 func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 	if s.hash == nil {
 		return nil, errors.New("secret key was not initialized")
@@ -42,7 +52,13 @@ func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 	return holder.GetHash(s.hash)
 }
 
-func (s *Signer) CheckSign(holder HashHolder, sign []byte) (bool, error) {
+func (s *Signer) CheckSign(holder HashHolder, signature string) (bool, error) {
+	sign, err := hex.DecodeString(signature)
+	if err != nil {
+		logger.ErrorFormat("Fail to decode signature: %v", err)
+		return false, err
+	}
+
 	holderSign, err := s.GetSign(holder)
 	if err != nil {
 		logger.ErrorFormat("Fail to get holder hash: %v", err)
