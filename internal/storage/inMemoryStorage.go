@@ -20,18 +20,6 @@ func NewInMemoryStorage() MetricsStorage {
 	}
 }
 
-func (s *inMemoryStorage) AddGaugeMetricValue(name string, value float64) (float64, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	return s.ensureMetricUpdate("gauge", name, value, metrics.NewGaugeMetric), nil
-}
-
-func (s *inMemoryStorage) AddCounterMetricValue(name string, value int64) (int64, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	return int64(s.ensureMetricUpdate("counter", name, float64(value), metrics.NewCounterMetric)), nil
-}
-
 func (s *inMemoryStorage) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
 	metricType := metric.GetType()
 	metricsList, ok := s.metricsByType[metricType]
@@ -69,21 +57,21 @@ func (s *inMemoryStorage) GetMetricValues() (map[string]map[string]string, error
 	return metricValues, nil
 }
 
-func (s *inMemoryStorage) GetMetricValue(metricType string, metricName string) (float64, error) {
+func (s *inMemoryStorage) GetMetric(metricType string, metricName string) (metrics.Metric, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
 	metricsByName, ok := s.metricsByType[metricType]
 	if !ok {
-		return 0, fmt.Errorf("metrics with type %v not found", metricType)
+		return nil, fmt.Errorf("metrics with type %v not found", metricType)
 	}
 
 	metric, ok := metricsByName[metricName]
 	if !ok {
-		return 0, fmt.Errorf("metrics with name %v and type %v not found", metricName, metricType)
+		return nil, fmt.Errorf("metrics with name %v and type %v not found", metricName, metricType)
 	}
 
-	return metric.GetValue(), nil
+	return metric, nil
 }
 
 func (s *inMemoryStorage) Restore(metricValues map[string]map[string]string) error {
@@ -105,25 +93,22 @@ func (s *inMemoryStorage) Restore(metricValues map[string]map[string]string) err
 			if err != nil {
 				return err
 			}
-			s.ensureMetricUpdate(metricType, metricName, value, metricFactory)
+
+			metricsList, ok := s.metricsByType[metricType]
+			if !ok {
+				metricsList = map[string]metrics.Metric{}
+				s.metricsByType[metricType] = metricsList
+			}
+
+			currentMetric, ok := metricsList[metricName]
+			if !ok {
+				currentMetric = metricFactory(metricName)
+				metricsList[metricName] = currentMetric
+			}
+
+			currentMetric.SetValue(value)
 		}
 	}
 
 	return nil
-}
-
-func (s *inMemoryStorage) ensureMetricUpdate(metricType string, name string, value float64, metricFactory func(string) metrics.Metric) float64 {
-	metricsList, ok := s.metricsByType[metricType]
-	if !ok {
-		metricsList = map[string]metrics.Metric{}
-		s.metricsByType[metricType] = metricsList
-	}
-
-	currentMetric, ok := metricsList[name]
-	if !ok {
-		currentMetric = metricFactory(name)
-		metricsList[name] = currentMetric
-	}
-
-	return currentMetric.SetValue(value)
 }

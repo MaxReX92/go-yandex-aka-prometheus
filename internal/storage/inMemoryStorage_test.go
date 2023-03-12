@@ -7,32 +7,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type keyValue[T int64 | float64] struct {
+type keyValue struct {
 	key   string
-	value T
+	value float64
 }
 
 func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 	tests := []struct {
 		name           string
-		counterMetrics []keyValue[int64]
+		counterMetrics []keyValue
 		expected       map[string]map[string]string
 	}{
 		{
 			name: "single_metric",
-			counterMetrics: []keyValue[int64]{
+			counterMetrics: []keyValue{
 				{key: "metricName1", value: 100}},
 			expected: map[string]map[string]string{
 				"counter": {"metricName1": "100"}},
 		}, {
 			name: "single_negative_metric",
-			counterMetrics: []keyValue[int64]{
+			counterMetrics: []keyValue{
 				{key: "metricName1", value: -100}},
 			expected: map[string]map[string]string{
 				"counter": {"metricName1": "-100"}},
 		}, {
 			name: "multi_metrics",
-			counterMetrics: []keyValue[int64]{
+			counterMetrics: []keyValue{
 				{key: "metricName1", value: 100},
 				{key: "metricName2", value: 200},
 			},
@@ -44,7 +44,7 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 		},
 		{
 			name: "same_metrics",
-			counterMetrics: []keyValue[int64]{
+			counterMetrics: []keyValue{
 				{key: "metricName1", value: 100},
 				{key: "metricName1", value: 200},
 			},
@@ -57,7 +57,7 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 			for _, m := range tt.counterMetrics {
-				_, err := storage.AddCounterMetricValue(m.key, m.value)
+				_, err := storage.AddMetricValue(createCounterMetric(m.key, m.value))
 				assert.NoError(t, err)
 			}
 
@@ -70,24 +70,24 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 	tests := []struct {
 		name         string
-		gaugeMetrics []keyValue[float64]
+		gaugeMetrics []keyValue
 		expected     map[string]map[string]string
 	}{
 		{
 			name: "single_metric",
-			gaugeMetrics: []keyValue[float64]{
+			gaugeMetrics: []keyValue{
 				{key: "metricName1", value: 100.001}},
 			expected: map[string]map[string]string{
 				"gauge": {"metricName1": "100.001"}},
 		}, {
 			name: "single_negative_metric",
-			gaugeMetrics: []keyValue[float64]{
+			gaugeMetrics: []keyValue{
 				{key: "metricName1", value: -100.001}},
 			expected: map[string]map[string]string{
 				"gauge": {"metricName1": "-100.001"}},
 		}, {
 			name: "multi_metrics",
-			gaugeMetrics: []keyValue[float64]{
+			gaugeMetrics: []keyValue{
 				{key: "metricName1", value: 100.001},
 				{key: "metricName2", value: 200.002},
 			},
@@ -99,7 +99,7 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 		},
 		{
 			name: "same_metrics",
-			gaugeMetrics: []keyValue[float64]{
+			gaugeMetrics: []keyValue{
 				{key: "metricName1", value: 100.001},
 				{key: "metricName1", value: 200.002},
 			},
@@ -112,7 +112,7 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddGaugeMetricValue(m.key, m.value)
+				_, err := storage.AddMetricValue(createGaugeMetric(m.key, m.value))
 				assert.NoError(t, err)
 			}
 
@@ -125,8 +125,8 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 	tests := []struct {
 		name           string
-		counterMetrics []keyValue[int64]
-		gaugeMetrics   []keyValue[float64]
+		counterMetrics []keyValue
+		gaugeMetrics   []keyValue
 		expected       map[string]map[string]string
 	}{
 		{
@@ -134,12 +134,12 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 			expected: map[string]map[string]string{},
 		}, {
 			name: "all_metric",
-			counterMetrics: []keyValue[int64]{
+			counterMetrics: []keyValue{
 				{key: "metricName2", value: 300},
 				{key: "metricName1", value: 100},
 				{key: "metricName3", value: -400},
 				{key: "metricName1", value: 200}},
-			gaugeMetrics: []keyValue[float64]{
+			gaugeMetrics: []keyValue{
 				{key: "metricName5", value: 300.003},
 				{key: "metricName4", value: 100.001},
 				{key: "metricName6", value: -400.004},
@@ -164,12 +164,12 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 			storage := NewInMemoryStorage()
 
 			for _, m := range tt.counterMetrics {
-				_, err := storage.AddCounterMetricValue(m.key, m.value)
+				_, err := storage.AddMetricValue(createCounterMetric(m.key, m.value))
 				assert.NoError(t, err)
 			}
 
 			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddGaugeMetricValue(m.key, m.value)
+				_, err := storage.AddMetricValue(createGaugeMetric(m.key, m.value))
 				assert.NoError(t, err)
 			}
 
@@ -230,50 +230,50 @@ func TestInMemoryStorage_Restore(t *testing.T) {
 func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 	tests := []struct {
 		name             string
-		counterMetrics   []keyValue[int64]
-		gaugeMetrics     []keyValue[float64]
+		counterMetrics   []keyValue
+		gaugeMetrics     []keyValue
 		expectedOk       bool
-		expectedCounters []keyValue[float64]
-		expectedGauges   []keyValue[float64]
+		expectedCounters []keyValue
+		expectedGauges   []keyValue
 	}{
 		{
 			name:             "empty_metrics",
-			counterMetrics:   []keyValue[int64]{},
-			gaugeMetrics:     []keyValue[float64]{},
+			counterMetrics:   []keyValue{},
+			gaugeMetrics:     []keyValue{},
 			expectedOk:       false,
-			expectedCounters: []keyValue[float64]{{key: "not_existed_metric", value: 0}},
-			expectedGauges:   []keyValue[float64]{{key: "not_existed_metric", value: 0}},
+			expectedCounters: []keyValue{{key: "not_existed_metric", value: 0}},
+			expectedGauges:   []keyValue{{key: "not_existed_metric", value: 0}},
 		},
 		{
 			name: "metric_not_found",
-			counterMetrics: []keyValue[int64]{
+			counterMetrics: []keyValue{
 				{key: "metricName1", value: 100},
 				{key: "metricName2", value: 300},
 				{key: "metricName3", value: -400}},
-			gaugeMetrics: []keyValue[float64]{
+			gaugeMetrics: []keyValue{
 				{key: "metricName4", value: 100.001},
 				{key: "metricName5", value: 300.003},
 				{key: "metricName6", value: -400.004}},
 			expectedOk:       false,
-			expectedCounters: []keyValue[float64]{{key: "not_existed_metric", value: 0}},
-			expectedGauges:   []keyValue[float64]{{key: "not_existed_metric", value: 0}},
+			expectedCounters: []keyValue{{key: "not_existed_metric", value: 0}},
+			expectedGauges:   []keyValue{{key: "not_existed_metric", value: 0}},
 		},
 		{
 			name: "success_values",
-			counterMetrics: []keyValue[int64]{
+			counterMetrics: []keyValue{
 				{key: "metricName1", value: 100},
 				{key: "metricName2", value: 300},
 				{key: "metricName3", value: -400}},
-			gaugeMetrics: []keyValue[float64]{
+			gaugeMetrics: []keyValue{
 				{key: "metricName4", value: 100.001},
 				{key: "metricName5", value: 300.003},
 				{key: "metricName6", value: -400.004}},
 			expectedOk: true,
-			expectedCounters: []keyValue[float64]{
+			expectedCounters: []keyValue{
 				{key: "metricName1", value: 100},
 				{key: "metricName2", value: 300},
 				{key: "metricName3", value: -400}},
-			expectedGauges: []keyValue[float64]{
+			expectedGauges: []keyValue{
 				{key: "metricName4", value: 100.001},
 				{key: "metricName5", value: 300.003},
 				{key: "metricName6", value: -400.004}},
@@ -285,30 +285,30 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 			storage := NewInMemoryStorage()
 
 			for _, m := range tt.counterMetrics {
-				_, err := storage.AddCounterMetricValue(m.key, m.value)
+				_, err := storage.AddMetricValue(createCounterMetric(m.key, m.value))
 				assert.NoError(t, err)
 			}
 
 			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddGaugeMetricValue(m.key, m.value)
+				_, err := storage.AddMetricValue(createGaugeMetric(m.key, m.value))
 				assert.NoError(t, err)
 			}
 
 			for _, expectedCounter := range tt.expectedCounters {
-				actualValue, err := storage.GetMetricValue("counter", expectedCounter.key)
+				actualValue, err := storage.GetMetric("counter", expectedCounter.key)
 				if tt.expectedOk {
 					assert.NoError(t, err)
-					assert.Equal(t, expectedCounter.value, actualValue)
+					assert.Equal(t, expectedCounter.value, actualValue.GetValue())
 				} else {
 					assert.Error(t, err)
 				}
 			}
 
 			for _, expectedGauge := range tt.expectedGauges {
-				actualValue, err := storage.GetMetricValue("gauge", expectedGauge.key)
+				actualValue, err := storage.GetMetric("gauge", expectedGauge.key)
 				if tt.expectedOk {
 					assert.NoError(t, err)
-					assert.Equal(t, expectedGauge.value, actualValue)
+					assert.Equal(t, expectedGauge.value, actualValue.GetValue())
 				} else {
 					assert.Error(t, err)
 				}

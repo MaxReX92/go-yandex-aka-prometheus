@@ -49,7 +49,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			metricsToPush: []metrics.Metric{
 				&testMetric{metricType: "invalid_type"},
 			},
-			expectedError: errors.New("unknown metric type: invalid_type"),
+			expectedError: errors.New("unknown metric type"),
 		},
 		{
 			name: "wrong_status_code",
