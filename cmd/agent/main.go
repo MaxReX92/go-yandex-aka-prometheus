@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 	"time"
 
 	"github.com/caarlos0/env/v7"
@@ -13,6 +15,7 @@ import (
 )
 
 type config struct {
+	Key                   string        `env:"KEY"`
 	ServerURL             string        `env:"ADDRESS"`
 	PushTimeout           time.Duration `env:"PUSH_TIMEOUT"`
 	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL"`
@@ -25,7 +28,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	metricPusher, err := client.NewMetricsPusher(conf)
+
+	signer := hash.NewSigner(conf)
+	converter := model.NewMetricsConverter(conf, signer)
+	metricPusher, err := client.NewMetricsPusher(conf, converter)
 	if err != nil {
 		panic(err)
 	}
@@ -76,6 +82,7 @@ func createConfig() (*config, error) {
 		"TotalAlloc",
 	}}
 
+	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Metrics server URL")
 	flag.DurationVar(&conf.PushTimeout, "t", time.Second*10, "Push metrics timeout")
 	flag.DurationVar(&conf.SendMetricsInterval, "r", time.Second*10, "Send metrics interval")
@@ -96,4 +103,12 @@ func (c *config) MetricsServerURL() string {
 
 func (c *config) PushMetricsTimeout() time.Duration {
 	return c.PushTimeout
+}
+
+func (c *config) GetKey() []byte {
+	return []byte(c.Key)
+}
+
+func (c *config) SignMetrics() bool {
+	return c.Key != ""
 }

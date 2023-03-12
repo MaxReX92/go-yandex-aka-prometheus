@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"io"
 	"net/http"
@@ -48,6 +49,11 @@ type testDescription struct {
 	metricName  string
 	metricValue string
 	expected    callResult
+}
+
+type testConf struct {
+	key         []byte
+	singEnabled bool
 }
 
 func Test_UpdateUrlRequest(t *testing.T) {
@@ -138,7 +144,11 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			request := httptest.NewRequest(tt.httpMethod, urlBuilder.String(), nil)
 			w := httptest.NewRecorder()
-			router := initRouter(metricsStorage, htmlPageBuilder)
+
+			conf := &testConf{key: nil, singEnabled: false}
+			signer := hash.NewSigner(conf)
+			converter := model.NewMetricsConverter(conf, signer)
+			router := initRouter(metricsStorage, converter, htmlPageBuilder)
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -319,7 +329,11 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			w := httptest.NewRecorder()
-			router := initRouter(metricsStorage, htmlPageBuilder)
+
+			conf := &testConf{key: nil, singEnabled: false}
+			signer := hash.NewSigner(conf)
+			converter := model.NewMetricsConverter(conf, signer)
+			router := initRouter(metricsStorage, converter, htmlPageBuilder)
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -453,7 +467,11 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 
 	request := httptest.NewRequest(apiRequest.httpMethod, "http://localhost:8080/"+apiRequest.path, &buffer)
 	w := httptest.NewRecorder()
-	router := initRouter(metricsStorage, htmlPageBuilder)
+
+	conf := &testConf{}
+	signer := hash.NewSigner(conf)
+	converter := model.NewMetricsConverter(conf, signer)
+	router := initRouter(metricsStorage, converter, htmlPageBuilder)
 	router.ServeHTTP(w, request)
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}
@@ -572,4 +590,12 @@ func createMetric(metricFactory func(string) metrics.Metric, name string, value 
 	metric := metricFactory(name)
 	metric.SetValue(value)
 	return metric
+}
+
+func (t *testConf) SignMetrics() bool {
+	return t.singEnabled
+}
+
+func (t *testConf) GetKey() []byte {
+	return t.key
 }

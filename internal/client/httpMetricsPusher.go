@@ -25,9 +25,10 @@ type httpMetricsPusher struct {
 	client           http.Client
 	metricsServerURL string
 	pushTimeout      time.Duration
+	converter        *model.MetricsConverter
 }
 
-func NewMetricsPusher(config metricsPusherConfig) (MetricsPusher, error) {
+func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter) (MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
 		return nil, err
@@ -37,6 +38,7 @@ func NewMetricsPusher(config metricsPusherConfig) (MetricsPusher, error) {
 		client:           http.Client{},
 		metricsServerURL: serverURL.String(),
 		pushTimeout:      config.PushMetricsTimeout(),
+		converter:        converter,
 	}, nil
 }
 
@@ -49,7 +51,7 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 	for _, metric := range metrics {
 
 		metricName := metric.GetName()
-		modelRequest, err := model.ToModelMetric(metric)
+		modelRequest, err := p.converter.ToModelMetric(metric)
 		if err != nil {
 			logger.ErrorFormat("Fail to create model request: %v", err)
 			return err

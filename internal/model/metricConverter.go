@@ -2,13 +2,34 @@ package model
 
 import (
 	"errors"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 )
 
-var ErrUnknownMetricType = errors.New("unknown metric type")
+var (
+	ErrUnknownMetricType = errors.New("unknown metric type")
+	ErrIvalidSignature   = errors.New("invalid signature")
+)
 
-func ToModelMetric(metric metrics.Metric) (*Metrics, error) {
+type MetricsConverterConfig interface {
+	SignMetrics() bool
+}
+
+type MetricsConverter struct {
+	signer      *hash.Signer
+	signMetrics bool
+}
+
+func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *MetricsConverter {
+	return &MetricsConverter{
+		signMetrics: conf.SignMetrics(),
+		signer:      signer,
+	}
+}
+
+func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error) {
 	modelMetric := &Metrics{
 		ID:    metric.GetName(),
 		MType: metric.GetType(),
@@ -26,10 +47,19 @@ func ToModelMetric(metric metrics.Metric) (*Metrics, error) {
 		return nil, ErrUnknownMetricType
 	}
 
+	if c.signMetrics {
+		signature, err := c.signer.GetSign(metric)
+		if err != nil {
+			return nil, err
+		}
+
+		modelMetric.Hash = string(signature)
+	}
+
 	return modelMetric, nil
 }
 
-func FromModelMetric(modelMetric *Metrics) (metrics.Metric, error) {
+func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric, error) {
 	var metric metrics.Metric
 	var value float64
 
@@ -54,5 +84,17 @@ func FromModelMetric(modelMetric *Metrics) (metrics.Metric, error) {
 	}
 
 	metric.SetValue(value)
+
+	if c.signMetrics && modelMetric.Hash != "" {
+		ok, err := c.signer.CheckSign(metric, []byte(modelMetric.Hash))
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
+			return nil, ErrIvalidSignature
+		}
+	}
+
 	return metric, nil
 }

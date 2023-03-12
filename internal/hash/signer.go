@@ -3,6 +3,7 @@ package hash
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"errors"
 	"hash"
 	"sync"
 
@@ -15,18 +16,27 @@ type SignerConfig interface {
 
 type Signer struct {
 	hash hash.Hash
-	sync.Mutex
+	lock sync.Mutex
 }
 
 func NewSigner(config SignerConfig) *Signer {
+	var h hash.Hash
+	key := config.GetKey()
+	if key != nil {
+		h = hmac.New(sha256.New, key)
+	}
 	return &Signer{
-		hash: hmac.New(sha256.New, config.GetKey()),
+		hash: h,
 	}
 }
 
 func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
-	s.Lock()
-	defer s.Unlock()
+	if s.hash == nil {
+		return nil, errors.New("secret key was not initialized")
+	}
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	defer s.hash.Reset()
 
 	return holder.GetHash(s.hash)
