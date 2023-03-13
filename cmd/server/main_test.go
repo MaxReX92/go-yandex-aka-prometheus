@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
@@ -54,6 +55,9 @@ type testDescription struct {
 type testConf struct {
 	key         []byte
 	singEnabled bool
+}
+
+type testDbStorage struct {
 }
 
 func Test_UpdateUrlRequest(t *testing.T) {
@@ -148,7 +152,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := initRouter(metricsStorage, converter, htmlPageBuilder)
+			router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDbStorage{})
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -333,7 +337,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := initRouter(metricsStorage, converter, htmlPageBuilder)
+			router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDbStorage{})
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -471,7 +475,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	conf := &testConf{}
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	router := initRouter(metricsStorage, converter, htmlPageBuilder)
+	router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDbStorage{})
 	router.ServeHTTP(w, request)
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}
@@ -598,4 +602,12 @@ func (t *testConf) SignMetrics() bool {
 
 func (t *testConf) GetKey() []byte {
 	return t.key
+}
+
+func (t testDbStorage) Ping(context.Context) error {
+	return nil
+}
+
+func (t testDbStorage) Close() error {
+	return nil
 }

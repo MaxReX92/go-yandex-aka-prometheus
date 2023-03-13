@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"io"
 	"net/http"
@@ -48,6 +49,7 @@ type config struct {
 	StoreInterval time.Duration `env:"STORE_INTERVAL"`
 	StoreFile     string        `env:"STORE_FILE"`
 	Restore       bool          `env:"RESTORE"`
+	Db            string        `env:"DATABASE_DSN"`
 }
 
 func main() {
@@ -58,13 +60,20 @@ func main() {
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
+	dbStorage, err := db.NewPostgresDbStorage(conf)
+	if err != nil {
+		logger.ErrorFormat("Fail to create db storage: %v", err)
+		panic(err)
+	}
+	defer dbStorage.Close()
+
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
 	inMemoryStorage := storage.NewInMemoryStorage()
 	fileStorage := storage.NewFileStorage(conf)
 	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
 	htmlPageBuilder := html.NewSimplePageBuilder()
-	router := initRouter(storageStrategy, converter, htmlPageBuilder)
+	router := initRouter(storageStrategy, converter, htmlPageBuilder, dbStorage)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -98,13 +107,16 @@ func createConfig() (*config, error) {
 	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-db.json", "Backup storage file path")
+	flag.StringVar(&conf.Db, "d", "", "Database connection stirng")
 	flag.Parse()
 
 	err := env.Parse(conf)
 	return conf, err
 }
 
-func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter, htmlPageBuilder html.HTMLPageBuilder) *chi.Mux {
+func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter,
+	htmlPageBuilder html.HTMLPageBuilder, dbStorage db.DbStorage) *chi.Mux {
+
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))
@@ -126,6 +138,10 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 
 		r.With(fillCommonURLContext, fillMetricValue(metricsStorage, converter)).
 			Get("/{metricType}/{metricName}", successURLValueResponse(converter))
+	})
+
+	router.Route("/ping", func(r chi.Router) {
+		r.Get("/", handleDbPing(dbStorage))
 	})
 
 	router.Route("/", func(r chi.Router) {
@@ -354,6 +370,17 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	}
 }
 
+func handleDbPing(dbStorage db.DbStorage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := dbStorage.Ping(r.Context())
+		if err == nil {
+			successResponse(w, "text/plain", "ok")
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
 func ensureMetricContext(r *http.Request) (context.Context, *model.Metrics) {
 	ctx := r.Context()
 	metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
@@ -384,4 +411,8 @@ func (c *config) GetKey() []byte {
 
 func (c *config) SignMetrics() bool {
 	return c.Key != ""
+}
+
+func (c *config) GetConnectionString() string {
+	return c.Db
 }
