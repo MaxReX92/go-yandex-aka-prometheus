@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"hash"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,20 +12,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	internalHash "github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
-type config struct {
+type testConf struct {
 	connectionString string
 	timeout          time.Duration
+	signEnabled      bool
+	key              []byte
 }
 
 type testMetric struct {
 	name       string
 	metricType string
 	value      float64
+	hash       []byte
 }
 
 func TestHttpMetricsPusher_Push(t *testing.T) {
@@ -49,7 +54,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			metricsToPush: []metrics.Metric{
 				&testMetric{metricType: "invalid_type"},
 			},
-			expectedError: errors.New("unknown metric type: invalid_type"),
+			expectedError: errors.New("unknown metric type"),
 		},
 		{
 			name: "wrong_status_code",
@@ -103,10 +108,15 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			}))
 			defer server.Close()
 
-			pusher, err := NewMetricsPusher(&config{
+			conf := &testConf{
 				connectionString: server.URL,
 				timeout:          10 * time.Second,
-			})
+				signEnabled:      false,
+				key:              nil,
+			}
+			signer := internalHash.NewSigner(conf)
+			converter := model.NewMetricsConverter(conf, signer)
+			pusher, err := NewMetricsPusher(conf, converter)
 			assert.NoError(t, err)
 
 			err = pusher.Push(ctx, tt.metricsToPush)
@@ -185,11 +195,11 @@ func createGaugeMetric(name string, value float64) metrics.Metric {
 	return metric
 }
 
-func (c *config) MetricsServerURL() string {
+func (c *testConf) MetricsServerURL() string {
 	return c.connectionString
 }
 
-func (c *config) PushMetricsTimeout() time.Duration {
+func (c *testConf) PushMetricsTimeout() time.Duration {
 	return c.timeout
 }
 
@@ -215,4 +225,16 @@ func (t *testMetric) SetValue(value float64) float64 {
 }
 
 func (t *testMetric) Flush() {
+}
+
+func (t *testMetric) GetHash(hash.Hash) ([]byte, error) {
+	return t.hash, nil
+}
+
+func (c *testConf) SignMetrics() bool {
+	return c.signEnabled
+}
+
+func (c *testConf) GetKey() []byte {
+	return c.key
 }

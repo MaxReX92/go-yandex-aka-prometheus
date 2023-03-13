@@ -7,6 +7,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"io"
 	"net/http"
 	"time"
@@ -42,10 +44,12 @@ type metricInfoContextKey struct {
 }
 
 type config struct {
+	Key           string        `env:"KEY"`
 	ServerURL     string        `env:"ADDRESS"`
 	StoreInterval time.Duration `env:"STORE_INTERVAL"`
 	StoreFile     string        `env:"STORE_FILE"`
 	Restore       bool          `env:"RESTORE"`
+	DB            string        `env:"DATABASE_DSN"`
 }
 
 func main() {
@@ -56,11 +60,20 @@ func main() {
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
+	dbStorage, err := db.NewPostgresDBStorage(conf)
+	if err != nil {
+		logger.ErrorFormat("Fail to create db storage: %v", err)
+		panic(err)
+	}
+	defer dbStorage.Close()
+
+	signer := hash.NewSigner(conf)
+	converter := model.NewMetricsConverter(conf, signer)
 	inMemoryStorage := storage.NewInMemoryStorage()
 	fileStorage := storage.NewFileStorage(conf)
 	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
 	htmlPageBuilder := html.NewSimplePageBuilder()
-	router := initRouter(storageStrategy, htmlPageBuilder)
+	router := initRouter(storageStrategy, converter, htmlPageBuilder, dbStorage)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -88,26 +101,31 @@ func main() {
 
 func createConfig() (*config, error) {
 	conf := &config{}
+
+	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.BoolVar(&conf.Restore, "r", true, "Restore metric values from the server backup file")
 	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-db.json", "Backup storage file path")
+	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")
 	flag.Parse()
 
 	err := env.Parse(conf)
 	return conf, err
 }
 
-func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTMLPageBuilder) *chi.Mux {
+func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter,
+	htmlPageBuilder html.HTMLPageBuilder, dbStorage db.DBStorage) *chi.Mux {
+
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))
 	router.Route("/update", func(r chi.Router) {
-		r.With(fillJSONContext, updateTypedMetric(metricsStorage)).
+		r.With(fillJSONContext, updateMetric(metricsStorage, converter)).
 			Post("/", successJSONResponse())
-		r.With(fillCommonURLContext, fillGaugeContext, updateGaugeMetric(metricsStorage)).
+		r.With(fillCommonURLContext, fillGaugeURLContext, updateMetric(metricsStorage, converter)).
 			Post("/gauge/{metricName}/{metricValue}", successURLResponse())
-		r.With(fillCommonURLContext, fillCounterURLContext, updateCounterMetric(metricsStorage)).
+		r.With(fillCommonURLContext, fillCounterURLContext, updateMetric(metricsStorage, converter)).
 			Post("/counter/{metricName}/{metricValue}", successURLResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "unknown metric type", http.StatusNotImplemented)
@@ -115,11 +133,15 @@ func initRouter(metricsStorage storage.MetricsStorage, htmlPageBuilder html.HTML
 	})
 
 	router.Route("/value", func(r chi.Router) {
-		r.With(fillJSONContext, fillMetricValue(metricsStorage)).
+		r.With(fillJSONContext, fillMetricValue(metricsStorage, converter)).
 			Post("/", successJSONResponse())
 
-		r.With(fillCommonURLContext, fillMetricValue(metricsStorage)).
-			Get("/{metricType}/{metricName}", successURLValueResponse())
+		r.With(fillCommonURLContext, fillMetricValue(metricsStorage, converter)).
+			Get("/{metricType}/{metricName}", successURLValueResponse(converter))
+	})
+
+	router.Route("/ping", func(r chi.Router) {
+		r.Get("/", handleDBPing(dbStorage))
 	})
 
 	router.Route("/", func(r chi.Router) {
@@ -141,7 +163,7 @@ func fillCommonURLContext(next http.Handler) http.Handler {
 	})
 }
 
-func fillGaugeContext(next http.Handler) http.Handler {
+func fillGaugeURLContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, metricContext := ensureMetricContext(r)
 		strValue := chi.URLParam(r, "metricValue")
@@ -151,6 +173,7 @@ func fillGaugeContext(next http.Handler) http.Handler {
 			return
 		}
 
+		metricContext.MType = "gauge"
 		metricContext.Value = &value
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -166,6 +189,7 @@ func fillCounterURLContext(next http.Handler) http.Handler {
 			return
 		}
 
+		metricContext.MType = "counter"
 		metricContext.Delta = &value
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -209,73 +233,7 @@ func fillJSONContext(next http.Handler) http.Handler {
 	})
 }
 
-func updateTypedMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, int, error) {
-		result := &model.Metrics{
-			ID:    metricContext.ID,
-			MType: metricContext.MType,
-		}
-
-		switch metricContext.MType {
-		case "gauge":
-			if metricContext.Value == nil {
-				return nil, http.StatusBadRequest, errors.New("metric value is missed")
-			}
-			newValue, err := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
-			if err != nil {
-				return nil, http.StatusInternalServerError, err
-			}
-
-			result.Value = &newValue
-		case "counter":
-			if metricContext.Delta == nil {
-				return nil, http.StatusBadRequest, errors.New("metric value is missed")
-			}
-			newValue, err := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
-			if err != nil {
-				return nil, http.StatusInternalServerError, err
-			}
-
-			result.Delta = &newValue
-		default:
-			return nil, http.StatusNotImplemented, errors.New("unknown metric type")
-		}
-
-		return result, 0, nil
-	})
-}
-
-func updateGaugeMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, int, error) {
-		res, err := storage.AddGaugeMetricValue(metricContext.ID, *metricContext.Value)
-		if err != nil {
-			return nil, http.StatusInternalServerError, err
-		}
-
-		return &model.Metrics{
-			ID:    metricContext.ID,
-			MType: metricContext.MType,
-			Value: &res,
-		}, 0, nil
-	})
-}
-
-func updateCounterMetric(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
-	return updateMetric(func(w http.ResponseWriter, metricContext *model.Metrics) (*model.Metrics, int, error) {
-		res, err := storage.AddCounterMetricValue(metricContext.ID, *metricContext.Delta)
-		if err != nil {
-			return nil, http.StatusInternalServerError, err
-		}
-
-		return &model.Metrics{
-			ID:    metricContext.ID,
-			MType: metricContext.MType,
-			Delta: &res,
-		}, 0, nil
-	})
-}
-
-func updateMetric(updateAction func(w http.ResponseWriter, metrics *model.Metrics) (*model.Metrics, int, error)) func(next http.Handler) http.Handler {
+func updateMetric(storage storage.MetricsStorage, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -285,20 +243,35 @@ func updateMetric(updateAction func(w http.ResponseWriter, metrics *model.Metric
 				return
 			}
 
-			newValue, errorStatus, err := updateAction(w, metricContext)
+			metric, err := converter.FromModelMetric(metricContext)
 			if err != nil {
-				logger.ErrorFormat("Fail to update metric: %v", err)
-				http.Error(w, err.Error(), errorStatus)
+				if errors.Is(err, model.ErrUnknownMetricType) {
+					http.Error(w, err.Error(), http.StatusNotImplemented)
+				} else {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+				}
 				return
 			}
 
-			logger.InfoFormat("Updated metric: %v. newValue: %v", metricContext.ID, *newValue)
+			resultMetric, err := storage.AddMetricValue(metric)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			newValue, err := converter.ToModelMetric(resultMetric)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			logger.InfoFormat("Updated metric: %v. newValue: %v", metricContext.ID, newValue)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, metricInfoContextKey{key: metricResultKey}, newValue)))
 		})
 	}
 }
 
-func fillMetricValue(storage storage.MetricsStorage) func(next http.Handler) http.Handler {
+func fillMetricValue(storage storage.MetricsStorage, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -308,26 +281,17 @@ func fillMetricValue(storage storage.MetricsStorage) func(next http.Handler) htt
 				return
 			}
 
-			metricValue, err := storage.GetMetricValue(metricContext.MType, metricContext.ID)
+			metric, err := storage.GetMetric(metricContext.MType, metricContext.ID)
 			if err != nil {
 				logger.ErrorFormat("Fail to get metric value: %v", err)
 				http.Error(w, "Metric not found", http.StatusNotFound)
 				return
 			}
 
-			resultValue := &model.Metrics{
-				ID:    metricContext.ID,
-				MType: metricContext.MType,
-			}
-
-			switch metricContext.MType {
-			case "counter":
-				counterValue := int64(metricValue)
-				resultValue.Delta = &counterValue
-			case "gauge":
-				resultValue.Value = &metricValue
-			default:
-				http.Error(w, "unknown metric type", http.StatusInternalServerError)
+			resultValue, err := converter.ToModelMetric(metric)
+			if err != nil {
+				logger.ErrorFormat("Fail to get metric value: %v", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -336,7 +300,7 @@ func fillMetricValue(storage storage.MetricsStorage) func(next http.Handler) htt
 	}
 }
 
-func successURLValueResponse() func(w http.ResponseWriter, r *http.Request) {
+func successURLValueResponse(converter *model.MetricsConverter) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		metricValueResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
@@ -345,18 +309,13 @@ func successURLValueResponse() func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var result string
-		switch metricValueResult.MType {
-		case "counter":
-			result = parser.IntToString(*metricValueResult.Delta)
-		case "gauge":
-			result = parser.FloatToString(*metricValueResult.Value)
-		default:
-			http.Error(w, "unknown metric type", http.StatusInternalServerError)
+		metric, err := converter.FromModelMetric(metricValueResult)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		successResponse(w, "text/plain", result)
+		successResponse(w, "text/plain", metric.GetStringValue())
 	}
 }
 
@@ -411,6 +370,18 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	}
 }
 
+func handleDBPing(dbStorage db.DBStorage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := dbStorage.Ping(r.Context())
+		if err == nil {
+			successResponse(w, "text/plain", "ok")
+		} else {
+			logger.ErrorFormat("Error ping result: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
 func ensureMetricContext(r *http.Request) (context.Context, *model.Metrics) {
 	ctx := r.Context()
 	metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
@@ -431,6 +402,18 @@ func (c *config) SyncMode() bool {
 }
 
 func (c *config) String() string {
-	return fmt.Sprintf("\nServerURL:\t%v\nStoreInterval:\t%v\nStoreFile:\t%v\nRestore:\t%v",
-		c.ServerURL, c.StoreInterval, c.StoreFile, c.Restore)
+	return fmt.Sprintf("\nServerURL:\t%v\nStoreInterval:\t%v\nStoreFile:\t%v\nRestore:\t%v\nDb:\t%v",
+		c.ServerURL, c.StoreInterval, c.StoreFile, c.Restore, c.DB)
+}
+
+func (c *config) GetKey() []byte {
+	return []byte(c.Key)
+}
+
+func (c *config) SignMetrics() bool {
+	return c.Key != ""
+}
+
+func (c *config) GetConnectionString() string {
+	return c.DB
 }
