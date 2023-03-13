@@ -14,7 +14,8 @@ import (
 
 	internalHash "github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
@@ -54,7 +55,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			metricsToPush: []metrics.Metric{
 				&testMetric{metricType: "invalid_type"},
 			},
-			expectedError: errors.New("unknown metric type"),
+			expectedError: errors.New("unknown metric types"),
 		},
 		{
 			name: "wrong_status_code",
@@ -184,13 +185,13 @@ func Test_URLNormalization(t *testing.T) {
 }
 
 func createCounterMetric(name string, value int64) metrics.Metric {
-	metric := metrics.NewCounterMetric(name)
+	metric := types.NewCounterMetric(name)
 	metric.SetValue(float64(value))
 	return metric
 }
 
 func createGaugeMetric(name string, value float64) metrics.Metric {
-	metric := metrics.NewGaugeMetric(name)
+	metric := types.NewGaugeMetric(name)
 	metric.SetValue(value)
 	return metric
 }

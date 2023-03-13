@@ -1,7 +1,9 @@
-package storage
+package memory
 
 import (
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"sync"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
@@ -13,7 +15,7 @@ type inMemoryStorage struct {
 	lock          sync.RWMutex
 }
 
-func NewInMemoryStorage() MetricsStorage {
+func NewInMemoryStorage() storage.MetricsStorage {
 	return &inMemoryStorage{
 		metricsByType: map[string]map[string]metrics.Metric{},
 		lock:          sync.RWMutex{},
@@ -63,12 +65,12 @@ func (s *inMemoryStorage) GetMetric(metricType string, metricName string) (metri
 
 	metricsByName, ok := s.metricsByType[metricType]
 	if !ok {
-		return nil, fmt.Errorf("metrics with type %v not found", metricType)
+		return nil, fmt.Errorf("metrics with types %v not found", metricType)
 	}
 
 	metric, ok := metricsByName[metricName]
 	if !ok {
-		return nil, fmt.Errorf("metrics with name %v and type %v not found", metricName, metricType)
+		return nil, fmt.Errorf("metrics with name %v and types %v not found", metricName, metricType)
 	}
 
 	return metric, nil
@@ -81,11 +83,11 @@ func (s *inMemoryStorage) Restore(metricValues map[string]map[string]string) err
 	s.metricsByType = map[string]map[string]metrics.Metric{}
 
 	for metricType, metricsByType := range metricValues {
-		metricFactory := metrics.NewGaugeMetric
+		metricFactory := types.NewGaugeMetric
 		if metricType == "counter" {
-			metricFactory = metrics.NewCounterMetric
+			metricFactory = types.NewCounterMetric
 		} else if metricType != "gauge" {
-			return fmt.Errorf("unknown metric type from backup: %v", metricType)
+			return fmt.Errorf("unknown metric types from backup: %v", metricType)
 		}
 
 		for metricName, metricValue := range metricsByType {

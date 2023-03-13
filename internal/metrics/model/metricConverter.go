@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
@@ -9,7 +10,7 @@ import (
 )
 
 var (
-	ErrUnknownMetricType = errors.New("unknown metric type")
+	ErrUnknownMetricType = errors.New("unknown metric types")
 	ErrIvalidSignature   = errors.New("invalid signature")
 )
 
@@ -43,7 +44,7 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error
 	case "gauge":
 		modelMetric.Value = &metricValue
 	default:
-		logger.ErrorFormat("unknown metric type: %v", modelMetric.MType)
+		logger.ErrorFormat("unknown metric types: %v", modelMetric.MType)
 		return nil, ErrUnknownMetricType
 	}
 
@@ -69,17 +70,17 @@ func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric
 			return nil, errors.New("metric value is missed")
 		}
 
-		metric = metrics.NewCounterMetric(modelMetric.ID)
+		metric = types.NewCounterMetric(modelMetric.ID)
 		value = float64(*modelMetric.Delta)
 	case "gauge":
 		if modelMetric.Value == nil {
 			return nil, errors.New("metric value is missed")
 		}
 
-		metric = metrics.NewGaugeMetric(modelMetric.ID)
+		metric = types.NewGaugeMetric(modelMetric.ID)
 		value = *modelMetric.Value
 	default:
-		logger.ErrorFormat("unknown metric type: %v", modelMetric.MType)
+		logger.ErrorFormat("unknown metric types: %v", modelMetric.MType)
 		return nil, ErrUnknownMetricType
 	}
 

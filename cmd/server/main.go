@@ -18,11 +18,13 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db/postgres"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/file"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/memory"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
@@ -61,7 +63,7 @@ func main() {
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
-	dbStorage, err := postgres.NewPostgresDBStorage(conf)
+	dbStorage, err := postgres.NewPostgresDataBase(conf)
 	if err != nil {
 		logger.ErrorFormat("Fail to create db storage: %v", err)
 		panic(err)
@@ -70,8 +72,8 @@ func main() {
 
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	inMemoryStorage := storage.NewInMemoryStorage()
-	fileStorage := storage.NewFileStorage(conf)
+	inMemoryStorage := memory.NewInMemoryStorage()
+	fileStorage := file.NewFileStorage(conf)
 	htmlPageBuilder := html.NewSimplePageBuilder()
 	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
 	defer storageStrategy.Close()
@@ -118,7 +120,7 @@ func createConfig() (*config, error) {
 }
 
 func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter,
-	htmlPageBuilder html.HTMLPageBuilder, dbStorage db.DBStorage) *chi.Mux {
+	htmlPageBuilder html.HTMLPageBuilder, dbStorage db.DataBase) *chi.Mux {
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
@@ -131,7 +133,7 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 		r.With(fillCommonURLContext, fillCounterURLContext, updateMetric(metricsStorage, converter)).
 			Post("/counter/{metricName}/{metricValue}", successURLResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "unknown metric type", http.StatusNotImplemented)
+			http.Error(w, "unknown metric types", http.StatusNotImplemented)
 		})
 	})
 
@@ -228,7 +230,7 @@ func fillJSONContext(next http.Handler) http.Handler {
 		}
 
 		if metricContext.MType == "" {
-			http.Error(w, "metric type is missed", http.StatusBadRequest)
+			http.Error(w, "metric types is missed", http.StatusBadRequest)
 			return
 		}
 
@@ -373,7 +375,7 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	}
 }
 
-func handleDBPing(dbStorage db.DBStorage) func(w http.ResponseWriter, r *http.Request) {
+func handleDBPing(dbStorage db.DataBase) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := dbStorage.Ping(r.Context())
 		if err == nil {

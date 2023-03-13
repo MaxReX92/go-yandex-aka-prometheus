@@ -1,8 +1,10 @@
-package metrics
+package provider
 
 import (
 	"context"
 	"errors"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,26 +17,26 @@ type aggregateMetricsProviderMock struct {
 
 func TestAggregateMetricsProvider_GetMetrics(t *testing.T) {
 
-	counter := NewCounterMetric("counterMetric")
-	gauge := NewCounterMetric("gaugeMetric")
+	counter := types.NewCounterMetric("counterMetric")
+	gauge := types.NewCounterMetric("gaugeMetric")
 
 	tests := []struct {
 		name                  string
-		firstProviderMetrics  []Metric
-		secondProviderMetrics []Metric
-		expectedMetrics       []Metric
+		firstProviderMetrics  []metrics.Metric
+		secondProviderMetrics []metrics.Metric
+		expectedMetrics       []metrics.Metric
 	}{
 		{
 			name:                  "empty_metrics",
-			firstProviderMetrics:  []Metric{},
-			secondProviderMetrics: []Metric{},
-			expectedMetrics:       []Metric{},
+			firstProviderMetrics:  []metrics.Metric{},
+			secondProviderMetrics: []metrics.Metric{},
+			expectedMetrics:       []metrics.Metric{},
 		},
 		{
 			name:                  "success",
-			firstProviderMetrics:  []Metric{counter},
-			secondProviderMetrics: []Metric{gauge},
-			expectedMetrics:       []Metric{counter, gauge},
+			firstProviderMetrics:  []metrics.Metric{counter},
+			secondProviderMetrics: []metrics.Metric{gauge},
+			expectedMetrics:       []metrics.Metric{counter, gauge},
 		},
 	}
 
@@ -109,9 +111,9 @@ func TestAggregateMetricsProvider_Update(t *testing.T) {
 	}
 }
 
-func (a *aggregateMetricsProviderMock) GetMetrics() []Metric {
+func (a *aggregateMetricsProviderMock) GetMetrics() []metrics.Metric {
 	args := a.Called()
-	return args.Get(0).([]Metric)
+	return args.Get(0).([]metrics.Metric)
 }
 
 func (a *aggregateMetricsProviderMock) Update(ctx context.Context) error {

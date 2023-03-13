@@ -1,4 +1,4 @@
-package storage
+package file
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 type config struct {
@@ -49,13 +51,13 @@ func TestFileStorage_AddGaugeMetricValue(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		values          []keyValue
+		values          []test.KeyValue
 		expecredRecords storageRecords
 	}{
 		{
 			name: "one_value",
-			values: []keyValue{
-				{key: "testMetric", value: 100.001},
+			values: []test.KeyValue{
+				{Key: "testMetric", Value: 100.001},
 			},
 			expecredRecords: storageRecords{
 				{Type: "gauge", Name: "testMetric", Value: "100.001"},
@@ -63,10 +65,10 @@ func TestFileStorage_AddGaugeMetricValue(t *testing.T) {
 		},
 		{
 			name: "many_values",
-			values: []keyValue{
-				{key: "testMetric1", value: 100.001},
-				{key: "testMetric2", value: 200.002},
-				{key: "testMetric3", value: 300.003},
+			values: []test.KeyValue{
+				{Key: "testMetric1", Value: 100.001},
+				{Key: "testMetric2", Value: 200.002},
+				{Key: "testMetric3", Value: 300.003},
 			},
 			expecredRecords: storageRecords{
 				{Type: "gauge", Name: "testMetric1", Value: "100.001"},
@@ -85,8 +87,8 @@ func TestFileStorage_AddGaugeMetricValue(t *testing.T) {
 
 			storage := NewFileStorage(&config{filePath: filePath})
 			for _, kv := range tt.values {
-				value, err := storage.AddMetricValue(createGaugeMetric(kv.key, kv.value))
-				assert.Equal(t, kv.value, value.GetValue())
+				value, err := storage.AddMetricValue(test.CreateGaugeMetric(kv.Key, kv.Value))
+				assert.Equal(t, kv.Value, value.GetValue())
 				assert.NoError(t, err)
 			}
 
@@ -99,13 +101,13 @@ func TestFileStorage_AddGaugeMetricValue(t *testing.T) {
 func TestFileStorage_AddCounterMetricValue(t *testing.T) {
 	tests := []struct {
 		name            string
-		values          []keyValue
+		values          []test.KeyValue
 		expectedRecords storageRecords
 	}{
 		{
 			name: "one_value",
-			values: []keyValue{
-				{key: "testMetric", value: 100},
+			values: []test.KeyValue{
+				{Key: "testMetric", Value: 100},
 			},
 			expectedRecords: storageRecords{
 				{Type: "counter", Name: "testMetric", Value: "100"},
@@ -113,10 +115,10 @@ func TestFileStorage_AddCounterMetricValue(t *testing.T) {
 		},
 		{
 			name: "many_values",
-			values: []keyValue{
-				{key: "testMetric1", value: 100},
-				{key: "testMetric2", value: 200},
-				{key: "testMetric3", value: 300},
+			values: []test.KeyValue{
+				{Key: "testMetric1", Value: 100},
+				{Key: "testMetric2", Value: 200},
+				{Key: "testMetric3", Value: 300},
 			},
 			expectedRecords: storageRecords{
 				{Type: "counter", Name: "testMetric1", Value: "100"},
@@ -135,8 +137,8 @@ func TestFileStorage_AddCounterMetricValue(t *testing.T) {
 
 			storage := NewFileStorage(&config{filePath: filePath})
 			for _, kv := range tt.values {
-				value, err := storage.AddMetricValue(createCounterMetric(kv.key, kv.value))
-				assert.Equal(t, kv.value, value.GetValue())
+				value, err := storage.AddMetricValue(test.CreateCounterMetric(kv.Key, kv.Value))
+				assert.Equal(t, kv.Value, value.GetValue())
 				assert.NoError(t, err)
 			}
 
@@ -160,14 +162,14 @@ func TestFileStorage_GetMetric(t *testing.T) {
 		{
 			name:          "empty_store",
 			stored:        storageRecords{},
-			expectedError: errors.New("metrics with name expectedMetricName and type gauge not found"),
+			expectedError: errors.New("metrics with name expectedMetricName and types gauge not found"),
 		},
 		{
 			name: "notFound",
 			stored: storageRecords{
 				{Type: "counter", Name: "metricName", Value: "100"},
 			},
-			expectedError: errors.New("metrics with name expectedMetricName and type gauge not found"),
+			expectedError: errors.New("metrics with name expectedMetricName and types gauge not found"),
 		},
 		{
 			name: "success",

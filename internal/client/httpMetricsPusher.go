@@ -13,7 +13,7 @@ import (
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 )
 
 type metricsPusherConfig interface {

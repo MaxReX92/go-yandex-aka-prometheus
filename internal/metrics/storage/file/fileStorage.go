@@ -1,10 +1,12 @@
-package storage
+package file
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"io"
 	"os"
 	"sync"
@@ -14,7 +16,7 @@ import (
 )
 
 type storageRecord struct {
-	Type  string `json:"type"`
+	Type  string `json:"types"`
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
@@ -30,7 +32,7 @@ type fileStorage struct {
 	lock     sync.Mutex
 }
 
-func NewFileStorage(config fileStorageConfig) MetricsStorage {
+func NewFileStorage(config fileStorageConfig) storage.MetricsStorage {
 	result := &fileStorage{
 		filePath: config.StoreFilePath(),
 	}
@@ -58,7 +60,7 @@ func (f *fileStorage) GetMetric(metricType string, metricName string) (metrics.M
 		return nil, err
 	}
 	if len(records) != 1 {
-		return nil, fmt.Errorf("metrics with name %v and type %v not found", metricName, metricType)
+		return nil, fmt.Errorf("metrics with name %v and types %v not found", metricName, metricType)
 	}
 
 	return f.toMetric(*records[0])
@@ -199,11 +201,11 @@ func (f *fileStorage) toMetric(record storageRecord) (metrics.Metric, error) {
 	var metric metrics.Metric
 	switch record.Type {
 	case "counter":
-		metric = metrics.NewCounterMetric(record.Name)
+		metric = types.NewCounterMetric(record.Name)
 	case "gauge":
-		metric = metrics.NewGaugeMetric(record.Name)
+		metric = types.NewGaugeMetric(record.Name)
 	default:
-		return nil, fmt.Errorf("unknown metric type: %s", record.Type)
+		return nil, fmt.Errorf("unknown metric types: %s", record.Type)
 	}
 
 	value, err := parser.ToFloat64(record.Value)

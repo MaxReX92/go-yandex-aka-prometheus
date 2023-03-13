@@ -2,11 +2,13 @@ package storage
 
 import (
 	"errors"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 type configMock struct {
@@ -53,7 +55,7 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 			name:                    "noSync_backupStorage_error",
 			syncMode:                false,
 			backupStorageErrorError: errTest,
-			expectedResult:          createGaugeMetric("resultMetric", 100),
+			expectedResult:          test.CreateGaugeMetric("resultMetric", 100),
 		},
 		{
 			name:                    "sync_backupStorage_error",
@@ -64,12 +66,12 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 		{
 			name:           "noSync_success",
 			syncMode:       false,
-			expectedResult: createGaugeMetric("resultMetric", 100),
+			expectedResult: test.CreateGaugeMetric("resultMetric", 100),
 		},
 		{
 			name:           "sync_success",
 			syncMode:       true,
-			expectedResult: createGaugeMetric("resultMetric", 100),
+			expectedResult: test.CreateGaugeMetric("resultMetric", 100),
 		},
 	}
 
@@ -80,7 +82,7 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 			inMemoryStorageMock := new(metricStorageMock)
 			backupStorageMock := new(metricStorageMock)
 
-			gaugeMetric := createGaugeMetric(metricName, metricValue)
+			gaugeMetric := test.CreateGaugeMetric(metricName, metricValue)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
 			inMemoryStorageMock.On("AddMetricValue", gaugeMetric).Return(tt.expectedResult, tt.inMemoryStorageError)
@@ -133,7 +135,7 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 			name:                    "noSync_backupStorage_error",
 			syncMode:                false,
 			backupStorageErrorError: errTest,
-			expectedResult:          createCounterMetric("resultMetric", 100),
+			expectedResult:          test.CreateCounterMetric("resultMetric", 100),
 		},
 		{
 			name:                    "sync_backupStorage_error",
@@ -144,12 +146,12 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 		{
 			name:           "noSync_success",
 			syncMode:       false,
-			expectedResult: createCounterMetric("resultMetric", 100),
+			expectedResult: test.CreateCounterMetric("resultMetric", 100),
 		},
 		{
 			name:           "sync_success",
 			syncMode:       true,
-			expectedResult: createCounterMetric("resultMetric", 100),
+			expectedResult: test.CreateCounterMetric("resultMetric", 100),
 		},
 	}
 
@@ -160,7 +162,7 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 			inMemoryStorageMock := new(metricStorageMock)
 			backupStorageMock := new(metricStorageMock)
 
-			counterMetric := createCounterMetric(metricName, metricValue)
+			counterMetric := test.CreateCounterMetric(metricName, metricValue)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
 			inMemoryStorageMock.On("AddMetricValue", counterMetric).Return(tt.expectedResult, tt.inMemoryStorageError)
@@ -250,7 +252,7 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 
 func TestStorageStrategy_GetMetric(t *testing.T) {
 
-	resultMetric := createGaugeMetric(metricName, metricValue)
+	resultMetric := test.CreateGaugeMetric(metricName, metricValue)
 	tests := []struct {
 		name           string
 		syncMode       bool
@@ -555,18 +557,4 @@ func (s *metricStorageMock) GetMetricValue(metricType string, metricName string)
 func (s *metricStorageMock) Restore(metricValues map[string]map[string]string) error {
 	args := s.Called(metricValues)
 	return args.Error(0)
-}
-
-func createCounterMetric(name string, value float64) metrics.Metric {
-	return createMetric(metrics.NewCounterMetric, name, value)
-}
-
-func createGaugeMetric(name string, value float64) metrics.Metric {
-	return createMetric(metrics.NewGaugeMetric, name, value)
-}
-
-func createMetric(metricFactory func(string) metrics.Metric, name string, value float64) metrics.Metric {
-	metric := metricFactory(name)
-	metric.SetValue(value)
-	return metric
 }

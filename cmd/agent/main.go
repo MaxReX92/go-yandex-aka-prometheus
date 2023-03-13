@@ -3,14 +3,16 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
 	"time"
 
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/client"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/custom"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/runtime"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
@@ -36,9 +38,9 @@ func main() {
 		panic(err)
 	}
 
-	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(conf)
-	customMetricsProvider := metrics.NewCustomMetricsProvider()
-	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider(runtimeMetricsProvider, customMetricsProvider)
+	runtimeMetricsProvider := runtime.NewRuntimeMetricsProvider(conf)
+	customMetricsProvider := custom.NewCustomMetricsProvider()
+	aggregateMetricsProvider := provider.NewAggregateMetricsProvider(runtimeMetricsProvider, customMetricsProvider)
 	getMetricsWorker := worker.NewPeriodicWorker(aggregateMetricsProvider.Update)
 	pushMetricsWorker := worker.NewPeriodicWorker(func(workerContext context.Context) error {
 		return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics())

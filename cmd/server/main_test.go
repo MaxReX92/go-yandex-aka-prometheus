@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,10 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/memory"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/storage"
 )
 
 type callResult struct {
@@ -31,7 +32,7 @@ type callResult struct {
 
 type modelRequest struct {
 	ID    string   `json:"id"`
-	MType string   `json:"type"`
+	MType string   `json:"types"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
 }
@@ -78,7 +79,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 						}
 					}
 
-					// Unexpected method type
+					// Unexpected method types
 					if expected == nil && method != http.MethodPost {
 						if metricType == "" || metricName == "" || metricValue == "" {
 							expected = expectedNotFound()
@@ -87,7 +88,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 						}
 					}
 
-					// Unexpected metric type
+					// Unexpected metric types
 					if expected == nil && metricType != "gauge" && metricType != "counter" {
 						if metricType == "" || metricName == "" || metricValue == "" {
 							expected = expectedNotFound()
@@ -144,7 +145,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			appendIfNotEmpty(urlBuilder, tt.metricName)
 			appendIfNotEmpty(urlBuilder, tt.metricValue)
 
-			metricsStorage := storage.NewInMemoryStorage()
+			metricsStorage := memory.NewInMemoryStorage()
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			request := httptest.NewRequest(tt.httpMethod, urlBuilder.String(), nil)
 			w := httptest.NewRecorder()
@@ -223,7 +224,7 @@ func Test_UpdateJsonRequest_MetricType(t *testing.T) {
 
 		var expected *callResult
 		if metricType == "" {
-			expected = expectedBadRequest("metric type is missed\n")
+			expected = expectedBadRequest("metric types is missed\n")
 		} else if metricType == "counter" {
 			delta := int64(100)
 			requestObj.Delta = &delta
@@ -327,7 +328,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 			url := fmt.Sprintf("http://localhost:8080/value/%v/%v", tt.metricType, tt.metricName)
 
 			htmlPageBuilder := html.NewSimplePageBuilder()
-			metricsStorage := storage.NewInMemoryStorage()
+			metricsStorage := memory.NewInMemoryStorage()
 			_, err := metricsStorage.AddMetricValue(createCounterMetric("metricName", 100))
 			assert.NoError(t, err)
 
@@ -427,7 +428,7 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 		metricList := []metrics.Metric{}
 
 		if metricType == "" {
-			expected = expectedBadRequest("metric type is missed\n")
+			expected = expectedBadRequest("metric types is missed\n")
 		} else if metricType == "counter" {
 			delta := int64(100)
 			metricList = append(metricList, createCounterMetric(requestObj.ID, float64(delta)))
@@ -454,7 +455,7 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 
 func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	var buffer bytes.Buffer
-	metricsStorage := storage.NewInMemoryStorage()
+	metricsStorage := memory.NewInMemoryStorage()
 	if apiRequest.metrics != nil {
 		for _, metric := range apiRequest.metrics {
 			_, err := metricsStorage.AddMetricValue(metric)
@@ -517,7 +518,7 @@ func expectedBadRequest(message string) *callResult {
 }
 
 func expectedNotImplemented() *callResult {
-	return getExpected(http.StatusNotImplemented, "unknown metric type\n")
+	return getExpected(http.StatusNotImplemented, "unknown metric types\n")
 }
 
 func expectedOk() *callResult {
@@ -583,11 +584,11 @@ func getMetricValue() []string {
 }
 
 func createCounterMetric(name string, value float64) metrics.Metric {
-	return createMetric(metrics.NewCounterMetric, name, value)
+	return createMetric(types.NewCounterMetric, name, value)
 }
 
 func createGaugeMetric(name string, value float64) metrics.Metric {
-	return createMetric(metrics.NewGaugeMetric, name, value)
+	return createMetric(types.NewGaugeMetric, name, value)
 }
 
 func createMetric(metricFactory func(string) metrics.Metric, name string, value float64) metrics.Metric {

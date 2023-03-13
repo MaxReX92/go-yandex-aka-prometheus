@@ -1,10 +1,11 @@
-package metrics
+package types
 
 import (
 	"fmt"
 	"hash"
 	"sync"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
@@ -14,7 +15,7 @@ type gaugeMetric struct {
 	lock  sync.RWMutex
 }
 
-func NewGaugeMetric(name string) Metric {
+func NewGaugeMetric(name string) metrics.Metric {
 	return &gaugeMetric{
 		name: name,
 	}
