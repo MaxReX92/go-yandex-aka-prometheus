@@ -22,7 +22,7 @@ type PostgresDBStorage struct {
 }
 
 func NewPostgresDBStorage(conf PostgresDBStorageConfig) (*PostgresDBStorage, error) {
-	connection, err := sql.Open("pgx", "host=localhost user=Max database=postgres password=1234")
+	connection, err := sql.Open("pgx", conf.GetConnectionString())
 	if err != nil {
 		return nil, err
 	}

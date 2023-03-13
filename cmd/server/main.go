@@ -402,8 +402,8 @@ func (c *config) SyncMode() bool {
 }
 
 func (c *config) String() string {
-	return fmt.Sprintf("\nServerURL:\t%v\nStoreInterval:\t%v\nStoreFile:\t%v\nRestore:\t%v",
-		c.ServerURL, c.StoreInterval, c.StoreFile, c.Restore)
+	return fmt.Sprintf("\nServerURL:\t%v\nStoreInterval:\t%v\nStoreFile:\t%v\nRestore:\t%v\nDb:\t%v",
+		c.ServerURL, c.StoreInterval, c.StoreFile, c.Restore, c.DB)
 }
 
 func (c *config) GetKey() []byte {
