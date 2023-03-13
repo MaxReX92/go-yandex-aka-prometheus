@@ -376,6 +376,7 @@ func handleDBPing(dbStorage db.DBStorage) func(w http.ResponseWriter, r *http.Re
 		if err == nil {
 			successResponse(w, "text/plain", "ok")
 		} else {
+			logger.ErrorFormat("Error ping result: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
