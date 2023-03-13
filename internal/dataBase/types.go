@@ -11,7 +11,7 @@ type DataBase interface {
 }
 
 type DBRecord struct {
-	metricType string
-	name       string
-	value      float64
+	MetricType string
+	Name       string
+	Value      float64
 }
