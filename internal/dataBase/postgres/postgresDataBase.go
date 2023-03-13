@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
 )
 
 type PostgresDataaBaseConfig interface {
@@ -16,7 +16,7 @@ type postgresDataBase struct {
 	conn *sql.DB
 }
 
-func NewPostgresDataBase(conf PostgresDataaBaseConfig) (db.DataBase, error) {
+func NewPostgresDataBase(conf PostgresDataaBaseConfig) (dataBase.DataBase, error) {
 	connection, err := sql.Open("pgx", conf.GetConnectionString())
 	if err != nil {
 		return nil, err

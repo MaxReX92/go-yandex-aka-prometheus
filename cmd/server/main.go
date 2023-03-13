@@ -15,8 +15,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db/postgres"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase/postgres"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
@@ -65,7 +65,7 @@ func main() {
 
 	dbStorage, err := postgres.NewPostgresDataBase(conf)
 	if err != nil {
-		logger.ErrorFormat("Fail to create db storage: %v", err)
+		logger.ErrorFormat("Fail to create dataBase storage: %v", err)
 		panic(err)
 	}
 	defer dbStorage.Close()
@@ -111,7 +111,7 @@ func createConfig() (*config, error) {
 	flag.BoolVar(&conf.Restore, "r", true, "Restore metric values from the server backup file")
 	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
-	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-db.json", "Backup storage file path")
+	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-dataBase.json", "Backup storage file path")
 	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")
 	flag.Parse()
 
@@ -120,7 +120,7 @@ func createConfig() (*config, error) {
 }
 
 func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter,
-	htmlPageBuilder html.HTMLPageBuilder, dbStorage db.DataBase) *chi.Mux {
+	htmlPageBuilder html.PageBuilder, dbStorage dataBase.DataBase) *chi.Mux {
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
@@ -324,7 +324,7 @@ func successURLValueResponse(converter *model.MetricsConverter) func(w http.Resp
 	}
 }
 
-func handleMetricsPage(builder html.HTMLPageBuilder, storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+func handleMetricsPage(builder html.PageBuilder, storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		values, err := storage.GetMetricValues()
 		if err != nil {
@@ -375,7 +375,7 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	}
 }
 
-func handleDBPing(dbStorage db.DataBase) func(w http.ResponseWriter, r *http.Request) {
+func handleDBPing(dbStorage dataBase.DataBase) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := dbStorage.Ping(r.Context())
 		if err == nil {

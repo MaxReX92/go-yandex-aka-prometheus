@@ -1,16 +1,16 @@
 package db
 
 import (
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 )
 
 type dbStorage struct {
-	dataBase db.DataBase
+	dataBase dataBase.DataBase
 }
 
-func NewDBStorage(dataBase db.DataBase) storage.MetricsStorage {
+func NewDBStorage(dataBase dataBase.DataBase) storage.MetricsStorage {
 	return &dbStorage{dataBase: dataBase}
 }
 

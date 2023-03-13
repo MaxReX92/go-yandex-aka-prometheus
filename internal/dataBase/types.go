@@ -1,4 +1,4 @@
-package db
+package dataBase
 
 import (
 	"database/sql/driver"
