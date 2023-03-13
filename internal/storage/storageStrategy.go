@@ -81,3 +81,7 @@ func (s *StorageStrategy) RestoreFromBackup() error {
 
 	return s.inMemoryStorage.Restore(restoredState)
 }
+
+func (s *StorageStrategy) Close() error {
+	return s.CreateBackup()
+}
