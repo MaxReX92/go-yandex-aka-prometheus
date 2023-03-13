@@ -7,8 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"io"
 	"net/http"
 	"time"
@@ -17,6 +15,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/db/postgres"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
@@ -60,7 +61,7 @@ func main() {
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
-	dbStorage, err := db.NewPostgresDBStorage(conf)
+	dbStorage, err := postgres.NewPostgresDBStorage(conf)
 	if err != nil {
 		logger.ErrorFormat("Fail to create db storage: %v", err)
 		panic(err)
@@ -71,8 +72,10 @@ func main() {
 	converter := model.NewMetricsConverter(conf, signer)
 	inMemoryStorage := storage.NewInMemoryStorage()
 	fileStorage := storage.NewFileStorage(conf)
-	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
 	htmlPageBuilder := html.NewSimplePageBuilder()
+	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
+	defer storageStrategy.Close()
+
 	router := initRouter(storageStrategy, converter, htmlPageBuilder, dbStorage)
 
 	ctx, cancel := context.WithCancel(context.Background())
