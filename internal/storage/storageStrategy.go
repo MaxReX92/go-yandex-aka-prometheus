@@ -10,7 +10,7 @@ type storageStrategyConfig interface {
 }
 
 type StorageStrategy struct {
-	fileStorage     MetricsStorage
+	backupStorage   MetricsStorage
 	inMemoryStorage MetricsStorage
 	syncMode        bool
 	lock            sync.RWMutex
@@ -18,7 +18,7 @@ type StorageStrategy struct {
 
 func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsStorage, fileStorage MetricsStorage) *StorageStrategy {
 	return &StorageStrategy{
-		fileStorage:     fileStorage,
+		backupStorage:   fileStorage,
 		inMemoryStorage: inMemoryStorage,
 		syncMode:        config.SyncMode(),
 	}
@@ -34,7 +34,7 @@ func (s *StorageStrategy) AddMetricValue(metric metrics.Metric) (metrics.Metric,
 	}
 
 	if s.syncMode {
-		_, err = s.fileStorage.AddMetricValue(result)
+		_, err = s.backupStorage.AddMetricValue(result)
 		if err != nil {
 			return nil, err
 		}
@@ -70,11 +70,11 @@ func (s *StorageStrategy) CreateBackup() error {
 		return err
 	}
 
-	return s.fileStorage.Restore(currentState)
+	return s.backupStorage.Restore(currentState)
 }
 
 func (s *StorageStrategy) RestoreFromBackup() error {
-	restoredState, err := s.fileStorage.GetMetricValues()
+	restoredState, err := s.backupStorage.GetMetricValues()
 	if err != nil {
 		return err
 	}
