@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher/http"
 	"time"
 
 	"github.com/caarlos0/env/v7"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/client"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider"
@@ -33,7 +33,7 @@ func main() {
 
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	metricPusher, err := client.NewMetricsPusher(conf, converter)
+	metricPusher, err := http.NewMetricsPusher(conf, converter)
 	if err != nil {
 		panic(err)
 	}

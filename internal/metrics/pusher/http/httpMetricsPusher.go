@@ -1,4 +1,4 @@
-package client
+package http
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 )
 
 type metricsPusherConfig interface {
@@ -28,7 +29,7 @@ type httpMetricsPusher struct {
 	converter        *model.MetricsConverter
 }
 
-func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter) (MetricsPusher, error) {
+func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
 		return nil, err
