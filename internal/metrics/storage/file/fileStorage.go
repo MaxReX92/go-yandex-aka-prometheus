@@ -1,9 +1,12 @@
-package storage
+package file
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"io"
 	"os"
 	"sync"
@@ -13,7 +16,7 @@ import (
 )
 
 type storageRecord struct {
-	Type  string `json:"type"`
+	Type  string `json:"types"`
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
@@ -29,7 +32,7 @@ type fileStorage struct {
 	lock     sync.Mutex
 }
 
-func NewFileStorage(config fileStorageConfig) MetricsStorage {
+func NewFileStorage(config fileStorageConfig) storage.MetricsStorage {
 	result := &fileStorage{
 		filePath: config.StoreFilePath(),
 	}
@@ -45,26 +48,22 @@ func NewFileStorage(config fileStorageConfig) MetricsStorage {
 	return result
 }
 
-func (f *fileStorage) AddGaugeMetricValue(name string, value float64) (float64, error) {
-	return value, f.updateMetric("gauge", name, parser.FloatToString(value))
+func (f *fileStorage) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
+	return metric, f.updateMetric(metric.GetType(), metric.GetName(), metric.GetStringValue())
 }
 
-func (f *fileStorage) AddCounterMetricValue(name string, value int64) (int64, error) {
-	return value, f.updateMetric("counter", name, parser.IntToString(value))
-}
-
-func (f *fileStorage) GetMetricValue(metricType string, metricName string) (float64, error) {
+func (f *fileStorage) GetMetric(metricType string, metricName string) (metrics.Metric, error) {
 	records, err := f.readRecordsFromFile(func(record *storageRecord) bool {
 		return record.Type == metricType && record.Name == metricName
 	})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	if len(records) != 1 {
-		return 0, fmt.Errorf("metrics with name %v and type %v not found", metricName, metricType)
+		return nil, fmt.Errorf("metrics with name %v and types %v not found", metricName, metricType)
 	}
 
-	return parser.ToFloat64(records[0].Value)
+	return f.toMetric(*records[0])
 }
 
 func (f *fileStorage) GetMetricValues() (map[string]map[string]string, error) {
@@ -196,4 +195,24 @@ func (f *fileStorage) workWithFileResult(flag int, work func(file *os.File) (sto
 	}(fileStream)
 
 	return work(fileStream)
+}
+
+func (f *fileStorage) toMetric(record storageRecord) (metrics.Metric, error) {
+	var metric metrics.Metric
+	switch record.Type {
+	case "counter":
+		metric = types.NewCounterMetric(record.Name)
+	case "gauge":
+		metric = types.NewGaugeMetric(record.Name)
+	default:
+		return nil, fmt.Errorf("unknown metric types: %s", record.Type)
+	}
+
+	value, err := parser.ToFloat64(record.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	metric.SetValue(value)
+	return metric, nil
 }

@@ -1,23 +1,24 @@
-package metrics
+package provider
 
 import (
 	"context"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
 type aggregateMetricsProvider struct {
-	providers []MetricsProvider
+	providers []metrics.MetricsProvider
 }
 
-func NewAggregateMetricsProvider(providers ...MetricsProvider) MetricsProvider {
+func NewAggregateMetricsProvider(providers ...metrics.MetricsProvider) metrics.MetricsProvider {
 	return &aggregateMetricsProvider{
 		providers: providers,
 	}
 }
 
-func (a *aggregateMetricsProvider) GetMetrics() []Metric {
-	resultMetrics := []Metric{}
+func (a *aggregateMetricsProvider) GetMetrics() []metrics.Metric {
+	resultMetrics := []metrics.Metric{}
 	for _, provider := range a.providers {
 		resultMetrics = append(resultMetrics, provider.GetMetrics()...)
 	}

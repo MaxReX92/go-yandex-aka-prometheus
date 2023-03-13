@@ -96,7 +96,7 @@ jobs:
 # Метрики отправлять по протоколу http, методом POST:
 #   * по умолчанию на адрес: 127.0.0.1, порт: 8080
 #   * в формате: "http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>"
-#   * application-type: "text/plain"
+#   * application-types: "text/plain"
 # Агент должен штатно завершаться по сигналам: syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT
 
       - name: "Code increment #1"
@@ -144,7 +144,7 @@ jobs:
 # Метрики принимаются сервером по протоколу http, методом POST:
 #   * по умолчанию открывать порт: 8080, на адресе: 127.0.0.1
 #   * в формате: "http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>"
-#   * application-type: "text/plain"
+#   * application-types: "text/plain"
 #   * при успешном приеме, возвращать статус: http.StatusOK
 # Сервер должен штатно завершаться по сигналам: syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT
 # Покройте код агента и сервера юнит тестами
@@ -220,9 +220,9 @@ jobs:
 # Дополнить(!) API сервера, которое позволяет принимать метрики в формате JSON.
 # При реализации задействовать одну из распространенных библиотек. Например: encoding/json
 #   * Обмен с сервером организовать с использованием следующей структуры:
-#   type Metrics struct {
+#   types Metrics struct {
 # 	    ID    string   `json:"id"`              // Имя метрики
-# 	    MType string   `json:"type"`            // Параметр принимающий значение gauge или counter
+# 	    MType string   `json:"types"`            // Параметр принимающий значение gauge или counter
 # 	    Delta *int64   `json:"delta,omitempty"` // Значение метрики в случае передачи counter
 # 	    Value *float64 `json:"value,omitempty"` // Значение метрики в случае передачи gauge
 #   }
@@ -438,9 +438,9 @@ jobs:
 
 # Реализовать механизм подписывания передаваемых данных по алгоритму sha256
 # Для этого расширим структуру
-#   type Metrics struct {
+#   types Metrics struct {
 # 	    ID    string   `json:"id"`              // Имя метрики
-# 	    MType string   `json:"type"`            // Параметр принимающий значение gauge или counter
+# 	    MType string   `json:"types"`            // Параметр принимающий значение gauge или counter
 # 	    Delta *int64   `json:"delta,omitempty"` // Значение метрики в случае передачи counter
 # 	    Value *float64 `json:"value,omitempty"` // Значение метрики в случае передачи gauge
 # 	    Hash  string   `json:"hash,omitempty"`  // Значение hash-функции

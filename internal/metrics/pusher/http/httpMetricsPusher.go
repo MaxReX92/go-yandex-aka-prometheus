@@ -1,4 +1,4 @@
-package client
+package http
 
 import (
 	"bytes"
@@ -13,7 +13,8 @@ import (
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 )
 
 type metricsPusherConfig interface {
@@ -25,9 +26,10 @@ type httpMetricsPusher struct {
 	client           http.Client
 	metricsServerURL string
 	pushTimeout      time.Duration
+	converter        *model.MetricsConverter
 }
 
-func NewMetricsPusher(config metricsPusherConfig) (MetricsPusher, error) {
+func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
 		return nil, err
@@ -37,6 +39,7 @@ func NewMetricsPusher(config metricsPusherConfig) (MetricsPusher, error) {
 		client:           http.Client{},
 		metricsServerURL: serverURL.String(),
 		pushTimeout:      config.PushMetricsTimeout(),
+		converter:        converter,
 	}, nil
 }
 
@@ -49,7 +52,7 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 	for _, metric := range metrics {
 
 		metricName := metric.GetName()
-		modelRequest, err := createModelRequest(metric)
+		modelRequest, err := p.converter.ToModelMetric(metric)
 		if err != nil {
 			logger.ErrorFormat("Fail to create model request: %v", err)
 			return err
@@ -93,25 +96,6 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 			metricName, metric.GetStringValue(), response.Status, stringContent)
 	}
 	return nil
-}
-
-func createModelRequest(metric metrics.Metric) (*model.Metrics, error) {
-	modelRequest := &model.Metrics{
-		ID:    metric.GetName(),
-		MType: metric.GetType(),
-	}
-
-	metricValue := metric.GetValue()
-	if modelRequest.MType == "counter" {
-		counterValue := int64(metricValue)
-		modelRequest.Delta = &counterValue
-	} else if modelRequest.MType == "gauge" {
-		modelRequest.Value = &metricValue
-	} else {
-		return nil, fmt.Errorf("unknown metric type: %v", modelRequest.MType)
-	}
-
-	return modelRequest, nil
 }
 
 func normalizeURL(urlStr string) (*url.URL, error) {

@@ -1,8 +1,10 @@
-package metrics
+package runtime
 
 import (
 	"context"
 	"fmt"
+	metrics2 "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"reflect"
 	"runtime"
 
@@ -14,14 +16,14 @@ type runtimeMetricsProviderConfig interface {
 }
 
 type runtimeMetricsProvider struct {
-	metrics []Metric
+	metrics []metrics2.Metric
 }
 
-func NewRuntimeMetricsProvider(config runtimeMetricsProviderConfig) MetricsProvider {
+func NewRuntimeMetricsProvider(config runtimeMetricsProviderConfig) metrics2.MetricsProvider {
 	metricsList := config.MetricsList()
-	metrics := make([]Metric, len(metricsList))
+	metrics := make([]metrics2.Metric, len(metricsList))
 	for i, metricName := range metricsList {
-		metrics[i] = NewGaugeMetric(metricName)
+		metrics[i] = types.NewGaugeMetric(metricName)
 	}
 
 	return &runtimeMetricsProvider{metrics: metrics}
@@ -47,7 +49,7 @@ func (p *runtimeMetricsProvider) Update(context.Context) error {
 	return nil
 }
 
-func (p *runtimeMetricsProvider) GetMetrics() []Metric {
+func (p *runtimeMetricsProvider) GetMetrics() []metrics2.Metric {
 	return p.metrics
 }
 

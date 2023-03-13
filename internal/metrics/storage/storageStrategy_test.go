@@ -6,6 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 type configMock struct {
@@ -17,10 +20,9 @@ type metricStorageMock struct {
 }
 
 const (
-	metricType               = "metricType"
-	metricName               = "metricName"
-	metricValueInt   int64   = 100
-	metricValueFloat float64 = 100
+	metricType          = "metricType"
+	metricName          = "metricName"
+	metricValue float64 = 100
 )
 
 var (
@@ -30,14 +32,12 @@ var (
 func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 
 	tests := []struct {
-		name                  string
-		syncMode              bool
-		inMemoryStorageResult float64
-		inMemoryStorageError  error
-		fileStorageResult     float64
-		fileStorageErrorError error
-		expectedResult        float64
-		expectedError         error
+		name                    string
+		syncMode                bool
+		inMemoryStorageError    error
+		backupStorageErrorError error
+		expectedResult          metrics.Metric
+		expectedError           error
 	}{
 		{
 			name:                 "noSync_inMemoryStorage_error",
@@ -52,32 +52,26 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 			expectedError:        errTest,
 		},
 		{
-			name:                  "noSync_fileStorage_error",
-			syncMode:              false,
-			inMemoryStorageResult: metricValueFloat,
-			fileStorageErrorError: errTest,
-			expectedResult:        metricValueFloat,
+			name:                    "noSync_backupStorage_error",
+			syncMode:                false,
+			backupStorageErrorError: errTest,
+			expectedResult:          test.CreateGaugeMetric("resultMetric", 100),
 		},
 		{
-			name:                  "sync_fileStorage_error",
-			syncMode:              true,
-			inMemoryStorageResult: metricValueFloat,
-			fileStorageErrorError: errTest,
-			expectedError:         errTest,
+			name:                    "sync_backupStorage_error",
+			syncMode:                true,
+			backupStorageErrorError: errTest,
+			expectedError:           errTest,
 		},
 		{
-			name:                  "noSync_success",
-			syncMode:              false,
-			inMemoryStorageResult: metricValueFloat,
-			fileStorageResult:     metricValueFloat,
-			expectedResult:        metricValueFloat,
+			name:           "noSync_success",
+			syncMode:       false,
+			expectedResult: test.CreateGaugeMetric("resultMetric", 100),
 		},
 		{
-			name:                  "sync_success",
-			syncMode:              true,
-			inMemoryStorageResult: metricValueFloat,
-			fileStorageResult:     metricValueFloat,
-			expectedResult:        metricValueFloat,
+			name:           "sync_success",
+			syncMode:       true,
+			expectedResult: test.CreateGaugeMetric("resultMetric", 100),
 		},
 	}
 
@@ -86,28 +80,30 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 
 			confMock := new(configMock)
 			inMemoryStorageMock := new(metricStorageMock)
-			fileStorageMock := new(metricStorageMock)
+			backupStorageMock := new(metricStorageMock)
+
+			gaugeMetric := test.CreateGaugeMetric(metricName, metricValue)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
-			inMemoryStorageMock.On("AddGaugeMetricValue", metricName, metricValueFloat).Return(tt.inMemoryStorageResult, tt.inMemoryStorageError)
-			fileStorageMock.On("AddGaugeMetricValue", metricName, tt.inMemoryStorageResult).Return(tt.fileStorageResult, tt.fileStorageErrorError)
+			inMemoryStorageMock.On("AddMetricValue", gaugeMetric).Return(tt.expectedResult, tt.inMemoryStorageError)
+			backupStorageMock.On("AddMetricValue", tt.expectedResult).Return(tt.expectedResult, tt.backupStorageErrorError)
 
-			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, fileStorageMock)
-			actualResult, actualError := strategy.AddGaugeMetricValue(metricName, metricValueFloat)
+			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
+			actualResult, actualError := strategy.AddMetricValue(gaugeMetric)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
 			assert.Equal(t, tt.expectedError, actualError)
 
-			inMemoryStorageMock.AssertCalled(t, "AddGaugeMetricValue", metricName, metricValueFloat)
+			inMemoryStorageMock.AssertCalled(t, "AddMetricValue", gaugeMetric)
 
 			if tt.inMemoryStorageError == nil {
 				if tt.syncMode {
-					fileStorageMock.AssertCalled(t, "AddGaugeMetricValue", metricName, tt.inMemoryStorageResult)
+					backupStorageMock.AssertCalled(t, "AddMetricValue", tt.expectedResult)
 				} else {
-					fileStorageMock.AssertNotCalled(t, "AddGaugeMetricValue", mock.Anything, mock.Anything)
+					backupStorageMock.AssertNotCalled(t, "AddMetricValue", mock.Anything)
 				}
 			} else {
-				fileStorageMock.AssertNotCalled(t, "AddGaugeMetricValue", mock.Anything, mock.Anything)
+				backupStorageMock.AssertNotCalled(t, "AddMetricValue", mock.Anything, mock.Anything)
 			}
 		})
 	}
@@ -116,14 +112,12 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 
 	tests := []struct {
-		name                  string
-		syncMode              bool
-		inMemoryStorageResult int64
-		inMemoryStorageError  error
-		fileStorageResult     int64
-		fileStorageErrorError error
-		expectedResult        int64
-		expectedError         error
+		name                    string
+		syncMode                bool
+		inMemoryStorageError    error
+		backupStorageErrorError error
+		expectedResult          metrics.Metric
+		expectedError           error
 	}{
 		{
 			name:                 "noSync_inMemoryStorage_error",
@@ -138,32 +132,26 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 			expectedError:        errTest,
 		},
 		{
-			name:                  "noSync_fileStorage_error",
-			syncMode:              false,
-			inMemoryStorageResult: metricValueInt,
-			fileStorageErrorError: errTest,
-			expectedResult:        metricValueInt,
+			name:                    "noSync_backupStorage_error",
+			syncMode:                false,
+			backupStorageErrorError: errTest,
+			expectedResult:          test.CreateCounterMetric("resultMetric", 100),
 		},
 		{
-			name:                  "sync_fileStorage_error",
-			syncMode:              true,
-			inMemoryStorageResult: metricValueInt,
-			fileStorageErrorError: errTest,
-			expectedError:         errTest,
+			name:                    "sync_backupStorage_error",
+			syncMode:                true,
+			backupStorageErrorError: errTest,
+			expectedError:           errTest,
 		},
 		{
-			name:                  "noSync_success",
-			syncMode:              false,
-			inMemoryStorageResult: metricValueInt,
-			fileStorageResult:     metricValueInt,
-			expectedResult:        metricValueInt,
+			name:           "noSync_success",
+			syncMode:       false,
+			expectedResult: test.CreateCounterMetric("resultMetric", 100),
 		},
 		{
-			name:                  "sync_success",
-			syncMode:              true,
-			inMemoryStorageResult: metricValueInt,
-			fileStorageResult:     metricValueInt,
-			expectedResult:        metricValueInt,
+			name:           "sync_success",
+			syncMode:       true,
+			expectedResult: test.CreateCounterMetric("resultMetric", 100),
 		},
 	}
 
@@ -172,28 +160,30 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 
 			confMock := new(configMock)
 			inMemoryStorageMock := new(metricStorageMock)
-			fileStorageMock := new(metricStorageMock)
+			backupStorageMock := new(metricStorageMock)
+
+			counterMetric := test.CreateCounterMetric(metricName, metricValue)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
-			inMemoryStorageMock.On("AddCounterMetricValue", metricName, metricValueInt).Return(tt.inMemoryStorageResult, tt.inMemoryStorageError)
-			fileStorageMock.On("AddCounterMetricValue", metricName, tt.inMemoryStorageResult).Return(tt.fileStorageResult, tt.fileStorageErrorError)
+			inMemoryStorageMock.On("AddMetricValue", counterMetric).Return(tt.expectedResult, tt.inMemoryStorageError)
+			backupStorageMock.On("AddMetricValue", tt.expectedResult).Return(tt.expectedResult, tt.backupStorageErrorError)
 
-			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, fileStorageMock)
-			actualResult, actualError := strategy.AddCounterMetricValue(metricName, metricValueInt)
+			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
+			actualResult, actualError := strategy.AddMetricValue(counterMetric)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
 			assert.Equal(t, tt.expectedError, actualError)
 
-			inMemoryStorageMock.AssertCalled(t, "AddCounterMetricValue", metricName, metricValueInt)
+			inMemoryStorageMock.AssertCalled(t, "AddMetricValue", counterMetric)
 
 			if tt.inMemoryStorageError == nil {
 				if tt.syncMode {
-					fileStorageMock.AssertCalled(t, "AddCounterMetricValue", metricName, tt.inMemoryStorageResult)
+					backupStorageMock.AssertCalled(t, "AddMetricValue", tt.expectedResult)
 				} else {
-					fileStorageMock.AssertNotCalled(t, "AddCounterMetricValue", mock.Anything, mock.Anything)
+					backupStorageMock.AssertNotCalled(t, "AddMetricValue", mock.Anything)
 				}
 			} else {
-				fileStorageMock.AssertNotCalled(t, "AddCounterMetricValue", mock.Anything, mock.Anything)
+				backupStorageMock.AssertNotCalled(t, "AddMetricValue", mock.Anything)
 			}
 		})
 	}
@@ -242,32 +232,33 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 
 			confMock := new(configMock)
 			inMemoryStorageMock := new(metricStorageMock)
-			fileStorageMock := new(metricStorageMock)
+			backupStorageMock := new(metricStorageMock)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
 			inMemoryStorageMock.On("GetMetricValues").Return(tt.storageResult, tt.storageError)
-			fileStorageMock.On("GetMetricValues").Return(tt.storageResult, tt.storageError)
+			backupStorageMock.On("GetMetricValues").Return(tt.storageResult, tt.storageError)
 
-			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, fileStorageMock)
+			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
 			actualResult, actualError := strategy.GetMetricValues()
 
 			assert.Equal(t, tt.expectedResult, actualResult)
 			assert.Equal(t, tt.expectedError, actualError)
 
 			inMemoryStorageMock.AssertCalled(t, "GetMetricValues")
-			fileStorageMock.AssertNotCalled(t, "GetMetricValues")
+			backupStorageMock.AssertNotCalled(t, "GetMetricValues")
 		})
 	}
 }
 
-func TestStorageStrategy_GetMetricValue(t *testing.T) {
+func TestStorageStrategy_GetMetric(t *testing.T) {
 
+	resultMetric := test.CreateGaugeMetric(metricName, metricValue)
 	tests := []struct {
 		name           string
 		syncMode       bool
-		storageResult  float64
+		storageResult  metrics.Metric
 		storageError   error
-		expectedResult float64
+		expectedResult metrics.Metric
 		expectedError  error
 	}{
 		{
@@ -285,14 +276,14 @@ func TestStorageStrategy_GetMetricValue(t *testing.T) {
 		{
 			name:           "noSync_success",
 			syncMode:       true,
-			storageResult:  metricValueFloat,
-			expectedResult: metricValueFloat,
+			storageResult:  resultMetric,
+			expectedResult: resultMetric,
 		},
 		{
 			name:           "sync_success",
 			syncMode:       true,
-			storageResult:  metricValueFloat,
-			expectedResult: metricValueFloat,
+			storageResult:  resultMetric,
+			expectedResult: resultMetric,
 		},
 	}
 
@@ -301,20 +292,20 @@ func TestStorageStrategy_GetMetricValue(t *testing.T) {
 
 			confMock := new(configMock)
 			inMemoryStorageMock := new(metricStorageMock)
-			fileStorageMock := new(metricStorageMock)
+			backupStorageMock := new(metricStorageMock)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
-			inMemoryStorageMock.On("GetMetricValue", metricType, metricName).Return(tt.storageResult, tt.storageError)
-			fileStorageMock.On("GetMetricValue", metricType, metricName).Return(tt.storageResult, tt.storageError)
+			inMemoryStorageMock.On("GetMetric", metricType, metricName).Return(tt.storageResult, tt.storageError)
+			backupStorageMock.On("GetMetric", metricType, metricName).Return(tt.storageResult, tt.storageError)
 
-			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, fileStorageMock)
-			actualResult, actualError := strategy.GetMetricValue(metricType, metricName)
+			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
+			actualResult, actualError := strategy.GetMetric(metricType, metricName)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
 			assert.Equal(t, tt.expectedError, actualError)
 
-			inMemoryStorageMock.AssertCalled(t, "GetMetricValue", metricType, metricName)
-			fileStorageMock.AssertNotCalled(t, "GetMetricValue", mock.Anything, mock.Anything)
+			inMemoryStorageMock.AssertCalled(t, "GetMetric", metricType, metricName)
+			backupStorageMock.AssertNotCalled(t, "GetMetric", mock.Anything, mock.Anything)
 		})
 	}
 }
@@ -356,19 +347,19 @@ func TestStorageStrategy_Restore(t *testing.T) {
 
 			confMock := new(configMock)
 			inMemoryStorageMock := new(metricStorageMock)
-			fileStorageMock := new(metricStorageMock)
+			backupStorageMock := new(metricStorageMock)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
 			inMemoryStorageMock.On("Restore", values).Return(tt.storageError)
-			fileStorageMock.On("Restore", values).Return(tt.storageError)
+			backupStorageMock.On("Restore", values).Return(tt.storageError)
 
-			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, fileStorageMock)
+			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
 			actualError := strategy.Restore(values)
 
 			assert.Equal(t, tt.expectedError, actualError)
 
 			inMemoryStorageMock.AssertCalled(t, "Restore", values)
-			fileStorageMock.AssertNotCalled(t, "Restore", mock.Anything)
+			backupStorageMock.AssertNotCalled(t, "Restore", mock.Anything)
 		})
 	}
 }
@@ -428,13 +419,13 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 
 			confMock := new(configMock)
 			inMemoryStorageMock := new(metricStorageMock)
-			fileStorageMock := new(metricStorageMock)
+			backupStorageMock := new(metricStorageMock)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
 			inMemoryStorageMock.On("GetMetricValues").Return(tt.currentStateValues, tt.currentStateError)
-			fileStorageMock.On("Restore", tt.currentStateValues).Return(tt.restoreError)
+			backupStorageMock.On("Restore", tt.currentStateValues).Return(tt.restoreError)
 
-			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, fileStorageMock)
+			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
 			actualError := strategy.CreateBackup()
 
 			assert.Equal(t, tt.expectedError, actualError)
@@ -442,9 +433,9 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 			inMemoryStorageMock.AssertCalled(t, "GetMetricValues")
 
 			if tt.currentStateError == nil {
-				fileStorageMock.AssertCalled(t, "Restore", tt.currentStateValues)
+				backupStorageMock.AssertCalled(t, "Restore", tt.currentStateValues)
 			} else {
-				fileStorageMock.AssertNotCalled(t, "Restore", mock.Anything)
+				backupStorageMock.AssertNotCalled(t, "Restore", mock.Anything)
 			}
 		})
 	}
@@ -505,18 +496,18 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 
 			confMock := new(configMock)
 			inMemoryStorageMock := new(metricStorageMock)
-			fileStorageMock := new(metricStorageMock)
+			backupStorageMock := new(metricStorageMock)
 
 			confMock.On("SyncMode").Return(tt.syncMode)
-			fileStorageMock.On("GetMetricValues").Return(tt.currentStateValues, tt.currentStateError)
+			backupStorageMock.On("GetMetricValues").Return(tt.currentStateValues, tt.currentStateError)
 			inMemoryStorageMock.On("Restore", tt.currentStateValues).Return(tt.restoreError)
 
-			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, fileStorageMock)
+			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
 			actualError := strategy.RestoreFromBackup()
 
 			assert.Equal(t, tt.expectedError, actualError)
 
-			fileStorageMock.AssertCalled(t, "GetMetricValues")
+			backupStorageMock.AssertCalled(t, "GetMetricValues")
 
 			if tt.currentStateError == nil {
 				inMemoryStorageMock.AssertCalled(t, "Restore", tt.currentStateValues)
@@ -532,14 +523,25 @@ func (c *configMock) SyncMode() bool {
 	return args.Bool(0)
 }
 
-func (s *metricStorageMock) AddGaugeMetricValue(name string, value float64) (float64, error) {
-	args := s.Called(name, value)
-	return args.Get(0).(float64), args.Error(1)
+func (s *metricStorageMock) GetMetric(metricType string, metricName string) (metrics.Metric, error) {
+	args := s.Called(metricType, metricName)
+	result := args.Get(0)
+	if result == nil {
+		return nil, args.Error(1)
+	} else {
+		return result.(metrics.Metric), args.Error(1)
+	}
 }
 
-func (s *metricStorageMock) AddCounterMetricValue(name string, value int64) (int64, error) {
-	args := s.Called(name, value)
-	return args.Get(0).(int64), args.Error(1)
+func (s *metricStorageMock) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
+	args := s.Called(metric)
+
+	result := args.Get(0)
+	if result == nil {
+		return nil, args.Error(1)
+	} else {
+		return result.(metrics.Metric), args.Error(1)
+	}
 }
 
 func (s *metricStorageMock) GetMetricValues() (map[string]map[string]string, error) {

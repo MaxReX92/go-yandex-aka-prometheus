@@ -3,16 +3,21 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher/http"
 	"time"
 
 	"github.com/caarlos0/env/v7"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/client"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/custom"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/runtime"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
 type config struct {
+	Key                   string        `env:"KEY"`
 	ServerURL             string        `env:"ADDRESS"`
 	PushTimeout           time.Duration `env:"PUSH_TIMEOUT"`
 	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL"`
@@ -25,14 +30,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	metricPusher, err := client.NewMetricsPusher(conf)
+
+	signer := hash.NewSigner(conf)
+	converter := model.NewMetricsConverter(conf, signer)
+	metricPusher, err := http.NewMetricsPusher(conf, converter)
 	if err != nil {
 		panic(err)
 	}
 
-	runtimeMetricsProvider := metrics.NewRuntimeMetricsProvider(conf)
-	customMetricsProvider := metrics.NewCustomMetricsProvider()
-	aggregateMetricsProvider := metrics.NewAggregateMetricsProvider(runtimeMetricsProvider, customMetricsProvider)
+	runtimeMetricsProvider := runtime.NewRuntimeMetricsProvider(conf)
+	customMetricsProvider := custom.NewCustomMetricsProvider()
+	aggregateMetricsProvider := provider.NewAggregateMetricsProvider(runtimeMetricsProvider, customMetricsProvider)
 	getMetricsWorker := worker.NewPeriodicWorker(aggregateMetricsProvider.Update)
 	pushMetricsWorker := worker.NewPeriodicWorker(func(workerContext context.Context) error {
 		return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics())
@@ -76,6 +84,7 @@ func createConfig() (*config, error) {
 		"TotalAlloc",
 	}}
 
+	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Metrics server URL")
 	flag.DurationVar(&conf.PushTimeout, "t", time.Second*10, "Push metrics timeout")
 	flag.DurationVar(&conf.SendMetricsInterval, "r", time.Second*10, "Send metrics interval")
@@ -96,4 +105,12 @@ func (c *config) MetricsServerURL() string {
 
 func (c *config) PushMetricsTimeout() time.Duration {
 	return c.PushTimeout
+}
+
+func (c *config) GetKey() []byte {
+	return []byte(c.Key)
+}
+
+func (c *config) SignMetrics() bool {
+	return c.Key != ""
 }

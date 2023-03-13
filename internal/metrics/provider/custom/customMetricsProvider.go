@@ -1,26 +1,28 @@
-package metrics
+package custom
 
 import (
 	"context"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"math/rand"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
 type customMetricsProvider struct {
-	poolMetric   Metric
-	randomMetric Metric
+	poolMetric   metrics.Metric
+	randomMetric metrics.Metric
 }
 
-func NewCustomMetricsProvider() MetricsProvider {
+func NewCustomMetricsProvider() metrics.MetricsProvider {
 	return &customMetricsProvider{
-		poolMetric:   NewCounterMetric("PollCount"),
-		randomMetric: NewGaugeMetric("RandomValue"),
+		poolMetric:   types.NewCounterMetric("PollCount"),
+		randomMetric: types.NewGaugeMetric("RandomValue"),
 	}
 }
 
-func (c *customMetricsProvider) GetMetrics() []Metric {
-	return []Metric{
+func (c *customMetricsProvider) GetMetrics() []metrics.Metric {
+	return []metrics.Metric{
 		c.poolMetric,
 		c.randomMetric,
 	}

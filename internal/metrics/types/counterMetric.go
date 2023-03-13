@@ -1,8 +1,11 @@
-package metrics
+package types
 
 import (
+	"fmt"
+	"hash"
 	"sync"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
@@ -12,7 +15,7 @@ type counterMetric struct {
 	lock  sync.RWMutex
 }
 
-func NewCounterMetric(name string) Metric {
+func NewCounterMetric(name string) metrics.Metric {
 	return &counterMetric{
 		name: name,
 	}
@@ -44,6 +47,17 @@ func (m *counterMetric) SetValue(value float64) float64 {
 
 func (m *counterMetric) Flush() {
 	m.setValue(0)
+}
+
+func (m *counterMetric) GetHash(hash hash.Hash) ([]byte, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	_, err := hash.Write([]byte(fmt.Sprintf("%s:counter:%d", m.name, m.value)))
+	if err != nil {
+		return nil, err
+	}
+	return hash.Sum(nil), nil
 }
 
 func (m *counterMetric) setValue(value int64) float64 {
