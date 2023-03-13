@@ -49,7 +49,7 @@ type config struct {
 	StoreInterval time.Duration `env:"STORE_INTERVAL"`
 	StoreFile     string        `env:"STORE_FILE"`
 	Restore       bool          `env:"RESTORE"`
-	Db            string        `env:"DATABASE_DSN"`
+	DB            string        `env:"DATABASE_DSN"`
 }
 
 func main() {
@@ -60,7 +60,7 @@ func main() {
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
-	dbStorage, err := db.NewPostgresDbStorage(conf)
+	dbStorage, err := db.NewPostgresDBStorage(conf)
 	if err != nil {
 		logger.ErrorFormat("Fail to create db storage: %v", err)
 		panic(err)
@@ -107,7 +107,7 @@ func createConfig() (*config, error) {
 	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-db.json", "Backup storage file path")
-	flag.StringVar(&conf.Db, "d", "", "Database connection stirng")
+	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")
 	flag.Parse()
 
 	err := env.Parse(conf)
@@ -115,7 +115,7 @@ func createConfig() (*config, error) {
 }
 
 func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter,
-	htmlPageBuilder html.HTMLPageBuilder, dbStorage db.DbStorage) *chi.Mux {
+	htmlPageBuilder html.HTMLPageBuilder, dbStorage db.DBStorage) *chi.Mux {
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
@@ -141,7 +141,7 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 	})
 
 	router.Route("/ping", func(r chi.Router) {
-		r.Get("/", handleDbPing(dbStorage))
+		r.Get("/", handleDBPing(dbStorage))
 	})
 
 	router.Route("/", func(r chi.Router) {
@@ -370,7 +370,7 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	}
 }
 
-func handleDbPing(dbStorage db.DbStorage) func(w http.ResponseWriter, r *http.Request) {
+func handleDBPing(dbStorage db.DBStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := dbStorage.Ping(r.Context())
 		if err == nil {
@@ -414,5 +414,5 @@ func (c *config) SignMetrics() bool {
 }
 
 func (c *config) GetConnectionString() string {
-	return c.Db
+	return c.DB
 }
