@@ -16,13 +16,13 @@ type postgresDataBase struct {
 	conn *sql.DB
 }
 
-func NewPostgresDataBase(conf PostgresDataaBaseConfig) (dataBase.DataBase, error) {
-	connection, err := sql.Open("pgx", conf.GetConnectionString())
+func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (dataBase.DataBase, error) {
+	conn, err := initDb(ctx, conf.GetConnectionString())
 	if err != nil {
 		return nil, err
 	}
 
-	return &postgresDataBase{conn: connection}, nil
+	return &postgresDataBase{conn: conn}, nil
 }
 
 func (p *postgresDataBase) Ping(ctx context.Context) error {

@@ -8,6 +8,8 @@ import (
 type DataBase interface {
 	driver.Pinger
 	io.Closer
+
+	//WriteRecords(records []DBRecord) error
 }
 
 type DBRecord struct {

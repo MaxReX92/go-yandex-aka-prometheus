@@ -7,6 +7,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase/stub"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/db"
 	"io"
 	"net/http"
 	"time"
@@ -56,6 +58,9 @@ type config struct {
 }
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	conf, err := createConfig()
 	if err != nil {
 		logger.ErrorFormat("Fail to create config file: %v", err)
@@ -63,25 +68,30 @@ func main() {
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
-	dbStorage, err := postgres.NewPostgresDataBase(conf)
-	if err != nil {
-		logger.ErrorFormat("Fail to create dataBase storage: %v", err)
-		panic(err)
+	var base dataBase.DataBase
+	var backupStorage storage.MetricsStorage
+	if conf.DB == "" {
+		base = &stub.StubDataBase{}
+		backupStorage = file.NewFileStorage(conf)
+	} else {
+		base, err = postgres.NewPostgresDataBase(ctx, conf)
+		if err != nil {
+			logger.ErrorFormat("Fail to create database: %v", err)
+			panic(err)
+		}
+
+		backupStorage = db.NewDBStorage(base)
 	}
-	defer dbStorage.Close()
+	defer base.Close()
+
+	inMemoryStorage := memory.NewInMemoryStorage()
+	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, backupStorage)
+	defer storageStrategy.Close()
 
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	inMemoryStorage := memory.NewInMemoryStorage()
-	fileStorage := file.NewFileStorage(conf)
 	htmlPageBuilder := html.NewSimplePageBuilder()
-	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, fileStorage)
-	defer storageStrategy.Close()
-
-	router := initRouter(storageStrategy, converter, htmlPageBuilder, dbStorage)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	router := initRouter(storageStrategy, converter, htmlPageBuilder, base)
 
 	if conf.Restore {
 		logger.Info("Restore metrics from backup")
