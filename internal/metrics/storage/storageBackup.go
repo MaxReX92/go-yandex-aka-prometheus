@@ -1,10 +1,13 @@
 package storage
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 type StorageBackup interface {
 	io.Closer
 
-	CreateBackup() error
-	RestoreFromBackup() error
+	CreateBackup(context.Context) error
+	RestoreFromBackup(context.Context) error
 }

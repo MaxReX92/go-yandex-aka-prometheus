@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,11 +49,11 @@ func NewFileStorage(config fileStorageConfig) storage.MetricsStorage {
 	return result
 }
 
-func (f *fileStorage) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
+func (f *fileStorage) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
 	return metric, f.updateMetric(metric.GetType(), metric.GetName(), metric.GetStringValue())
 }
 
-func (f *fileStorage) GetMetric(metricType string, metricName string) (metrics.Metric, error) {
+func (f *fileStorage) GetMetric(ctx context.Context, metricType string, metricName string) (metrics.Metric, error) {
 	records, err := f.readRecordsFromFile(func(record *storageRecord) bool {
 		return record.Type == metricType && record.Name == metricName
 	})
@@ -66,7 +67,7 @@ func (f *fileStorage) GetMetric(metricType string, metricName string) (metrics.M
 	return f.toMetric(*records[0])
 }
 
-func (f *fileStorage) GetMetricValues() (map[string]map[string]string, error) {
+func (f *fileStorage) GetMetricValues(context.Context) (map[string]map[string]string, error) {
 	records, err := f.readRecordsFromFile(func(record *storageRecord) bool { return true })
 	if err != nil {
 		return nil, err
@@ -86,7 +87,7 @@ func (f *fileStorage) GetMetricValues() (map[string]map[string]string, error) {
 	return result, err
 }
 
-func (f *fileStorage) Restore(metricValues map[string]map[string]string) error {
+func (f *fileStorage) Restore(ctx context.Context, metricValues map[string]map[string]string) error {
 	var records storageRecords
 	for metricType, metricsByType := range metricValues {
 		for metricName, metricValue := range metricsByType {

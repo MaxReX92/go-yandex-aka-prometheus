@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -54,11 +55,11 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 			for _, m := range tt.counterMetrics {
-				_, err := storage.AddMetricValue(test.CreateCounterMetric(m.Key, m.Value))
+				_, err := storage.AddMetricValue(context.Background(), test.CreateCounterMetric(m.Key, m.Value))
 				assert.NoError(t, err)
 			}
 
-			actual, _ := storage.GetMetricValues()
+			actual, _ := storage.GetMetricValues(context.Background())
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -109,11 +110,11 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddMetricValue(test.CreateGaugeMetric(m.Key, m.Value))
+				_, err := storage.AddMetricValue(context.Background(), test.CreateGaugeMetric(m.Key, m.Value))
 				assert.NoError(t, err)
 			}
 
-			actual, _ := storage.GetMetricValues()
+			actual, _ := storage.GetMetricValues(context.Background())
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -161,16 +162,16 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 			storage := NewInMemoryStorage()
 
 			for _, m := range tt.counterMetrics {
-				_, err := storage.AddMetricValue(test.CreateCounterMetric(m.Key, m.Value))
+				_, err := storage.AddMetricValue(context.Background(), test.CreateCounterMetric(m.Key, m.Value))
 				assert.NoError(t, err)
 			}
 
 			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddMetricValue(test.CreateGaugeMetric(m.Key, m.Value))
+				_, err := storage.AddMetricValue(context.Background(), test.CreateGaugeMetric(m.Key, m.Value))
 				assert.NoError(t, err)
 			}
 
-			actual, _ := storage.GetMetricValues()
+			actual, _ := storage.GetMetricValues(context.Background())
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -213,11 +214,11 @@ func TestInMemoryStorage_Restore(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 
-			actualError := storage.Restore(tt.values)
+			actualError := storage.Restore(context.Background(), tt.values)
 			assert.Equal(t, tt.expectedError, actualError)
 
 			if tt.expectedError == nil {
-				actual, _ := storage.GetMetricValues()
+				actual, _ := storage.GetMetricValues(context.Background())
 				assert.Equal(t, tt.values, actual)
 			}
 		})
@@ -282,17 +283,17 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 			storage := NewInMemoryStorage()
 
 			for _, m := range tt.counterMetrics {
-				_, err := storage.AddMetricValue(test.CreateCounterMetric(m.Key, m.Value))
+				_, err := storage.AddMetricValue(context.Background(), test.CreateCounterMetric(m.Key, m.Value))
 				assert.NoError(t, err)
 			}
 
 			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddMetricValue(test.CreateGaugeMetric(m.Key, m.Value))
+				_, err := storage.AddMetricValue(context.Background(), test.CreateGaugeMetric(m.Key, m.Value))
 				assert.NoError(t, err)
 			}
 
 			for _, expectedCounter := range tt.expectedCounters {
-				actualValue, err := storage.GetMetric("counter", expectedCounter.Key)
+				actualValue, err := storage.GetMetric(context.Background(), "counter", expectedCounter.Key)
 				if tt.expectedOk {
 					assert.NoError(t, err)
 					assert.Equal(t, expectedCounter.Value, actualValue.GetValue())
@@ -302,7 +303,7 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 			}
 
 			for _, expectedGauge := range tt.expectedGauges {
-				actualValue, err := storage.GetMetric("gauge", expectedGauge.Key)
+				actualValue, err := storage.GetMetric(context.Background(), "gauge", expectedGauge.Key)
 				if tt.expectedOk {
 					assert.NoError(t, err)
 					assert.Equal(t, expectedGauge.Value, actualValue.GetValue())

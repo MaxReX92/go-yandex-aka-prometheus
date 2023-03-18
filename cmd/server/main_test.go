@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
 	"io"
 	"net/http"
@@ -329,7 +330,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			metricsStorage := memory.NewInMemoryStorage()
-			_, err := metricsStorage.AddMetricValue(createCounterMetric("metricName", 100))
+			_, err := metricsStorage.AddMetricValue(context.Background(), createCounterMetric("metricName", 100))
 			assert.NoError(t, err)
 
 			request := httptest.NewRequest(http.MethodGet, url, nil)
@@ -458,7 +459,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	metricsStorage := memory.NewInMemoryStorage()
 	if apiRequest.metrics != nil {
 		for _, metric := range apiRequest.metrics {
-			_, err := metricsStorage.AddMetricValue(metric)
+			_, err := metricsStorage.AddMetricValue(context.Background(), metric)
 			assert.NoError(t, err)
 		}
 	}
@@ -611,4 +612,19 @@ func (t testDBStorage) Ping(context.Context) error {
 
 func (t testDBStorage) Close() error {
 	return nil
+}
+
+func (t *testDBStorage) UpdateRecords(ctx context.Context, records []dataBase.DBRecord) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *testDBStorage) ReadRecord(ctx context.Context, metricType string, metricName string) (*dataBase.DBRecord, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *testDBStorage) ReadAll(ctx context.Context) ([]dataBase.DBRecord, error) {
+	//TODO implement me
+	panic("implement me")
 }

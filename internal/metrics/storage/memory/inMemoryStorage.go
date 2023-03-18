@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
@@ -22,7 +23,7 @@ func NewInMemoryStorage() storage.MetricsStorage {
 	}
 }
 
-func (s *inMemoryStorage) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
+func (s *inMemoryStorage) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
 	metricType := metric.GetType()
 	metricsList, ok := s.metricsByType[metricType]
 	if !ok {
@@ -42,7 +43,7 @@ func (s *inMemoryStorage) AddMetricValue(metric metrics.Metric) (metrics.Metric,
 	return currentMetric, nil
 }
 
-func (s *inMemoryStorage) GetMetricValues() (map[string]map[string]string, error) {
+func (s *inMemoryStorage) GetMetricValues(context.Context) (map[string]map[string]string, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -59,7 +60,7 @@ func (s *inMemoryStorage) GetMetricValues() (map[string]map[string]string, error
 	return metricValues, nil
 }
 
-func (s *inMemoryStorage) GetMetric(metricType string, metricName string) (metrics.Metric, error) {
+func (s *inMemoryStorage) GetMetric(ctx context.Context, metricType string, metricName string) (metrics.Metric, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -76,7 +77,7 @@ func (s *inMemoryStorage) GetMetric(metricType string, metricName string) (metri
 	return metric, nil
 }
 
-func (s *inMemoryStorage) Restore(metricValues map[string]map[string]string) error {
+func (s *inMemoryStorage) Restore(ctx context.Context, metricValues map[string]map[string]string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

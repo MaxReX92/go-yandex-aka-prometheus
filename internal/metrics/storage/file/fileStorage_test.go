@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -87,7 +88,7 @@ func TestFileStorage_AddGaugeMetricValue(t *testing.T) {
 
 			storage := NewFileStorage(&config{filePath: filePath})
 			for _, kv := range tt.values {
-				value, err := storage.AddMetricValue(test.CreateGaugeMetric(kv.Key, kv.Value))
+				value, err := storage.AddMetricValue(context.Background(), test.CreateGaugeMetric(kv.Key, kv.Value))
 				assert.Equal(t, kv.Value, value.GetValue())
 				assert.NoError(t, err)
 			}
@@ -137,7 +138,7 @@ func TestFileStorage_AddCounterMetricValue(t *testing.T) {
 
 			storage := NewFileStorage(&config{filePath: filePath})
 			for _, kv := range tt.values {
-				value, err := storage.AddMetricValue(test.CreateCounterMetric(kv.Key, kv.Value))
+				value, err := storage.AddMetricValue(context.Background(), test.CreateCounterMetric(kv.Key, kv.Value))
 				assert.Equal(t, kv.Value, value.GetValue())
 				assert.NoError(t, err)
 			}
@@ -189,7 +190,7 @@ func TestFileStorage_GetMetric(t *testing.T) {
 			writeRecords(t, filePath, tt.stored)
 
 			storage := NewFileStorage(&config{filePath: filePath})
-			actualValue, err := storage.GetMetric(expectedMetricType, expectedMetricName)
+			actualValue, err := storage.GetMetric(context.Background(), expectedMetricType, expectedMetricName)
 			assert.Equal(t, tt.expectedError, err)
 
 			if tt.expectedError == nil {

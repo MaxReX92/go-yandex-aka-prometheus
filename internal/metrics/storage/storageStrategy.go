@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"sync"
 )
@@ -24,17 +25,17 @@ func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsSto
 	}
 }
 
-func (s *StorageStrategy) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
+func (s *StorageStrategy) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	result, err := s.inMemoryStorage.AddMetricValue(metric)
+	result, err := s.inMemoryStorage.AddMetricValue(ctx, metric)
 	if err != nil {
 		return result, err
 	}
 
 	if s.syncMode {
-		_, err = s.backupStorage.AddMetricValue(result)
+		_, err = s.backupStorage.AddMetricValue(ctx, result)
 		if err != nil {
 			return nil, err
 		}
@@ -43,45 +44,45 @@ func (s *StorageStrategy) AddMetricValue(metric metrics.Metric) (metrics.Metric,
 	return result, nil
 }
 
-func (s *StorageStrategy) GetMetricValues() (map[string]map[string]string, error) {
+func (s *StorageStrategy) GetMetricValues(ctx context.Context) (map[string]map[string]string, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	return s.inMemoryStorage.GetMetricValues()
+	return s.inMemoryStorage.GetMetricValues(ctx)
 }
 
-func (s *StorageStrategy) GetMetric(metricType string, metricName string) (metrics.Metric, error) {
+func (s *StorageStrategy) GetMetric(ctx context.Context, metricType string, metricName string) (metrics.Metric, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	return s.inMemoryStorage.GetMetric(metricType, metricName)
+	return s.inMemoryStorage.GetMetric(ctx, metricType, metricName)
 }
 
-func (s *StorageStrategy) Restore(metricValues map[string]map[string]string) error {
+func (s *StorageStrategy) Restore(ctx context.Context, metricValues map[string]map[string]string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	return s.inMemoryStorage.Restore(metricValues)
+	return s.inMemoryStorage.Restore(ctx, metricValues)
 }
 
-func (s *StorageStrategy) CreateBackup() error {
-	currentState, err := s.inMemoryStorage.GetMetricValues()
+func (s *StorageStrategy) CreateBackup(ctx context.Context) error {
+	currentState, err := s.inMemoryStorage.GetMetricValues(ctx)
 	if err != nil {
 		return err
 	}
 
-	return s.backupStorage.Restore(currentState)
+	return s.backupStorage.Restore(ctx, currentState)
 }
 
-func (s *StorageStrategy) RestoreFromBackup() error {
-	restoredState, err := s.backupStorage.GetMetricValues()
+func (s *StorageStrategy) RestoreFromBackup(ctx context.Context) error {
+	restoredState, err := s.backupStorage.GetMetricValues(ctx)
 	if err != nil {
 		return err
 	}
 
-	return s.inMemoryStorage.Restore(restoredState)
+	return s.inMemoryStorage.Restore(ctx, restoredState)
 }
 
 func (s *StorageStrategy) Close() error {
-	return s.CreateBackup()
+	return s.CreateBackup(context.Background()) //force backup
 }

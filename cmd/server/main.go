@@ -95,7 +95,7 @@ func main() {
 
 	if conf.Restore {
 		logger.Info("Restore metrics from backup")
-		err = storageStrategy.RestoreFromBackup()
+		err = storageStrategy.RestoreFromBackup(ctx)
 		if err != nil {
 			logger.ErrorFormat("Fail to restore state from backup: %v", err)
 		}
@@ -103,7 +103,7 @@ func main() {
 
 	if !conf.SyncMode() {
 		logger.Info("Start periodic backup serice")
-		backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.CreateBackup() })
+		backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.CreateBackup(ctx) })
 		go backgroundStore.StartWork(ctx, conf.StoreInterval)
 	}
 
@@ -270,7 +270,7 @@ func updateMetric(storage storage.MetricsStorage, converter *model.MetricsConver
 				return
 			}
 
-			resultMetric, err := storage.AddMetricValue(metric)
+			resultMetric, err := storage.AddMetricValue(ctx, metric)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -298,7 +298,7 @@ func fillMetricValue(storage storage.MetricsStorage, converter *model.MetricsCon
 				return
 			}
 
-			metric, err := storage.GetMetric(metricContext.MType, metricContext.ID)
+			metric, err := storage.GetMetric(ctx, metricContext.MType, metricContext.ID)
 			if err != nil {
 				logger.ErrorFormat("Fail to get metric value: %v", err)
 				http.Error(w, "Metric not found", http.StatusNotFound)
@@ -338,7 +338,7 @@ func successURLValueResponse(converter *model.MetricsConverter) func(w http.Resp
 
 func handleMetricsPage(builder html.PageBuilder, storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		values, err := storage.GetMetricValues()
+		values, err := storage.GetMetricValues(r.Context())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

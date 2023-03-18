@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -89,7 +90,7 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 			backupStorageMock.On("AddMetricValue", tt.expectedResult).Return(tt.expectedResult, tt.backupStorageErrorError)
 
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
-			actualResult, actualError := strategy.AddMetricValue(gaugeMetric)
+			actualResult, actualError := strategy.AddMetricValue(nil, gaugeMetric)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
 			assert.Equal(t, tt.expectedError, actualError)
@@ -169,7 +170,7 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 			backupStorageMock.On("AddMetricValue", tt.expectedResult).Return(tt.expectedResult, tt.backupStorageErrorError)
 
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
-			actualResult, actualError := strategy.AddMetricValue(counterMetric)
+			actualResult, actualError := strategy.AddMetricValue(nil, counterMetric)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
 			assert.Equal(t, tt.expectedError, actualError)
@@ -239,7 +240,7 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 			backupStorageMock.On("GetMetricValues").Return(tt.storageResult, tt.storageError)
 
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
-			actualResult, actualError := strategy.GetMetricValues()
+			actualResult, actualError := strategy.GetMetricValues(nil)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
 			assert.Equal(t, tt.expectedError, actualError)
@@ -299,7 +300,7 @@ func TestStorageStrategy_GetMetric(t *testing.T) {
 			backupStorageMock.On("GetMetric", metricType, metricName).Return(tt.storageResult, tt.storageError)
 
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
-			actualResult, actualError := strategy.GetMetric(metricType, metricName)
+			actualResult, actualError := strategy.GetMetric(nil, metricType, metricName)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
 			assert.Equal(t, tt.expectedError, actualError)
@@ -354,7 +355,7 @@ func TestStorageStrategy_Restore(t *testing.T) {
 			backupStorageMock.On("Restore", values).Return(tt.storageError)
 
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
-			actualError := strategy.Restore(values)
+			actualError := strategy.Restore(nil, values)
 
 			assert.Equal(t, tt.expectedError, actualError)
 
@@ -426,7 +427,7 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 			backupStorageMock.On("Restore", tt.currentStateValues).Return(tt.restoreError)
 
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
-			actualError := strategy.CreateBackup()
+			actualError := strategy.CreateBackup(context.Background())
 
 			assert.Equal(t, tt.expectedError, actualError)
 
@@ -503,7 +504,7 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 			inMemoryStorageMock.On("Restore", tt.currentStateValues).Return(tt.restoreError)
 
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
-			actualError := strategy.RestoreFromBackup()
+			actualError := strategy.RestoreFromBackup(context.Background())
 
 			assert.Equal(t, tt.expectedError, actualError)
 
@@ -523,8 +524,8 @@ func (c *configMock) SyncMode() bool {
 	return args.Bool(0)
 }
 
-func (s *metricStorageMock) GetMetric(metricType string, metricName string) (metrics.Metric, error) {
-	args := s.Called(metricType, metricName)
+func (s *metricStorageMock) GetMetric(ctx context.Context, metricType string, metricName string) (metrics.Metric, error) {
+	args := s.Called(ctx, metricType, metricName)
 	result := args.Get(0)
 	if result == nil {
 		return nil, args.Error(1)
@@ -533,8 +534,8 @@ func (s *metricStorageMock) GetMetric(metricType string, metricName string) (met
 	}
 }
 
-func (s *metricStorageMock) AddMetricValue(metric metrics.Metric) (metrics.Metric, error) {
-	args := s.Called(metric)
+func (s *metricStorageMock) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
+	args := s.Called(ctx, metric)
 
 	result := args.Get(0)
 	if result == nil {
@@ -544,17 +545,17 @@ func (s *metricStorageMock) AddMetricValue(metric metrics.Metric) (metrics.Metri
 	}
 }
 
-func (s *metricStorageMock) GetMetricValues() (map[string]map[string]string, error) {
-	args := s.Called()
+func (s *metricStorageMock) GetMetricValues(ctx context.Context) (map[string]map[string]string, error) {
+	args := s.Called(ctx)
 	return args.Get(0).(map[string]map[string]string), args.Error(1)
 }
 
-func (s *metricStorageMock) GetMetricValue(metricType string, metricName string) (float64, error) {
-	args := s.Called(metricType, metricName)
+func (s *metricStorageMock) GetMetricValue(ctx context.Context, metricType string, metricName string) (float64, error) {
+	args := s.Called(ctx, metricType, metricName)
 	return args.Get(0).(float64), args.Error(1)
 }
 
-func (s *metricStorageMock) Restore(metricValues map[string]map[string]string) error {
-	args := s.Called(metricValues)
+func (s *metricStorageMock) Restore(ctx context.Context, metricValues map[string]map[string]string) error {
+	args := s.Called(ctx, metricValues)
 	return args.Error(0)
 }
