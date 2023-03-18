@@ -33,7 +33,7 @@ type callResult struct {
 
 type modelRequest struct {
 	ID    string   `json:"id"`
-	MType string   `json:"types"`
+	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
 }
