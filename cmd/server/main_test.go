@@ -614,7 +614,7 @@ func (t testDBStorage) Close() error {
 	return nil
 }
 
-func (t *testDBStorage) UpdateRecords(ctx context.Context, records []dataBase.DBRecord) error {
+func (t *testDBStorage) UpdateRecords(ctx context.Context, records []*dataBase.DBRecord) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -624,7 +624,7 @@ func (t *testDBStorage) ReadRecord(ctx context.Context, metricType string, metri
 	panic("implement me")
 }
 
-func (t *testDBStorage) ReadAll(ctx context.Context) ([]dataBase.DBRecord, error) {
+func (t *testDBStorage) ReadAll(ctx context.Context) ([]*dataBase.DBRecord, error) {
 	//TODO implement me
 	panic("implement me")
 }

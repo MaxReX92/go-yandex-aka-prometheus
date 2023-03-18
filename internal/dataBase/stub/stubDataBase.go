@@ -8,7 +8,7 @@ import (
 type StubDataBase struct {
 }
 
-func (s *StubDataBase) UpdateRecords(ctx context.Context, records []dataBase.DBRecord) error {
+func (s *StubDataBase) UpdateRecords(ctx context.Context, records []*dataBase.DBRecord) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -18,7 +18,7 @@ func (s *StubDataBase) ReadRecord(ctx context.Context, metricType string, metric
 	panic("implement me")
 }
 
-func (s *StubDataBase) ReadAll(ctx context.Context) ([]dataBase.DBRecord, error) {
+func (s *StubDataBase) ReadAll(ctx context.Context) ([]*dataBase.DBRecord, error) {
 	//TODO implement me
 	panic("implement me")
 }

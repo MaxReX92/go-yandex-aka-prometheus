@@ -27,7 +27,7 @@ func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (dat
 	return &postgresDataBase{conn: conn}, nil
 }
 
-func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []dataBase.DBRecord) error {
+func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []*dataBase.DBRecord) error {
 	return p.callInTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		for _, record := range records {
 
@@ -46,7 +46,7 @@ func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []dataBase
 }
 
 func (p *postgresDataBase) ReadRecord(ctx context.Context, metricType string, metricName string) (*dataBase.DBRecord, error) {
-	result, err := p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]dataBase.DBRecord, error) {
+	result, err := p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*dataBase.DBRecord, error) {
 		const command = "" +
 			"SELECT mt.name, m.name, m.value " +
 			"FROM metric m " +
@@ -74,11 +74,11 @@ func (p *postgresDataBase) ReadRecord(ctx context.Context, metricType string, me
 		logger.ErrorFormat("More than one metric in logical primary key: %v, %v", metricType, metricName)
 	}
 
-	return &result[0], nil
+	return result[0], nil
 }
 
-func (p *postgresDataBase) ReadAll(ctx context.Context) ([]dataBase.DBRecord, error) {
-	return p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]dataBase.DBRecord, error) {
+func (p *postgresDataBase) ReadAll(ctx context.Context) ([]*dataBase.DBRecord, error) {
+	return p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*dataBase.DBRecord, error) {
 		const command = "" +
 			"SELECT mt.name, m.name, m.value " +
 			"FROM metric m"
@@ -96,14 +96,14 @@ func (p *postgresDataBase) Close() error {
 }
 
 func (p *postgresDataBase) callInTransaction(ctx context.Context, action func(context.Context, *sql.Tx) error) error {
-	_, err := p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]dataBase.DBRecord, error) {
+	_, err := p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*dataBase.DBRecord, error) {
 		return nil, action(ctx, tx)
 	})
 
 	return err
 }
 
-func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action func(context.Context, *sql.Tx) ([]dataBase.DBRecord, error)) ([]dataBase.DBRecord, error) {
+func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action func(context.Context, *sql.Tx) ([]*dataBase.DBRecord, error)) ([]*dataBase.DBRecord, error) {
 	tx, err := p.conn.BeginTx(ctx, &sql.TxOptions{ReadOnly: false})
 	if err != nil {
 		return nil, err
@@ -128,14 +128,14 @@ func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action f
 	return result, nil
 }
 
-func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command string, args map[string]any) ([]dataBase.DBRecord, error) {
+func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command string, args map[string]any) ([]*dataBase.DBRecord, error) {
 	rows, err := tx.QueryContext(ctx, command, args)
 
 	if err != nil {
 		return nil, err
 	}
 
-	result := []dataBase.DBRecord{}
+	result := []*dataBase.DBRecord{}
 	for rows.Next() {
 		var record dataBase.DBRecord
 		err = rows.Scan(record.MetricType, record.Name, record.Value)
@@ -143,7 +143,7 @@ func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command 
 			return nil, err
 		}
 
-		result = append(result, record)
+		result = append(result, &record)
 	}
 
 	err = rows.Err()
