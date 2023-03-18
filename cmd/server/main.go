@@ -428,7 +428,7 @@ func (c *config) StoreFilePath() string {
 }
 
 func (c *config) SyncMode() bool {
-	return c.StoreInterval == 0
+	return c.DB != "" || c.StoreInterval == 0
 }
 
 func (c *config) String() string {
