@@ -13,7 +13,7 @@ func (s *StubDataBase) UpdateRecords(ctx context.Context, records []dataBase.DBR
 	panic("implement me")
 }
 
-func (s *StubDataBase) ReadRecord(ctx context.Context, metricType string, metricName string) (dataBase.DBRecord, error) {
+func (s *StubDataBase) ReadRecord(ctx context.Context, metricType string, metricName string) (*dataBase.DBRecord, error) {
 	//TODO implement me
 	panic("implement me")
 }
