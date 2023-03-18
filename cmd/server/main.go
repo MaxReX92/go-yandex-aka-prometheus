@@ -122,7 +122,9 @@ func createConfig() (*config, error) {
 	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-dataBase.json", "Backup storage file path")
-	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")
+
+	// TODO: REmove default value
+	flag.StringVar(&conf.DB, "d", "host=localhost user=Max database=metrics password=1234", "Database connection stirng")
 	flag.Parse()
 
 	err := env.Parse(conf)
