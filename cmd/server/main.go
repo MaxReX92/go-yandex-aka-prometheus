@@ -143,6 +143,7 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 		r.With(fillCommonURLContext, fillCounterURLContext, updateMetric(metricsStorage, converter)).
 			Post("/counter/{metricName}/{metricValue}", successURLResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
+			logger.Error("Faul to update metric: unknown metric types")
 			http.Error(w, "unknown metric types", http.StatusNotImplemented)
 		})
 	})
@@ -184,6 +185,7 @@ func fillGaugeURLContext(next http.Handler) http.Handler {
 		strValue := chi.URLParam(r, "metricValue")
 		value, err := parser.ToFloat64(strValue)
 		if err != nil {
+			logger.ErrorFormat("Fail to collect context: value parsing fail: %s: %s", strValue, err.Error())
 			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", strValue, err), http.StatusBadRequest)
 			return
 		}
@@ -200,6 +202,7 @@ func fillCounterURLContext(next http.Handler) http.Handler {
 		strValue := chi.URLParam(r, "metricValue")
 		value, err := parser.ToInt64(strValue)
 		if err != nil {
+			logger.ErrorFormat("Fail to collect context: value parsing fail: %s: %s", strValue, err.Error())
 			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", strValue, err), http.StatusBadRequest)
 			return
 		}
@@ -230,16 +233,19 @@ func fillJSONContext(next http.Handler) http.Handler {
 
 		err := json.NewDecoder(reader).Decode(metricContext)
 		if err != nil {
+			logger.ErrorFormat("Fail to collect json context: invalid json, %s", err.Error())
 			http.Error(w, fmt.Sprintf("Invalid json: %v", err), http.StatusBadRequest)
 			return
 		}
 
 		if metricContext.ID == "" {
+			logger.Error("Fail to collect json context: metric name is missed")
 			http.Error(w, "metric name is missed", http.StatusBadRequest)
 			return
 		}
 
 		if metricContext.MType == "" {
+			logger.Error("Fail to collect json context: metric type is missed")
 			http.Error(w, "metric types is missed", http.StatusBadRequest)
 			return
 		}
@@ -296,6 +302,7 @@ func fillMetricValue(storage storage.MetricsStorage, converter *model.MetricsCon
 			ctx := r.Context()
 			metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
 			if !ok {
+				logger.Error("Fail to get metric value: metric info not found in context")
 				http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 				return
 			}
@@ -324,12 +331,14 @@ func successURLValueResponse(converter *model.MetricsConverter) func(w http.Resp
 		ctx := r.Context()
 		metricValueResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
 		if !ok {
+			logger.Error("Fail to send success response: metric info not found in context")
 			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 			return
 		}
 
 		metric, err := converter.FromModelMetric(metricValueResult)
 		if err != nil {
+			logger.ErrorFormat("Fail to convert: %s", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -342,6 +351,7 @@ func handleMetricsPage(builder html.PageBuilder, storage storage.MetricsStorage)
 	return func(w http.ResponseWriter, r *http.Request) {
 		values, err := storage.GetMetricValues(r.Context())
 		if err != nil {
+			logger.ErrorFormat("Fail to get metric values: %s", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -360,6 +370,7 @@ func successJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		metricUpdateResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
 		if !ok {
+			logger.Error("Fail to send success rosponse: metric update result not found in context")
 			http.Error(w, "Metric update result not found in context", http.StatusInternalServerError)
 			return
 		}
