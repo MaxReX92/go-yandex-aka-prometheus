@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"

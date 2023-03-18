@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"

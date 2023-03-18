@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 )
 
 type PostgresDataaBaseConfig interface {

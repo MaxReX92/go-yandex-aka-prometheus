@@ -15,9 +15,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase/postgres"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase/stub"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database/postgres"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database/stub"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"

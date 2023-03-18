@@ -2,7 +2,7 @@ package stub
 
 import (
 	"context"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 )
 
 type StubDataBase struct {
