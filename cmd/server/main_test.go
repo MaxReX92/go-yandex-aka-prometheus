@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,8 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/memory"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
@@ -614,17 +614,17 @@ func (t testDBStorage) Close() error {
 	return nil
 }
 
-func (t *testDBStorage) UpdateRecords(ctx context.Context, records []*dataBase.DBRecord) error {
+func (t *testDBStorage) UpdateRecords(ctx context.Context, records []*database.DBRecord) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t *testDBStorage) ReadRecord(ctx context.Context, metricType string, metricName string) (*dataBase.DBRecord, error) {
+func (t *testDBStorage) ReadRecord(ctx context.Context, metricType string, metricName string) (*database.DBRecord, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (t *testDBStorage) ReadAll(ctx context.Context) ([]*dataBase.DBRecord, error) {
+func (t *testDBStorage) ReadAll(ctx context.Context) ([]*database.DBRecord, error) {
 	//TODO implement me
 	panic("implement me")
 }

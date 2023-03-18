@@ -18,8 +18,8 @@ type postgresDataBase struct {
 	conn *sql.DB
 }
 
-func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (dataBase.DataBase, error) {
-	conn, err := initDb(ctx, conf.GetConnectionString())
+func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (database.DataBase, error) {
+	conn, err := initDB(ctx, conf.GetConnectionString())
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (dat
 	return &postgresDataBase{conn: conn}, nil
 }
 
-func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []*dataBase.DBRecord) error {
+func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []*database.DBRecord) error {
 	return p.callInTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		for _, record := range records {
 
@@ -45,8 +45,8 @@ func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []*dataBas
 	})
 }
 
-func (p *postgresDataBase) ReadRecord(ctx context.Context, metricType string, metricName string) (*dataBase.DBRecord, error) {
-	result, err := p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*dataBase.DBRecord, error) {
+func (p *postgresDataBase) ReadRecord(ctx context.Context, metricType string, metricName string) (*database.DBRecord, error) {
+	result, err := p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*database.DBRecord, error) {
 		const command = "" +
 			"SELECT mt.name, m.name, m.value " +
 			"FROM metric m " +
@@ -77,8 +77,8 @@ func (p *postgresDataBase) ReadRecord(ctx context.Context, metricType string, me
 	return result[0], nil
 }
 
-func (p *postgresDataBase) ReadAll(ctx context.Context) ([]*dataBase.DBRecord, error) {
-	return p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*dataBase.DBRecord, error) {
+func (p *postgresDataBase) ReadAll(ctx context.Context) ([]*database.DBRecord, error) {
+	return p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*database.DBRecord, error) {
 		const command = "" +
 			"SELECT mt.name, m.name, m.value " +
 			"FROM metric m " +
@@ -97,14 +97,14 @@ func (p *postgresDataBase) Close() error {
 }
 
 func (p *postgresDataBase) callInTransaction(ctx context.Context, action func(context.Context, *sql.Tx) error) error {
-	_, err := p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*dataBase.DBRecord, error) {
+	_, err := p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*database.DBRecord, error) {
 		return nil, action(ctx, tx)
 	})
 
 	return err
 }
 
-func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action func(context.Context, *sql.Tx) ([]*dataBase.DBRecord, error)) ([]*dataBase.DBRecord, error) {
+func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action func(context.Context, *sql.Tx) ([]*database.DBRecord, error)) ([]*database.DBRecord, error) {
 	tx, err := p.conn.BeginTx(ctx, &sql.TxOptions{ReadOnly: false})
 	if err != nil {
 		return nil, err
@@ -129,16 +129,16 @@ func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action f
 	return result, nil
 }
 
-func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command string, args ...any) ([]*dataBase.DBRecord, error) {
+func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command string, args ...any) ([]*database.DBRecord, error) {
 	rows, err := tx.QueryContext(ctx, command, args...)
 
 	if err != nil {
 		return nil, err
 	}
 
-	result := []*dataBase.DBRecord{}
+	result := []*database.DBRecord{}
 	for rows.Next() {
-		var record dataBase.DBRecord
+		var record database.DBRecord
 		err = rows.Scan(&record.MetricType, &record.Name, &record.Value)
 		if err != nil {
 			return nil, err

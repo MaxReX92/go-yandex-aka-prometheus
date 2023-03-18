@@ -8,17 +8,17 @@ import (
 type StubDataBase struct {
 }
 
-func (s *StubDataBase) UpdateRecords(ctx context.Context, records []*dataBase.DBRecord) error {
+func (s *StubDataBase) UpdateRecords(ctx context.Context, records []*database.DBRecord) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubDataBase) ReadRecord(ctx context.Context, metricType string, metricName string) (*dataBase.DBRecord, error) {
+func (s *StubDataBase) ReadRecord(ctx context.Context, metricType string, metricName string) (*database.DBRecord, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubDataBase) ReadAll(ctx context.Context) ([]*dataBase.DBRecord, error) {
+func (s *StubDataBase) ReadAll(ctx context.Context) ([]*database.DBRecord, error) {
 	//TODO implement me
 	panic("implement me")
 }

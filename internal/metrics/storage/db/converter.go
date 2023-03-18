@@ -4,22 +4,23 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
-var ErrInvalidRecord = errors.New("Invalid db record")
+var ErrInvalidRecord = errors.New("invalid db record")
 
-func toDbRecord(metric metrics.Metric) *dataBase.DBRecord {
-	return &dataBase.DBRecord{
+func toDBRecord(metric metrics.Metric) *database.DBRecord {
+	return &database.DBRecord{
 		MetricType: sql.NullString{String: metric.GetType(), Valid: true},
 		Name:       sql.NullString{String: metric.GetName(), Valid: true},
 		Value:      sql.NullFloat64{Float64: metric.GetValue(), Valid: true},
 	}
 }
 
-func fromDbRecord(record *dataBase.DBRecord) (metrics.Metric, error) {
+func fromDBRecord(record *database.DBRecord) (metrics.Metric, error) {
 	if !record.MetricType.Valid {
 		return nil, ErrInvalidRecord
 	}

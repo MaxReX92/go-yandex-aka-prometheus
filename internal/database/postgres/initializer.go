@@ -72,7 +72,7 @@ var scripts = map[string]string{
 		"END;$$",
 }
 
-func initDb(ctx context.Context, connectionString string) (*sql.DB, error) {
+func initDB(ctx context.Context, connectionString string) (*sql.DB, error) {
 	logger.Info("Initialize database schema")
 
 	conn, err := sql.Open("pgx", connectionString)
@@ -100,7 +100,7 @@ func initDb(ctx context.Context, connectionString string) (*sql.DB, error) {
 		logger.InfoFormat("Invoke %s", commandName)
 		_, err = conn.ExecContext(ctx, command)
 		if err != nil {
-			logger.ErrorFormat("Fail to invoke &s: %v", commandName, err)
+			logger.ErrorFormat("Fail to invoke %s: %v", commandName, err)
 			return nil, err
 		}
 	}

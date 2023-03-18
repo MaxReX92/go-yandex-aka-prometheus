@@ -7,8 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase/stub"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/db"
 	"io"
 	"net/http"
 	"time"
@@ -19,11 +17,13 @@ import (
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase/postgres"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/dataBase/stub"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/db"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/file"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/memory"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
@@ -68,7 +68,7 @@ func main() {
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
-	var base dataBase.DataBase
+	var base database.DataBase
 	var backupStorage storage.MetricsStorage
 	if conf.DB == "" {
 		base = &stub.StubDataBase{}
@@ -130,7 +130,7 @@ func createConfig() (*config, error) {
 }
 
 func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter,
-	htmlPageBuilder html.PageBuilder, dbStorage dataBase.DataBase) *chi.Mux {
+	htmlPageBuilder html.PageBuilder, dbStorage database.DataBase) *chi.Mux {
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
@@ -389,7 +389,7 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	}
 }
 
-func handleDBPing(dbStorage dataBase.DataBase) func(w http.ResponseWriter, r *http.Request) {
+func handleDBPing(dbStorage database.DataBase) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := dbStorage.Ping(r.Context())
 		if err == nil {

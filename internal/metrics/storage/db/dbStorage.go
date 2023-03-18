@@ -11,15 +11,15 @@ import (
 )
 
 type dbStorage struct {
-	dataBase dataBase.DataBase
+	dataBase database.DataBase
 }
 
-func NewDBStorage(dataBase dataBase.DataBase) storage.MetricsStorage {
+func NewDBStorage(dataBase database.DataBase) storage.MetricsStorage {
 	return &dbStorage{dataBase: dataBase}
 }
 
 func (d *dbStorage) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
-	err := d.dataBase.UpdateRecords(ctx, []*dataBase.DBRecord{toDbRecord(metric)})
+	err := d.dataBase.UpdateRecords(ctx, []*database.DBRecord{toDBRecord(metric)})
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +67,12 @@ func (d *dbStorage) GetMetric(ctx context.Context, metricType string, metricName
 		return nil, err
 	}
 
-	return fromDbRecord(result)
+	return fromDBRecord(result)
 }
 
 func (d *dbStorage) Restore(ctx context.Context, metricValues map[string]map[string]string) error {
 
-	records := []*dataBase.DBRecord{}
+	records := []*database.DBRecord{}
 	for metricType, metricsByType := range metricValues {
 		for metricName, metricValue := range metricsByType {
 			value, err := parser.ToFloat64(metricValue)
@@ -80,7 +80,7 @@ func (d *dbStorage) Restore(ctx context.Context, metricValues map[string]map[str
 				return err
 			}
 
-			records = append(records, &dataBase.DBRecord{
+			records = append(records, &database.DBRecord{
 				MetricType: sql.NullString{String: metricType, Valid: true},
 				Name:       sql.NullString{String: metricName, Valid: true},
 				Value:      sql.NullFloat64{Float64: value, Valid: true},
