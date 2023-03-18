@@ -31,7 +31,7 @@ func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []*dataBas
 	return p.callInTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		for _, record := range records {
 
-			_, err := tx.ExecContext(ctx, "UpdateOrCreateMetric(@metircType, @metricName, @metricValue)", pgx.NamedArgs{
+			_, err := tx.ExecContext(ctx, "CALL UpdateOrCreateMetric(@metricType, @metricName, @metricValue)", pgx.NamedArgs{
 				"metricType":  record.MetricType.String,
 				"metricName":  record.Name.String,
 				"metricValue": record.Value.Float64})
@@ -81,9 +81,10 @@ func (p *postgresDataBase) ReadAll(ctx context.Context) ([]*dataBase.DBRecord, e
 	return p.callInTransactionResult(ctx, func(ctx context.Context, tx *sql.Tx) ([]*dataBase.DBRecord, error) {
 		const command = "" +
 			"SELECT mt.name, m.name, m.value " +
-			"FROM metric m"
+			"FROM metric m " +
+			"JOIN metricType mt on m.typeId = mt.id"
 
-		return p.readRecords(ctx, tx, command, nil)
+		return p.readRecords(ctx, tx, command)
 	})
 }
 
@@ -128,8 +129,8 @@ func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action f
 	return result, nil
 }
 
-func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command string, args map[string]any) ([]*dataBase.DBRecord, error) {
-	rows, err := tx.QueryContext(ctx, command, args)
+func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command string, args ...any) ([]*dataBase.DBRecord, error) {
+	rows, err := tx.QueryContext(ctx, command, args...)
 
 	if err != nil {
 		return nil, err
@@ -138,7 +139,7 @@ func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command 
 	result := []*dataBase.DBRecord{}
 	for rows.Next() {
 		var record dataBase.DBRecord
-		err = rows.Scan(record.MetricType, record.Name, record.Value)
+		err = rows.Scan(&record.MetricType, &record.Name, &record.Value)
 		if err != nil {
 			return nil, err
 		}

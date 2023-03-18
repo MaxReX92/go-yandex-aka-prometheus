@@ -122,9 +122,6 @@ func createConfig() (*config, error) {
 	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-dataBase.json", "Backup storage file path")
-
-	//TODO: REmove default value
-	//flag.StringVar(&conf.DB, "d", "host=localhost user=Max database=metrics password=1234", "Database connection stirng")
 	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")
 	flag.Parse()
 
@@ -257,12 +254,14 @@ func updateMetric(storage storage.MetricsStorage, converter *model.MetricsConver
 			ctx := r.Context()
 			metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
 			if !ok {
+				logger.Error("Metric info not found in context")
 				http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
 				return
 			}
 
 			metric, err := converter.FromModelMetric(metricContext)
 			if err != nil {
+				logger.ErrorFormat("Fail to parse metric: %v", err)
 				if errors.Is(err, model.ErrUnknownMetricType) {
 					http.Error(w, err.Error(), http.StatusNotImplemented)
 				} else {
@@ -273,12 +272,14 @@ func updateMetric(storage storage.MetricsStorage, converter *model.MetricsConver
 
 			resultMetric, err := storage.AddMetricValue(ctx, metric)
 			if err != nil {
+				logger.ErrorFormat("Fail to update metric: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			newValue, err := converter.ToModelMetric(resultMetric)
 			if err != nil {
+				logger.ErrorFormat("Fail to convert metric: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

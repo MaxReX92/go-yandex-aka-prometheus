@@ -3,31 +3,34 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"sort"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
 var scripts = map[string]string{
-	"create metric type table command": "" +
+	"1 - create metric type table command": "" +
 		"CREATE TABLE IF NOT EXISTS metricType ( " +
 		"	id SMALLSERIAL PRIMARY KEY, " +
-		"	name CHAR(100)" +
+		"	name TEXT" +
 		");",
 
-	"create metric table command": "" +
+	"2 - create metric table command": "" +
 		"CREATE TABLE IF NOT EXISTS metric ( " +
 		"	id SERIAL PRIMARY KEY, " +
-		"	name CHAR(1000), " +
+		"	name TEXT, " +
 		"	typeId SMALLSERIAL, " +
 		"	value DOUBLE PRECISION " +
 		");",
 
-	"create metric index command": "" +
+	"3 - create metric index command": "" +
 		"CREATE UNIQUE INDEX IF NOT EXISTS metric_name_type_idx " +
 		"ON metric (name, typeId);",
 
-	"create metric type id procedure command": "" +
-		"CREATE OR REPLACE PROCEDURE GetOrCreateMetricTypeId(typeName IN CHAR(100), typeId OUT SMALLINT) " +
+	"4 - create metric type id procedure command": "" +
+		"CREATE OR REPLACE PROCEDURE GetOrCreateMetricTypeId(typeName IN TEXT, typeId OUT SMALLINT) " +
 		"LANGUAGE plpgsql " +
 		"AS $$ " +
 		"BEGIN " +
@@ -40,8 +43,8 @@ var scripts = map[string]string{
 		"	END IF; " +
 		"END;$$",
 
-	"create metric id procedure command": "" +
-		"CREATE OR REPLACE PROCEDURE GetOrCreateMetricId(metricTypeName IN CHAR(100), metricName IN CHAR(1000), metricId OUT INT) " +
+	"5 - create metric id procedure command": "" +
+		"CREATE OR REPLACE PROCEDURE GetOrCreateMetricId(metricTypeName IN TEXT, metricName IN TEXT, metricId OUT INT) " +
 		"LANGUAGE plpgsql " +
 		"AS $$ " +
 		"DECLARE " +
@@ -57,8 +60,8 @@ var scripts = map[string]string{
 		"	END IF; " +
 		"END;$$",
 
-	"create metric procedure command": "" +
-		"CREATE OR REPLACE PROCEDURE UpdateOrCreateMetric(metricTypeName IN CHAR(100), metricName IN CHAR(1000), metricValue IN double precision) " +
+	"6 - create metric procedure command": "" +
+		"CREATE OR REPLACE PROCEDURE UpdateOrCreateMetric(metricTypeName IN TEXT, metricName IN TEXT, metricValue IN double precision) " +
 		"LANGUAGE plpgsql " +
 		"AS $$ " +
 		"DECLARE " +
@@ -70,6 +73,8 @@ var scripts = map[string]string{
 }
 
 func initDb(ctx context.Context, connectionString string) (*sql.DB, error) {
+	logger.Info("Initialize database schema")
+
 	conn, err := sql.Open("pgx", connectionString)
 	if err != nil {
 		logger.ErrorFormat("Fail to open db connection: %v", err)
@@ -82,7 +87,17 @@ func initDb(ctx context.Context, connectionString string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	for commandName, command := range scripts {
+	i := 0
+	commandNames := make([]string, len(scripts))
+	for commandName := range scripts {
+		commandNames[i] = commandName
+		i++
+	}
+	sort.Strings(commandNames)
+
+	for _, commandName := range commandNames {
+		command := scripts[commandName]
+		logger.InfoFormat("Invoke %s", commandName)
 		_, err = conn.ExecContext(ctx, command)
 		if err != nil {
 			logger.ErrorFormat("Fail to invoke &s: %v", commandName, err)
