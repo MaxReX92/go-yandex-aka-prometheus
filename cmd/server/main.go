@@ -153,6 +153,11 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 		})
 	})
 
+	router.Route("/updates", func(r chi.Router) {
+		r.With(fillMultiJSONContext, updateMetrics(metricsStorage, converter)).
+			Post("/", successMultiJSONResponse())
+	})
+
 	router.Route("/value", func(r chi.Router) {
 		r.With(fillSingleJSONContext, fillMetricValues(metricsStorage, converter)).
 			Post("/", successSingleJSONResponse())
@@ -268,6 +273,49 @@ func fillSingleJSONContext(next http.Handler) http.Handler {
 			logger.Error("Fail to collect json context: metric type is missed")
 			http.Error(w, "metric types is missed", http.StatusBadRequest)
 			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func fillMultiJSONContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, metricsContext := ensureMetricsContext(r)
+		var reader io.Reader
+		if r.Header.Get(`Content-Encoding`) == `gzip` {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				logger.ErrorFormat("Fail to create gzip reader: %v", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			reader = gz
+			defer gz.Close()
+		} else {
+			reader = r.Body
+		}
+
+		metricsContext.requestMetrics = []*model.Metrics{}
+		err := json.NewDecoder(reader).Decode(&metricsContext.requestMetrics)
+		if err != nil {
+			logger.ErrorFormat("Fail to collect json context: invalid json, %s", err.Error())
+			http.Error(w, fmt.Sprintf("Invalid json: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		for _, requestMetric := range metricsContext.requestMetrics {
+			if requestMetric.ID == "" {
+				logger.Error("Fail to collect json context: metric name is missed")
+				http.Error(w, "metric name is missed", http.StatusBadRequest)
+				return
+			}
+
+			if requestMetric.MType == "" {
+				logger.Error("Fail to collect json context: metric type is missed")
+				http.Error(w, "metric types is missed", http.StatusBadRequest)
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -397,6 +445,29 @@ func successSingleJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		result, err := json.Marshal(metricsContext.resultMetrics[0])
+		if err != nil {
+			logger.ErrorFormat("Fail to serialise result: %v", err)
+			http.Error(w, "Fail to serialise result", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(result)
+		if err != nil {
+			logger.ErrorFormat("Fail to write response: %v", err)
+		}
+	}
+}
+
+func successMultiJSONResponse() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		//_, metricsContext := ensureMetricsContext(r)
+		//metricsContext.resultMetrics <-- update results
+
+		// just a stub, maybe temporary
+		stubResult := &model.Metrics{}
+		result, err := json.Marshal(stubResult)
 		if err != nil {
 			logger.ErrorFormat("Fail to serialise result: %v", err)
 			http.Error(w, "Fail to serialise result", http.StatusInternalServerError)
