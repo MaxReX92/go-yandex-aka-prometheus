@@ -30,7 +30,7 @@ func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (dat
 func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []*database.DBRecord) error {
 	return p.callInTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		for _, record := range records {
-
+			// statements for stored procedure are stored in a db
 			_, err := tx.ExecContext(ctx, "CALL UpdateOrCreateMetric(@metricType, @metricName, @metricValue)", pgx.NamedArgs{
 				"metricType":  record.MetricType.String,
 				"metricName":  record.Name.String,
