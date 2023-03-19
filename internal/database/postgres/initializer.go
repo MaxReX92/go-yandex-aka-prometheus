@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sort"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -77,14 +78,12 @@ func initDB(ctx context.Context, connectionString string) (*sql.DB, error) {
 
 	conn, err := sql.Open("pgx", connectionString)
 	if err != nil {
-		logger.ErrorFormat("Fail to open db connection: %v", err)
-		return nil, err
+		return nil, logger.WrapError("open db connection", err)
 	}
 
 	err = conn.PingContext(ctx)
 	if err != nil {
-		logger.ErrorFormat("Fail to ping db connection: %v", err)
-		return nil, err
+		return nil, logger.WrapError("ping db connection", err)
 	}
 
 	i := 0
@@ -100,8 +99,7 @@ func initDB(ctx context.Context, connectionString string) (*sql.DB, error) {
 		logger.InfoFormat("Invoke %s", commandName)
 		_, err = conn.ExecContext(ctx, command)
 		if err != nil {
-			logger.ErrorFormat("Fail to invoke %s: %v", commandName, err)
-			return nil, err
+			return nil, logger.WrapError(fmt.Sprintf("invoke %s", commandName), err)
 		}
 	}
 

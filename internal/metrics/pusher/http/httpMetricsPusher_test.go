@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"hash"
 	"net/http"
 	"net/http/httptest"
@@ -38,11 +37,11 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 	var gaugeValue = 100.001
 
 	tests := []struct {
-		name               string
-		metricsToPush      []metrics.Metric
-		expectedRequests   []model.Metrics
-		expectedError      error
-		responseStatusCode int
+		name                 string
+		metricsToPush        []metrics.Metric
+		expectedRequests     []model.Metrics
+		expectedErrorMessage string
+		responseStatusCode   int
 	}{
 		{
 			name:               "empty_metrics_list",
@@ -55,15 +54,15 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			metricsToPush: []metrics.Metric{
 				&testMetric{metricType: "invalid_type"},
 			},
-			expectedError: errors.New("unknown metric types"),
+			expectedErrorMessage: "unknown metric type: invalid_type",
 		},
 		{
 			name: "wrong_status_code",
 			metricsToPush: []metrics.Metric{
 				createCounterMetric("counterMetric1", counterValue),
 			},
-			expectedError:      errors.New("fail to push metric: "),
-			responseStatusCode: http.StatusBadRequest,
+			expectedErrorMessage: "failed to push metric: ",
+			responseStatusCode:   http.StatusBadRequest,
 		},
 		{
 			name: "simple_metrics",
@@ -123,7 +122,10 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = pusher.Push(ctx, tt.metricsToPush)
-			assert.Equal(t, tt.expectedError, err)
+
+			if tt.expectedErrorMessage != "" {
+				assert.ErrorContains(t, err, tt.expectedErrorMessage)
+			}
 
 			for key, call := range called {
 				assert.True(t, call, "Metric was not pushed, %v", key)

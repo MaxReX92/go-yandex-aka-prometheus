@@ -34,7 +34,7 @@ func NewSigner(config SignerConfig) *Signer {
 func (s *Signer) GetSignString(holder HashHolder) (string, error) {
 	sign, err := s.GetSign(holder)
 	if err != nil {
-		return "", nil
+		return "", logger.WrapError("get sign", err)
 	}
 
 	return hex.EncodeToString(sign), nil
@@ -42,7 +42,9 @@ func (s *Signer) GetSignString(holder HashHolder) (string, error) {
 
 func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 	if s.hash == nil {
-		return nil, errors.New("secret key was not initialized")
+		err := errors.New("secret key was not initialized")
+		logger.ErrorObj(err)
+		return nil, err
 	}
 
 	s.lock.Lock()
@@ -55,14 +57,12 @@ func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 func (s *Signer) CheckSign(holder HashHolder, signature string) (bool, error) {
 	sign, err := hex.DecodeString(signature)
 	if err != nil {
-		logger.ErrorFormat("Fail to decode signature: %v", err)
-		return false, err
+		return false, logger.WrapError("decode signature", err)
 	}
 
 	holderSign, err := s.GetSign(holder)
 	if err != nil {
-		logger.ErrorFormat("Fail to get holder hash: %v", err)
-		return false, err
+		return false, logger.WrapError("get holder hash", err)
 	}
 
 	return hmac.Equal(holderSign, sign), nil

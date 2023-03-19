@@ -32,7 +32,7 @@ type httpMetricsPusher struct {
 func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("normalize url", err)
 	}
 
 	return &httpMetricsPusher{
@@ -57,8 +57,7 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 	for i, metric := range metrics {
 		modelMetric, err := p.converter.ToModelMetric(metric)
 		if err != nil {
-			logger.ErrorFormat("Fail to create model request: %v", err)
-			return err
+			return logger.WrapError("create model request", err)
 		}
 
 		modelMetrics[i] = modelMetric
@@ -67,34 +66,30 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 	var buffer bytes.Buffer
 	err := json.NewEncoder(&buffer).Encode(modelMetrics)
 	if err != nil {
-		logger.ErrorFormat("Fail to serialize model request: %v", err)
-		return err
+		return logger.WrapError("serialize model request", err)
 	}
 
 	request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, p.metricsServerURL+"/updates", &buffer)
 	if err != nil {
-		logger.ErrorFormat("Fail to create push request: %v", err)
-		return err
+		return logger.WrapError("create push request", err)
 	}
 	request.Header.Add("Content-Type", "application/json")
 
 	response, err := p.client.Do(request)
 	if err != nil {
-		logger.ErrorFormat("Fail to push metric: %v", err)
-		return err
+		return logger.WrapError("push metrics", err)
 	}
 	defer response.Body.Close()
 
 	content, err := io.ReadAll(response.Body)
 	if err != nil {
-		logger.ErrorFormat("Fail to read response body: %v", err)
-		return err
+		return logger.WrapError("read response body", err)
 	}
 
 	stringContent := string(content)
 	if response.StatusCode != http.StatusOK {
 		logger.ErrorFormat("Unexpected response status code: %v %v", response.Status, stringContent)
-		return fmt.Errorf("fail to push metric: %v", stringContent)
+		return fmt.Errorf("failed to push metric: %v", stringContent)
 	}
 
 	for _, metric := range metrics {
@@ -114,7 +109,7 @@ func normalizeURL(urlStr string) (*url.URL, error) {
 	if err != nil {
 		result, err = url.ParseRequestURI("http://" + urlStr)
 		if err != nil {
-			return nil, err
+			return nil, logger.WrapError("parse request url", err)
 		}
 	}
 

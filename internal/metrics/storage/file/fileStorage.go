@@ -42,7 +42,7 @@ func NewFileStorage(config fileStorageConfig) storage.MetricsStorage {
 		logger.InfoFormat("Init storage file in %v", result.filePath)
 		err = result.writeRecordsToFile(storageRecords{})
 		if err != nil {
-			logger.ErrorFormat("Fail to init storage file: %v", err)
+			logger.ErrorFormat("failed to init storage file: %v", err)
 		}
 	}
 
@@ -58,7 +58,7 @@ func (f *fileStorage) GetMetric(ctx context.Context, metricType string, metricNa
 		return record.Type == metricType && record.Name == metricName
 	})
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("read records from file", err)
 	}
 	if len(records) != 1 {
 		return nil, fmt.Errorf("metrics with name %v and types %v not found", metricName, metricType)
@@ -70,7 +70,7 @@ func (f *fileStorage) GetMetric(ctx context.Context, metricType string, metricNa
 func (f *fileStorage) GetMetricValues(context.Context) (map[string]map[string]string, error) {
 	records, err := f.readRecordsFromFile(func(record *storageRecord) bool { return true })
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("read records from file", err)
 	}
 
 	result := map[string]map[string]string{}
@@ -84,7 +84,7 @@ func (f *fileStorage) GetMetricValues(context.Context) (map[string]map[string]st
 		metricsByType[record.Name] = record.Value
 	}
 
-	return result, err
+	return result, nil
 }
 
 func (f *fileStorage) Restore(ctx context.Context, metricValues map[string]map[string]string) error {
@@ -115,16 +115,16 @@ func (f *fileStorage) updateMetrics(metricsList []metrics.Metric) error {
 			return !found
 		})
 		if err != nil {
-			return err
+			return logger.WrapError("read records", err)
 		}
 
 		_, err = fileStream.Seek(0, io.SeekStart)
 		if err != nil {
-			return err
+			return logger.WrapError("seek pointer", err)
 		}
 		err = fileStream.Truncate(0)
 		if err != nil {
-			return err
+			return logger.WrapError("truncate file stream", err)
 		}
 
 		for _, metric := range metricsList {
@@ -150,8 +150,7 @@ func (f *fileStorage) readRecords(fileStream *os.File, isValid func(*storageReco
 	var records storageRecords
 	err := json.NewDecoder(fileStream).Decode(&records)
 	if err != nil {
-		logger.ErrorFormat("Fail to decode storage: %v", err)
-		return nil, err
+		return nil, logger.WrapError("decode storage", err)
 	}
 
 	result := storageRecords{}
@@ -194,13 +193,12 @@ func (f *fileStorage) workWithFileResult(flag int, work func(file *os.File) (sto
 
 	fileStream, err := os.OpenFile(f.filePath, flag, 0644)
 	if err != nil {
-		logger.ErrorFormat("Fail to open file: %v", err)
-		return nil, err
+		return nil, logger.WrapError("open file", err)
 	}
 	defer func(fileStream *os.File) {
 		err = fileStream.Close()
 		if err != nil {
-			logger.ErrorFormat("Fail to close file: %v", err)
+			logger.ErrorFormat("failed to close file: %v", err)
 		}
 	}(fileStream)
 
@@ -220,7 +218,7 @@ func (f *fileStorage) toMetric(record storageRecord) (metrics.Metric, error) {
 
 	value, err := parser.ToFloat64(record.Value)
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("parse record value", err)
 	}
 
 	metric.SetValue(value)

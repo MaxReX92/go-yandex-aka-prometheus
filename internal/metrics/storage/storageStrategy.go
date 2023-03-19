@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"sync"
 )
@@ -31,13 +32,13 @@ func (s *StorageStrategy) AddMetricValues(ctx context.Context, metric []metrics.
 
 	result, err := s.inMemoryStorage.AddMetricValues(ctx, metric)
 	if err != nil {
-		return result, err
+		return result, logger.WrapError("add metric values to memory storage", err)
 	}
 
 	if s.syncMode {
 		_, err = s.backupStorage.AddMetricValues(ctx, result)
 		if err != nil {
-			return nil, err
+			return nil, logger.WrapError("add metric values to backup storage", err)
 		}
 	}
 
@@ -68,7 +69,7 @@ func (s *StorageStrategy) Restore(ctx context.Context, metricValues map[string]m
 func (s *StorageStrategy) CreateBackup(ctx context.Context) error {
 	currentState, err := s.inMemoryStorage.GetMetricValues(ctx)
 	if err != nil {
-		return err
+		return logger.WrapError("get metrics from memory storage", err)
 	}
 
 	return s.backupStorage.Restore(ctx, currentState)
@@ -77,7 +78,7 @@ func (s *StorageStrategy) CreateBackup(ctx context.Context) error {
 func (s *StorageStrategy) RestoreFromBackup(ctx context.Context) error {
 	restoredState, err := s.backupStorage.GetMetricValues(ctx)
 	if err != nil {
-		return err
+		return logger.WrapError("get metrics from backup storage", err)
 	}
 
 	return s.inMemoryStorage.Restore(ctx, restoredState)

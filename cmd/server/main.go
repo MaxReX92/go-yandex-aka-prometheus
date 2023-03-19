@@ -31,10 +31,6 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
-const (
-	metricsContextKey = "metricsContextKey"
-)
-
 var compressContentTypes = []string{
 	"application/javascript",
 	"application/json",
@@ -68,8 +64,7 @@ func main() {
 
 	conf, err := createConfig()
 	if err != nil {
-		logger.ErrorFormat("Fail to create config file: %v", err)
-		panic(err)
+		panic(logger.WrapError("create config file", err))
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
@@ -81,8 +76,7 @@ func main() {
 	} else {
 		base, err = postgres.NewPostgresDataBase(ctx, conf)
 		if err != nil {
-			logger.ErrorFormat("Fail to create database: %v", err)
-			panic(err)
+			panic(logger.WrapError("create database", err))
 		}
 
 		backupStorage = db.NewDBStorage(base)
@@ -102,7 +96,7 @@ func main() {
 		logger.Info("Restore metrics from backup")
 		err = storageStrategy.RestoreFromBackup(ctx)
 		if err != nil {
-			logger.ErrorFormat("Fail to restore state from backup: %v", err)
+			logger.ErrorFormat("failed to restore state from backup: %v", err)
 		}
 	}
 
@@ -148,8 +142,9 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 		r.With(fillCommonURLContext, fillCounterURLContext, updateMetrics(metricsStorage, converter)).
 			Post("/counter/{metricName}/{metricValue}", successURLResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
-			logger.Error("Faul to update metric: unknown metric types")
-			http.Error(w, "unknown metric types", http.StatusNotImplemented)
+			message := fmt.Sprintf("unknown metric type: %s", chi.URLParam(r, "metricType"))
+			logger.Error("failed to update metric: " + message)
+			http.Error(w, message, http.StatusNotImplemented)
 		})
 	})
 
@@ -202,8 +197,7 @@ func fillGaugeURLContext(next http.Handler) http.Handler {
 		strValue := chi.URLParam(r, "metricValue")
 		value, err := parser.ToFloat64(strValue)
 		if err != nil {
-			logger.ErrorFormat("Fail to collect context: value parsing fail: %s: %s", strValue, err.Error())
-			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", strValue, err), http.StatusBadRequest)
+			http.Error(w, logger.WrapError(fmt.Sprintf("parse value: %v", strValue), err).Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -225,8 +219,7 @@ func fillCounterURLContext(next http.Handler) http.Handler {
 		strValue := chi.URLParam(r, "metricValue")
 		value, err := parser.ToInt64(strValue)
 		if err != nil {
-			logger.ErrorFormat("Fail to collect context: value parsing fail: %s: %s", strValue, err.Error())
-			http.Error(w, fmt.Sprintf("Value parsing fail %v: %v", strValue, err), http.StatusBadRequest)
+			http.Error(w, logger.WrapError(fmt.Sprintf("parse value: %v", strValue), err).Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -243,8 +236,7 @@ func fillSingleJSONContext(next http.Handler) http.Handler {
 		if r.Header.Get(`Content-Encoding`) == `gzip` {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
-				logger.ErrorFormat("Fail to create gzip reader: %v", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, logger.WrapError("create gzip reader", err).Error(), http.StatusInternalServerError)
 				return
 			}
 			reader = gz
@@ -258,8 +250,7 @@ func fillSingleJSONContext(next http.Handler) http.Handler {
 
 		err := json.NewDecoder(reader).Decode(metricContext)
 		if err != nil {
-			logger.ErrorFormat("Fail to collect json context: invalid json, %s", err.Error())
-			http.Error(w, fmt.Sprintf("Invalid json: %v", err), http.StatusBadRequest)
+			http.Error(w, logger.WrapError("unmarhsal json context", err).Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -286,8 +277,7 @@ func fillMultiJSONContext(next http.Handler) http.Handler {
 		if r.Header.Get(`Content-Encoding`) == `gzip` {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
-				logger.ErrorFormat("Fail to create gzip reader: %v", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, logger.WrapError("create gzip reader", err).Error(), http.StatusInternalServerError)
 				return
 			}
 			reader = gz
@@ -299,8 +289,7 @@ func fillMultiJSONContext(next http.Handler) http.Handler {
 		metricsContext.requestMetrics = []*model.Metrics{}
 		err := json.NewDecoder(reader).Decode(&metricsContext.requestMetrics)
 		if err != nil {
-			logger.ErrorFormat("Fail to collect json context: invalid json, %s", err.Error())
-			http.Error(w, fmt.Sprintf("Invalid json: %v", err), http.StatusBadRequest)
+			http.Error(w, logger.WrapError("unmarshal request metrics", err).Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -331,8 +320,10 @@ func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConve
 				metric, err := converter.FromModelMetric(metricContext)
 				if err != nil {
 					logger.ErrorFormat("Fail to parse metric: %v", err)
-					if errors.Is(err, model.ErrUnknownMetricType) {
-						http.Error(w, err.Error(), http.StatusNotImplemented)
+
+					var errUnknownMetricType *model.ErrUnknownMetricType
+					if errors.As(err, &errUnknownMetricType) {
+						http.Error(w, fmt.Sprintf("unknown metric type: %s", errUnknownMetricType.UnknownType), http.StatusNotImplemented)
 					} else {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 					}
@@ -344,8 +335,7 @@ func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConve
 
 			resultMetrics, err := storage.AddMetricValues(ctx, metricsList)
 			if err != nil {
-				logger.ErrorFormat("Fail to update metric: %v", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, logger.WrapError("update metric", err).Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -353,8 +343,7 @@ func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConve
 			for i, resultMetric := range resultMetrics {
 				newValue, err := converter.ToModelMetric(resultMetric)
 				if err != nil {
-					logger.ErrorFormat("Fail to convert metric: %v", err)
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					http.Error(w, logger.WrapError("convert metric", err).Error(), http.StatusInternalServerError)
 					return
 				}
 
@@ -382,8 +371,7 @@ func fillMetricValues(storage storage.MetricsStorage, converter *model.MetricsCo
 
 				resultValue, err := converter.ToModelMetric(metric)
 				if err != nil {
-					logger.ErrorFormat("Fail to get metric value: %v", err)
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					http.Error(w, logger.WrapError("get metric value", err).Error(), http.StatusInternalServerError)
 					return
 				}
 
@@ -407,8 +395,7 @@ func successURLValueResponse(converter *model.MetricsConverter) func(w http.Resp
 
 		metric, err := converter.FromModelMetric(metricsContext.resultMetrics[0])
 		if err != nil {
-			logger.ErrorFormat("Fail to convert: %s", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, logger.WrapError("convert result metric", err).Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -420,8 +407,7 @@ func handleMetricsPage(builder html.PageBuilder, storage storage.MetricsStorage)
 	return func(w http.ResponseWriter, r *http.Request) {
 		values, err := storage.GetMetricValues(r.Context())
 		if err != nil {
-			logger.ErrorFormat("Fail to get metric values: %s", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, logger.WrapError("get metric values", err).Error(), http.StatusInternalServerError)
 			return
 		}
 		successResponse(w, "text/html", builder.BuildMetricsPage(values))
@@ -446,8 +432,7 @@ func successSingleJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 
 		result, err := json.Marshal(metricsContext.resultMetrics[0])
 		if err != nil {
-			logger.ErrorFormat("Fail to serialise result: %v", err)
-			http.Error(w, "Fail to serialise result", http.StatusInternalServerError)
+			http.Error(w, logger.WrapError("serialise result", err).Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -455,7 +440,7 @@ func successSingleJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(result)
 		if err != nil {
-			logger.ErrorFormat("Fail to write response: %v", err)
+			logger.ErrorFormat("failed to write response: %v", err)
 		}
 	}
 }
@@ -469,8 +454,7 @@ func successMultiJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 		stubResult := &model.Metrics{}
 		result, err := json.Marshal(stubResult)
 		if err != nil {
-			logger.ErrorFormat("Fail to serialise result: %v", err)
-			http.Error(w, "Fail to serialise result", http.StatusInternalServerError)
+			http.Error(w, logger.WrapError("serialise result", err).Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -478,7 +462,7 @@ func successMultiJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(result)
 		if err != nil {
-			logger.ErrorFormat("Fail to write response: %v", err)
+			logger.ErrorFormat("failed to write response: %v", err)
 		}
 	}
 }
@@ -488,7 +472,7 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte(message))
 	if err != nil {
-		logger.ErrorFormat("Fail to write response: %v", err)
+		logger.ErrorFormat("failed to write response: %v", err)
 	}
 }
 
@@ -498,13 +482,13 @@ func handleDBPing(dbStorage database.DataBase) func(w http.ResponseWriter, r *ht
 		if err == nil {
 			successResponse(w, "text/plain", "ok")
 		} else {
-			logger.ErrorFormat("Error ping result: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, logger.WrapError("ping database", err).Error(), http.StatusInternalServerError)
 		}
 	}
 }
 
 func ensureMetricsContext(r *http.Request) (context.Context, *metricsRequestContext) {
+	const metricsContextKey = "metricsContextKey"
 	ctx := r.Context()
 	metricsContext, ok := ctx.Value(metricInfoContextKey{key: metricsContextKey}).(*metricsRequestContext)
 	if !ok {

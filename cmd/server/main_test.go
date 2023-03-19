@@ -74,7 +74,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 					// json api
 					if metricType == "" && metricName == "" && metricValue == "" {
 						if method == http.MethodPost {
-							expected = expectedBadRequest("Invalid json: EOF\n")
+							expected = expectedBadRequest("failed to unmarhsal json context: EOF\n")
 						} else {
 							expected = expectedNotAllowed()
 						}
@@ -94,7 +94,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 						if metricType == "" || metricName == "" || metricValue == "" {
 							expected = expectedNotFound()
 						} else {
-							expected = expectedNotImplemented()
+							expected = expectedNotImplemented(metricType)
 						}
 					}
 
@@ -110,12 +110,12 @@ func Test_UpdateUrlRequest(t *testing.T) {
 						} else if metricType == "gauge" {
 							_, err := strconv.ParseFloat(metricValue, 64)
 							if err != nil {
-								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err))
+								expected = expectedBadRequest(fmt.Sprintf("failed to parse value: %v: %v\n", metricValue, err))
 							}
 						} else if metricType == "counter" {
 							_, err := strconv.ParseInt(metricValue, 10, 64)
 							if err != nil {
-								expected = expectedBadRequest(fmt.Sprintf("Value parsing fail %v: %v\n", metricValue, err))
+								expected = expectedBadRequest(fmt.Sprintf("failed to parse value: %v: %v\n", metricValue, err))
 							}
 						}
 					}
@@ -235,7 +235,7 @@ func Test_UpdateJsonRequest_MetricType(t *testing.T) {
 			requestObj.Value = &value
 			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
 		} else {
-			expected = expectedNotImplemented()
+			expected = expectedNotImplemented(metricType)
 		}
 
 		t.Run("json_"+metricType+"_metricType", func(t *testing.T) {
@@ -518,8 +518,8 @@ func expectedBadRequest(message string) *callResult {
 	return getExpected(http.StatusBadRequest, message)
 }
 
-func expectedNotImplemented() *callResult {
-	return getExpected(http.StatusNotImplemented, "unknown metric types\n")
+func expectedNotImplemented(metricType string) *callResult {
+	return getExpected(http.StatusNotImplemented, fmt.Sprintf("unknown metric type: %s\n", metricType))
 }
 
 func expectedOk() *callResult {

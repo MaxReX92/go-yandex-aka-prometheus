@@ -99,7 +99,7 @@ func TestAggregateMetricsProvider_Update(t *testing.T) {
 			provider := NewAggregateMetricsProvider(firstProvider, secondProvider)
 			actualError := provider.Update(ctx)
 
-			assert.Equal(t, tt.expectedError, actualError)
+			assert.ErrorIs(t, actualError, tt.expectedError)
 
 			firstProvider.AssertCalled(t, "Update", ctx)
 			if tt.firstProviderError == nil {

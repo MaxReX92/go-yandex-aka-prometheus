@@ -2,17 +2,20 @@ package model
 
 import (
 	"errors"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
-var (
-	ErrUnknownMetricType = errors.New("unknown metric types")
-	ErrIvalidSignature   = errors.New("invalid signature")
-)
+type ErrUnknownMetricType struct {
+	UnknownType string
+}
+
+func (e *ErrUnknownMetricType) Error() string {
+	return "unknown metric type: " + e.UnknownType
+}
 
 type MetricsConverterConfig interface {
 	SignMetrics() bool
@@ -44,14 +47,14 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error
 	case "gauge":
 		modelMetric.Value = &metricValue
 	default:
-		logger.ErrorFormat("unknown metric types: %v", modelMetric.MType)
-		return nil, ErrUnknownMetricType
+		logger.ErrorFormat("unknown metric type: %v", modelMetric.MType)
+		return nil, &ErrUnknownMetricType{UnknownType: modelMetric.MType}
 	}
 
 	if c.signMetrics {
 		signature, err := c.signer.GetSignString(metric)
 		if err != nil {
-			return nil, err
+			return nil, logger.WrapError("get signature string", err)
 		}
 
 		modelMetric.Hash = signature
@@ -80,8 +83,8 @@ func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric
 		metric = types.NewGaugeMetric(modelMetric.ID)
 		value = *modelMetric.Value
 	default:
-		logger.ErrorFormat("unknown metric types: %v", modelMetric.MType)
-		return nil, ErrUnknownMetricType
+		logger.ErrorFormat("unknown metric type: %v", modelMetric.MType)
+		return nil, &ErrUnknownMetricType{UnknownType: modelMetric.MType}
 	}
 
 	metric.SetValue(value)
@@ -89,11 +92,11 @@ func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric
 	if c.signMetrics && modelMetric.Hash != "" {
 		ok, err := c.signer.CheckSign(metric, modelMetric.Hash)
 		if err != nil {
-			return nil, err
+			return nil, logger.WrapError("check signature", err)
 		}
 
 		if !ok {
-			return nil, ErrIvalidSignature
+			return nil, errors.New("invalid signature")
 		}
 	}
 

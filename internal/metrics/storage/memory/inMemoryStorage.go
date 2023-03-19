@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"fmt"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"sync"
@@ -100,7 +101,7 @@ func (s *inMemoryStorage) Restore(ctx context.Context, metricValues map[string]m
 		for metricName, metricValue := range metricsByType {
 			value, err := parser.ToFloat64(metricValue)
 			if err != nil {
-				return err
+				return logger.WrapError("parse float metric value", err)
 			}
 
 			metricsList, ok := s.metricsByType[metricType]

@@ -3,11 +3,11 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
 type PostgresDataaBaseConfig interface {
@@ -21,7 +21,7 @@ type postgresDataBase struct {
 func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (database.DataBase, error) {
 	conn, err := initDB(ctx, conf.GetConnectionString())
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("init postgresql database", err)
 	}
 
 	return &postgresDataBase{conn: conn}, nil
@@ -37,7 +37,7 @@ func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []*databas
 				"metricValue": record.Value.Float64})
 
 			if err != nil {
-				return err
+				return logger.WrapError("update records in postgresql database", err)
 			}
 		}
 
@@ -62,7 +62,7 @@ func (p *postgresDataBase) ReadRecord(ctx context.Context, metricType string, me
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("read records from postgresql database", err)
 	}
 
 	count := len(result)
@@ -107,14 +107,14 @@ func (p *postgresDataBase) callInTransaction(ctx context.Context, action func(co
 func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action func(context.Context, *sql.Tx) ([]*database.DBRecord, error)) ([]*database.DBRecord, error) {
 	tx, err := p.conn.BeginTx(ctx, &sql.TxOptions{ReadOnly: false})
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("begin transaction in postgresql database", err)
 	}
 
 	result, err := action(ctx, tx)
 	if err != nil {
 		rollbackError := tx.Rollback()
 		if rollbackError != nil {
-			logger.ErrorFormat("Fail to rollback transaction: %v", rollbackError)
+			logger.ErrorFormat("failed to rollback transaction: %v", rollbackError)
 		}
 
 		return nil, err
@@ -122,8 +122,7 @@ func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action f
 
 	err = tx.Commit()
 	if err != nil {
-		logger.ErrorFormat("Fail to commit transaction: %v", err)
-		return nil, err
+		return nil, logger.WrapError("commit transaction", err)
 	}
 
 	return result, nil
@@ -133,7 +132,7 @@ func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command 
 	rows, err := tx.QueryContext(ctx, command, args...)
 
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("call query", err)
 	}
 
 	result := []*database.DBRecord{}
@@ -141,7 +140,7 @@ func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command 
 		var record database.DBRecord
 		err = rows.Scan(&record.MetricType, &record.Name, &record.Value)
 		if err != nil {
-			return nil, err
+			return nil, logger.WrapError("scan rows", err)
 		}
 
 		result = append(result, &record)
@@ -149,7 +148,7 @@ func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command 
 
 	err = rows.Err()
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("get rows", err)
 	}
 
 	return result, nil

@@ -2,15 +2,12 @@ package db
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
-
-var ErrInvalidRecord = errors.New("invalid db record")
 
 func toDBRecord(metric metrics.Metric) *database.DBRecord {
 	return &database.DBRecord{
@@ -22,17 +19,17 @@ func toDBRecord(metric metrics.Metric) *database.DBRecord {
 
 func fromDBRecord(record *database.DBRecord) (metrics.Metric, error) {
 	if !record.MetricType.Valid {
-		return nil, ErrInvalidRecord
+		return nil, NewErrInvalidRecord("invalid record metric type")
 	}
 	metricType := record.MetricType.String
 
 	if !record.Name.Valid {
-		return nil, ErrInvalidRecord
+		return nil, NewErrInvalidRecord("invalid record metric name")
 	}
 	metricName := record.Name.String
 
 	if !record.Value.Valid {
-		return nil, ErrInvalidRecord
+		return nil, NewErrInvalidRecord("invalid record metric value")
 	}
 	value := record.Value.Float64
 

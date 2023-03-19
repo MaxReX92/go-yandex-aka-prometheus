@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher/http"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"time"
 
 	"github.com/caarlos0/env/v7"
@@ -13,6 +13,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/custom"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/runtime"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
@@ -28,14 +29,14 @@ type config struct {
 func main() {
 	conf, err := createConfig()
 	if err != nil {
-		panic(err)
+		panic(logger.WrapError("initialize config", err))
 	}
 
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
 	metricPusher, err := http.NewMetricsPusher(conf, converter)
 	if err != nil {
-		panic(err)
+		panic(logger.WrapError("create new metrics pusher", err))
 	}
 
 	runtimeMetricsProvider := runtime.NewRuntimeMetricsProvider(conf)

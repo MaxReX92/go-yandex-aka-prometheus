@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
@@ -26,7 +27,7 @@ func (d *dbStorage) AddMetricValues(ctx context.Context, metricsList []metrics.M
 
 	err := d.dataBase.UpdateRecords(ctx, dbRecords)
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("update db record", err)
 	}
 
 	return metricsList, nil
@@ -35,13 +36,13 @@ func (d *dbStorage) AddMetricValues(ctx context.Context, metricsList []metrics.M
 func (d *dbStorage) GetMetricValues(ctx context.Context) (map[string]map[string]string, error) {
 	records, err := d.dataBase.ReadAll(ctx)
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("read all db records", err)
 	}
 
 	result := map[string]map[string]string{}
 	for _, record := range records {
 		if !record.MetricType.Valid {
-			return nil, ErrInvalidRecord
+			return nil, NewErrInvalidRecord("invalid record metric type")
 		}
 
 		metricType := record.MetricType.String
@@ -52,12 +53,12 @@ func (d *dbStorage) GetMetricValues(ctx context.Context) (map[string]map[string]
 		}
 
 		if !record.Name.Valid {
-			return nil, ErrInvalidRecord
+			return nil, NewErrInvalidRecord("invalid record metric name")
 		}
 		metricName := record.Name.String
 
 		if !record.Value.Valid {
-			return nil, ErrInvalidRecord
+			return nil, NewErrInvalidRecord("invalid record metric value")
 		}
 
 		metricsByType[metricName] = parser.FloatToString(record.Value.Float64)
@@ -69,7 +70,7 @@ func (d *dbStorage) GetMetricValues(ctx context.Context) (map[string]map[string]
 func (d *dbStorage) GetMetric(ctx context.Context, metricType string, metricName string) (metrics.Metric, error) {
 	result, err := d.dataBase.ReadRecord(ctx, metricType, metricName)
 	if err != nil {
-		return nil, err
+		return nil, logger.WrapError("read db record", err)
 	}
 
 	return fromDBRecord(result)
@@ -82,7 +83,7 @@ func (d *dbStorage) Restore(ctx context.Context, metricValues map[string]map[str
 		for metricName, metricValue := range metricsByType {
 			value, err := parser.ToFloat64(metricValue)
 			if err != nil {
-				return err
+				return logger.WrapError("parse metric value", err)
 			}
 
 			records = append(records, &database.DBRecord{

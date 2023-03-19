@@ -95,7 +95,7 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 			actualResult, actualError := strategy.AddMetricValues(ctx, metricsList)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
-			assert.Equal(t, tt.expectedError, actualError)
+			assert.ErrorIs(t, actualError, tt.expectedError)
 
 			inMemoryStorageMock.AssertCalled(t, "AddMetricValues", ctx, metricsList)
 
@@ -177,7 +177,7 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 			actualResult, actualError := strategy.AddMetricValues(ctx, metricsList)
 
 			assert.Equal(t, tt.expectedResult, actualResult)
-			assert.Equal(t, tt.expectedError, actualError)
+			assert.ErrorIs(t, actualError, tt.expectedError)
 
 			inMemoryStorageMock.AssertCalled(t, "AddMetricValues", ctx, metricsList)
 
@@ -441,7 +441,7 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
 			actualError := strategy.CreateBackup(ctx)
 
-			assert.Equal(t, tt.expectedError, actualError)
+			assert.ErrorIs(t, actualError, tt.expectedError)
 
 			inMemoryStorageMock.AssertCalled(t, "GetMetricValues", ctx)
 
@@ -520,7 +520,7 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
 			actualError := strategy.RestoreFromBackup(ctx)
 
-			assert.Equal(t, tt.expectedError, actualError)
+			assert.ErrorIs(t, actualError, tt.expectedError)
 
 			backupStorageMock.AssertCalled(t, "GetMetricValues", ctx)
 
