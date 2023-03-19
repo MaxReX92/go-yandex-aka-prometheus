@@ -460,13 +460,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	var buffer bytes.Buffer
 	metricsStorage := memory.NewInMemoryStorage()
 	if apiRequest.metrics != nil {
-
-		metricsList := make([]metrics.Metric, len(apiRequest.metrics))
-		for i, metric := range apiRequest.metrics {
-			metricsList[i] = metric
-		}
-
-		_, err := metricsStorage.AddMetricValues(context.Background(), metricsList)
+		_, err := metricsStorage.AddMetricValues(context.Background(), apiRequest.metrics)
 		assert.NoError(t, err)
 	}
 	htmlPageBuilder := html.NewSimplePageBuilder()
