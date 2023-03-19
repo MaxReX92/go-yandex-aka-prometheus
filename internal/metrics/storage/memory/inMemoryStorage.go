@@ -23,24 +23,30 @@ func NewInMemoryStorage() storage.MetricsStorage {
 	}
 }
 
-func (s *inMemoryStorage) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
-	metricType := metric.GetType()
-	metricsList, ok := s.metricsByType[metricType]
-	if !ok {
-		metricsList = map[string]metrics.Metric{}
-		s.metricsByType[metricType] = metricsList
+func (s *inMemoryStorage) AddMetricValues(ctx context.Context, metricList []metrics.Metric) ([]metrics.Metric, error) {
+	result := make([]metrics.Metric, len(metricList))
+
+	for i, metric := range metricList {
+		metricType := metric.GetType()
+		typedMetrics, ok := s.metricsByType[metricType]
+		if !ok {
+			typedMetrics = map[string]metrics.Metric{}
+			s.metricsByType[metricType] = typedMetrics
+		}
+
+		metricName := metric.GetName()
+		currentMetric, ok := typedMetrics[metricName]
+		if ok {
+			currentMetric.SetValue(metric.GetValue())
+		} else {
+			currentMetric = metric
+			typedMetrics[metricName] = currentMetric
+		}
+
+		result[i] = currentMetric
 	}
 
-	metricName := metric.GetName()
-	currentMetric, ok := metricsList[metricName]
-	if ok {
-		currentMetric.SetValue(metric.GetValue())
-	} else {
-		currentMetric = metric
-		metricsList[metricName] = currentMetric
-	}
-
-	return currentMetric, nil
+	return result, nil
 }
 
 func (s *inMemoryStorage) GetMetricValues(context.Context) (map[string]map[string]string, error) {

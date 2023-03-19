@@ -49,8 +49,8 @@ func NewFileStorage(config fileStorageConfig) storage.MetricsStorage {
 	return result
 }
 
-func (f *fileStorage) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
-	return metric, f.updateMetric(metric.GetType(), metric.GetName(), metric.GetStringValue())
+func (f *fileStorage) AddMetricValues(ctx context.Context, metricsList []metrics.Metric) ([]metrics.Metric, error) {
+	return metricsList, f.updateMetrics(metricsList)
 }
 
 func (f *fileStorage) GetMetric(ctx context.Context, metricType string, metricName string) (metrics.Metric, error) {
@@ -102,11 +102,17 @@ func (f *fileStorage) Restore(ctx context.Context, metricValues map[string]map[s
 	return f.writeRecordsToFile(records)
 }
 
-func (f *fileStorage) updateMetric(metricType string, metricName string, stringValue string) error {
+func (f *fileStorage) updateMetrics(metricsList []metrics.Metric) error {
 	// Read and write
 	return f.workWithFile(os.O_CREATE|os.O_RDWR, func(fileStream *os.File) error {
+		metricsMap := map[string]metrics.Metric{} // contains?
+		for _, metric := range metricsList {
+			metricsMap[metric.GetType()+metric.GetName()] = metric
+		}
+
 		records, err := f.readRecords(fileStream, func(record *storageRecord) bool {
-			return record.Type != metricType || record.Name != metricName
+			_, found := metricsMap[record.Type+record.Name]
+			return !found
 		})
 		if err != nil {
 			return err
@@ -121,11 +127,14 @@ func (f *fileStorage) updateMetric(metricType string, metricName string, stringV
 			return err
 		}
 
-		records = append(records, &storageRecord{
-			Type:  metricType,
-			Name:  metricName,
-			Value: stringValue,
-		})
+		for _, metric := range metricsList {
+			records = append(records, &storageRecord{
+				Type:  metric.GetType(),
+				Name:  metric.GetName(),
+				Value: metric.GetStringValue(),
+			})
+		}
+
 		return f.writeRecords(fileStream, records)
 	})
 }

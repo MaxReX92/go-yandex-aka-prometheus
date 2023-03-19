@@ -330,7 +330,9 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			metricsStorage := memory.NewInMemoryStorage()
-			_, err := metricsStorage.AddMetricValue(context.Background(), createCounterMetric("metricName", 100))
+			metricsList := []metrics.Metric{createCounterMetric("metricName", 100)}
+
+			_, err := metricsStorage.AddMetricValues(context.Background(), metricsList)
 			assert.NoError(t, err)
 
 			request := httptest.NewRequest(http.MethodGet, url, nil)
@@ -458,10 +460,14 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	var buffer bytes.Buffer
 	metricsStorage := memory.NewInMemoryStorage()
 	if apiRequest.metrics != nil {
-		for _, metric := range apiRequest.metrics {
-			_, err := metricsStorage.AddMetricValue(context.Background(), metric)
-			assert.NoError(t, err)
+
+		metricsList := make([]metrics.Metric, len(apiRequest.metrics))
+		for i, metric := range apiRequest.metrics {
+			metricsList[i] = metric
 		}
+
+		_, err := metricsStorage.AddMetricValues(context.Background(), metricsList)
+		assert.NoError(t, err)
 	}
 	htmlPageBuilder := html.NewSimplePageBuilder()
 

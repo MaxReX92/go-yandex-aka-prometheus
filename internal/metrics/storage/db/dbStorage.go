@@ -18,13 +18,18 @@ func NewDBStorage(dataBase database.DataBase) storage.MetricsStorage {
 	return &dbStorage{dataBase: dataBase}
 }
 
-func (d *dbStorage) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
-	err := d.dataBase.UpdateRecords(ctx, []*database.DBRecord{toDBRecord(metric)})
+func (d *dbStorage) AddMetricValues(ctx context.Context, metricsList []metrics.Metric) ([]metrics.Metric, error) {
+	dbRecords := make([]*database.DBRecord, len(metricsList))
+	for i, metric := range metricsList {
+		dbRecords[i] = toDBRecord(metric)
+	}
+
+	err := d.dataBase.UpdateRecords(ctx, dbRecords)
 	if err != nil {
 		return nil, err
 	}
 
-	return metric, nil
+	return metricsList, nil
 }
 
 func (d *dbStorage) GetMetricValues(ctx context.Context) (map[string]map[string]string, error) {

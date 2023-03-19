@@ -20,6 +20,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database/stub"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
@@ -31,8 +32,7 @@ import (
 )
 
 const (
-	metricContextKey = "metricContextKey"
-	metricResultKey  = "metricResultKey"
+	metricsContextKey = "metricsContextKey"
 )
 
 var compressContentTypes = []string{
@@ -46,6 +46,11 @@ var compressContentTypes = []string{
 
 type metricInfoContextKey struct {
 	key string
+}
+
+type metricsRequestContext struct {
+	requestMetrics []*model.Metrics
+	resultMetrics  []*model.Metrics
 }
 
 type config struct {
@@ -136,11 +141,11 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 	router.Use(middleware.Logger)
 	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))
 	router.Route("/update", func(r chi.Router) {
-		r.With(fillJSONContext, updateMetric(metricsStorage, converter)).
-			Post("/", successJSONResponse())
-		r.With(fillCommonURLContext, fillGaugeURLContext, updateMetric(metricsStorage, converter)).
+		r.With(fillSingleJSONContext, updateMetrics(metricsStorage, converter)).
+			Post("/", successSingleJSONResponse())
+		r.With(fillCommonURLContext, fillGaugeURLContext, updateMetrics(metricsStorage, converter)).
 			Post("/gauge/{metricName}/{metricValue}", successURLResponse())
-		r.With(fillCommonURLContext, fillCounterURLContext, updateMetric(metricsStorage, converter)).
+		r.With(fillCommonURLContext, fillCounterURLContext, updateMetrics(metricsStorage, converter)).
 			Post("/counter/{metricName}/{metricValue}", successURLResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
 			logger.Error("Faul to update metric: unknown metric types")
@@ -149,10 +154,10 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 	})
 
 	router.Route("/value", func(r chi.Router) {
-		r.With(fillJSONContext, fillMetricValue(metricsStorage, converter)).
-			Post("/", successJSONResponse())
+		r.With(fillSingleJSONContext, fillMetricValues(metricsStorage, converter)).
+			Post("/", successSingleJSONResponse())
 
-		r.With(fillCommonURLContext, fillMetricValue(metricsStorage, converter)).
+		r.With(fillCommonURLContext, fillMetricValues(metricsStorage, converter)).
 			Get("/{metricType}/{metricName}", successURLValueResponse(converter))
 	})
 
@@ -170,10 +175,11 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 
 func fillCommonURLContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, metricContext := ensureMetricContext(r)
-
-		metricContext.ID = chi.URLParam(r, "metricName")
-		metricContext.MType = chi.URLParam(r, "metricType")
+		ctx, metricsContext := ensureMetricsContext(r)
+		metricsContext.requestMetrics = append(metricsContext.requestMetrics, &model.Metrics{
+			ID:    chi.URLParam(r, "metricName"),
+			MType: chi.URLParam(r, "metricType"),
+		})
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -181,7 +187,13 @@ func fillCommonURLContext(next http.Handler) http.Handler {
 
 func fillGaugeURLContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, metricContext := ensureMetricContext(r)
+		ctx, metricsContext := ensureMetricsContext(r)
+		if len(metricsContext.requestMetrics) != 1 {
+			logger.Error("fillGaugeURLContext: wrong context")
+			http.Error(w, "fillGaugeURLContext: wrong context", http.StatusInternalServerError)
+			return
+		}
+
 		strValue := chi.URLParam(r, "metricValue")
 		value, err := parser.ToFloat64(strValue)
 		if err != nil {
@@ -190,15 +202,21 @@ func fillGaugeURLContext(next http.Handler) http.Handler {
 			return
 		}
 
-		metricContext.MType = "gauge"
-		metricContext.Value = &value
+		metricsContext.requestMetrics[0].MType = "gauge"
+		metricsContext.requestMetrics[0].Value = &value
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func fillCounterURLContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, metricContext := ensureMetricContext(r)
+		ctx, metricsContext := ensureMetricsContext(r)
+		if len(metricsContext.requestMetrics) != 1 {
+			logger.Error("fillCounterURLContext: wrong context")
+			http.Error(w, "fillCounterURLContext: wrong context", http.StatusInternalServerError)
+			return
+		}
+
 		strValue := chi.URLParam(r, "metricValue")
 		value, err := parser.ToInt64(strValue)
 		if err != nil {
@@ -207,16 +225,15 @@ func fillCounterURLContext(next http.Handler) http.Handler {
 			return
 		}
 
-		metricContext.MType = "counter"
-		metricContext.Delta = &value
+		metricsContext.requestMetrics[0].MType = "counter"
+		metricsContext.requestMetrics[0].Delta = &value
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func fillJSONContext(next http.Handler) http.Handler {
+func fillSingleJSONContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, metricContext := ensureMetricContext(r)
-
+		ctx, metricsContext := ensureMetricsContext(r)
 		var reader io.Reader
 		if r.Header.Get(`Content-Encoding`) == `gzip` {
 			gz, err := gzip.NewReader(r.Body)
@@ -230,6 +247,9 @@ func fillJSONContext(next http.Handler) http.Handler {
 		} else {
 			reader = r.Body
 		}
+
+		metricContext := &model.Metrics{}
+		metricsContext.requestMetrics = append(metricsContext.requestMetrics, metricContext)
 
 		err := json.NewDecoder(reader).Decode(metricContext)
 		if err != nil {
@@ -254,89 +274,90 @@ func fillJSONContext(next http.Handler) http.Handler {
 	})
 }
 
-func updateMetric(storage storage.MetricsStorage, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
+func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-			metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
-			if !ok {
-				logger.Error("Metric info not found in context")
-				http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
-				return
-			}
-
-			metric, err := converter.FromModelMetric(metricContext)
-			if err != nil {
-				logger.ErrorFormat("Fail to parse metric: %v", err)
-				if errors.Is(err, model.ErrUnknownMetricType) {
-					http.Error(w, err.Error(), http.StatusNotImplemented)
-				} else {
-					http.Error(w, err.Error(), http.StatusBadRequest)
+			ctx, metricsContext := ensureMetricsContext(r)
+			metricsList := make([]metrics.Metric, len(metricsContext.requestMetrics))
+			for i, metricContext := range metricsContext.requestMetrics {
+				metric, err := converter.FromModelMetric(metricContext)
+				if err != nil {
+					logger.ErrorFormat("Fail to parse metric: %v", err)
+					if errors.Is(err, model.ErrUnknownMetricType) {
+						http.Error(w, err.Error(), http.StatusNotImplemented)
+					} else {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+					}
+					return
 				}
-				return
+
+				metricsList[i] = metric
 			}
 
-			resultMetric, err := storage.AddMetricValue(ctx, metric)
+			resultMetrics, err := storage.AddMetricValues(ctx, metricsList)
 			if err != nil {
 				logger.ErrorFormat("Fail to update metric: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			newValue, err := converter.ToModelMetric(resultMetric)
-			if err != nil {
-				logger.ErrorFormat("Fail to convert metric: %v", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+			metricsContext.resultMetrics = make([]*model.Metrics, len(resultMetrics))
+			for i, resultMetric := range resultMetrics {
+				newValue, err := converter.ToModelMetric(resultMetric)
+				if err != nil {
+					logger.ErrorFormat("Fail to convert metric: %v", err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				logger.InfoFormat("Updated metric: %v. newValue: %v", resultMetric.GetName(), newValue)
+				metricsContext.resultMetrics[i] = newValue
 			}
 
-			logger.InfoFormat("Updated metric: %v. newValue: %v", metricContext.ID, newValue)
-			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, metricInfoContextKey{key: metricResultKey}, newValue)))
+			next.ServeHTTP(w, r)
 		})
 	}
 }
 
-func fillMetricValue(storage storage.MetricsStorage, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
+func fillMetricValues(storage storage.MetricsStorage, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-			metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
-			if !ok {
-				logger.Error("Fail to get metric value: metric info not found in context")
-				http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
-				return
+			ctx, metricsContext := ensureMetricsContext(r)
+			metricsContext.resultMetrics = make([]*model.Metrics, len(metricsContext.requestMetrics))
+			for i, metricContext := range metricsContext.requestMetrics {
+				metric, err := storage.GetMetric(ctx, metricContext.MType, metricContext.ID)
+				if err != nil {
+					logger.ErrorFormat("Fail to get metric value: %v", err)
+					http.Error(w, "Metric not found", http.StatusNotFound)
+					return
+				}
+
+				resultValue, err := converter.ToModelMetric(metric)
+				if err != nil {
+					logger.ErrorFormat("Fail to get metric value: %v", err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				metricsContext.resultMetrics[i] = resultValue
 			}
 
-			metric, err := storage.GetMetric(ctx, metricContext.MType, metricContext.ID)
-			if err != nil {
-				logger.ErrorFormat("Fail to get metric value: %v", err)
-				http.Error(w, "Metric not found", http.StatusNotFound)
-				return
-			}
-
-			resultValue, err := converter.ToModelMetric(metric)
-			if err != nil {
-				logger.ErrorFormat("Fail to get metric value: %v", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, metricInfoContextKey{key: metricResultKey}, resultValue)))
+			next.ServeHTTP(w, r)
 		})
 	}
 }
 
 func successURLValueResponse(converter *model.MetricsConverter) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		metricValueResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
-		if !ok {
-			logger.Error("Fail to send success response: metric info not found in context")
-			http.Error(w, "Metric info not found in context", http.StatusInternalServerError)
+		_, metricsContext := ensureMetricsContext(r)
+
+		if len(metricsContext.resultMetrics) != 1 {
+			logger.Error("successURLValueResponse: wrong context")
+			http.Error(w, "successURLValueResponse: wrong context", http.StatusInternalServerError)
 			return
 		}
 
-		metric, err := converter.FromModelMetric(metricValueResult)
+		metric, err := converter.FromModelMetric(metricsContext.resultMetrics[0])
 		if err != nil {
 			logger.ErrorFormat("Fail to convert: %s", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -365,17 +386,17 @@ func successURLResponse() func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func successJSONResponse() func(w http.ResponseWriter, r *http.Request) {
+func successSingleJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		metricUpdateResult, ok := ctx.Value(metricInfoContextKey{key: metricResultKey}).(*model.Metrics)
-		if !ok {
-			logger.Error("Fail to send success rosponse: metric update result not found in context")
-			http.Error(w, "Metric update result not found in context", http.StatusInternalServerError)
+		_, metricsContext := ensureMetricsContext(r)
+
+		if len(metricsContext.resultMetrics) != 1 {
+			logger.Error("successSingleJSONResponse: wrong context")
+			http.Error(w, "successSingleJSONResponse: wrong context", http.StatusInternalServerError)
 			return
 		}
 
-		result, err := json.Marshal(metricUpdateResult)
+		result, err := json.Marshal(metricsContext.resultMetrics[0])
 		if err != nil {
 			logger.ErrorFormat("Fail to serialise result: %v", err)
 			http.Error(w, "Fail to serialise result", http.StatusInternalServerError)
@@ -412,15 +433,15 @@ func handleDBPing(dbStorage database.DataBase) func(w http.ResponseWriter, r *ht
 	}
 }
 
-func ensureMetricContext(r *http.Request) (context.Context, *model.Metrics) {
+func ensureMetricsContext(r *http.Request) (context.Context, *metricsRequestContext) {
 	ctx := r.Context()
-	metricContext, ok := ctx.Value(metricInfoContextKey{key: metricContextKey}).(*model.Metrics)
+	metricsContext, ok := ctx.Value(metricInfoContextKey{key: metricsContextKey}).(*metricsRequestContext)
 	if !ok {
-		metricContext = &model.Metrics{}
-		ctx = context.WithValue(r.Context(), metricInfoContextKey{key: metricContextKey}, metricContext)
+		metricsContext = &metricsRequestContext{}
+		ctx = context.WithValue(r.Context(), metricInfoContextKey{key: metricsContextKey}, metricsContext)
 	}
 
-	return ctx, metricContext
+	return ctx, metricsContext
 }
 
 func (c *config) StoreFilePath() string {

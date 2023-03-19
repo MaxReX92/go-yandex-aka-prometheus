@@ -3,12 +3,12 @@ package runtime
 import (
 	"context"
 	"fmt"
-	metrics2 "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"reflect"
 	"runtime"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
 type runtimeMetricsProviderConfig interface {
@@ -16,17 +16,17 @@ type runtimeMetricsProviderConfig interface {
 }
 
 type runtimeMetricsProvider struct {
-	metrics []metrics2.Metric
+	metrics []metrics.Metric
 }
 
-func NewRuntimeMetricsProvider(config runtimeMetricsProviderConfig) metrics2.MetricsProvider {
-	metricsList := config.MetricsList()
-	metrics := make([]metrics2.Metric, len(metricsList))
-	for i, metricName := range metricsList {
-		metrics[i] = types.NewGaugeMetric(metricName)
+func NewRuntimeMetricsProvider(config runtimeMetricsProviderConfig) metrics.MetricsProvider {
+	metricNames := config.MetricsList()
+	metricsList := make([]metrics.Metric, len(metricNames))
+	for i, metricName := range metricNames {
+		metricsList[i] = types.NewGaugeMetric(metricName)
 	}
 
-	return &runtimeMetricsProvider{metrics: metrics}
+	return &runtimeMetricsProvider{metrics: metricsList}
 }
 
 func (p *runtimeMetricsProvider) Update(context.Context) error {
@@ -49,7 +49,7 @@ func (p *runtimeMetricsProvider) Update(context.Context) error {
 	return nil
 }
 
-func (p *runtimeMetricsProvider) GetMetrics() []metrics2.Metric {
+func (p *runtimeMetricsProvider) GetMetrics() []metrics.Metric {
 	return p.metrics
 }
 

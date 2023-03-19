@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"errors"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -54,10 +55,13 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
-			for _, m := range tt.counterMetrics {
-				_, err := storage.AddMetricValue(context.Background(), test.CreateCounterMetric(m.Key, m.Value))
-				assert.NoError(t, err)
+
+			metricsList := make([]metrics.Metric, len(tt.counterMetrics))
+			for i, m := range tt.counterMetrics {
+				metricsList[i] = test.CreateCounterMetric(m.Key, m.Value)
 			}
+			_, err := storage.AddMetricValues(context.Background(), metricsList)
+			assert.NoError(t, err)
 
 			actual, _ := storage.GetMetricValues(context.Background())
 			assert.Equal(t, tt.expected, actual)
@@ -109,10 +113,13 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
-			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddMetricValue(context.Background(), test.CreateGaugeMetric(m.Key, m.Value))
-				assert.NoError(t, err)
+
+			metricsList := make([]metrics.Metric, len(tt.gaugeMetrics))
+			for i, m := range tt.gaugeMetrics {
+				metricsList[i] = test.CreateGaugeMetric(m.Key, m.Value)
 			}
+			_, err := storage.AddMetricValues(context.Background(), metricsList)
+			assert.NoError(t, err)
 
 			actual, _ := storage.GetMetricValues(context.Background())
 			assert.Equal(t, tt.expected, actual)
@@ -161,15 +168,15 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 
-			for _, m := range tt.counterMetrics {
-				_, err := storage.AddMetricValue(context.Background(), test.CreateCounterMetric(m.Key, m.Value))
-				assert.NoError(t, err)
+			metricsList := make([]metrics.Metric, len(tt.counterMetrics)+len(tt.gaugeMetrics))
+			for i, m := range tt.counterMetrics {
+				metricsList[i] = test.CreateCounterMetric(m.Key, m.Value)
 			}
-
-			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddMetricValue(context.Background(), test.CreateGaugeMetric(m.Key, m.Value))
-				assert.NoError(t, err)
+			for i, m := range tt.gaugeMetrics {
+				metricsList[len(tt.counterMetrics)+i] = test.CreateGaugeMetric(m.Key, m.Value)
 			}
+			_, err := storage.AddMetricValues(context.Background(), metricsList)
+			assert.NoError(t, err)
 
 			actual, _ := storage.GetMetricValues(context.Background())
 			assert.Equal(t, tt.expected, actual)
@@ -282,15 +289,16 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewInMemoryStorage()
 
-			for _, m := range tt.counterMetrics {
-				_, err := storage.AddMetricValue(context.Background(), test.CreateCounterMetric(m.Key, m.Value))
-				assert.NoError(t, err)
+			metricsList := make([]metrics.Metric, len(tt.counterMetrics)+len(tt.gaugeMetrics))
+			for i, m := range tt.counterMetrics {
+				metricsList[i] = test.CreateCounterMetric(m.Key, m.Value)
+			}
+			for i, m := range tt.gaugeMetrics {
+				metricsList[len(tt.counterMetrics)+i] = test.CreateGaugeMetric(m.Key, m.Value)
 			}
 
-			for _, m := range tt.gaugeMetrics {
-				_, err := storage.AddMetricValue(context.Background(), test.CreateGaugeMetric(m.Key, m.Value))
-				assert.NoError(t, err)
-			}
+			_, err := storage.AddMetricValues(context.Background(), metricsList)
+			assert.NoError(t, err)
 
 			for _, expectedCounter := range tt.expectedCounters {
 				actualValue, err := storage.GetMetric(context.Background(), "counter", expectedCounter.Key)

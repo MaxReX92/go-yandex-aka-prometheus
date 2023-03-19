@@ -25,17 +25,17 @@ func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsSto
 	}
 }
 
-func (s *StorageStrategy) AddMetricValue(ctx context.Context, metric metrics.Metric) (metrics.Metric, error) {
+func (s *StorageStrategy) AddMetricValues(ctx context.Context, metric []metrics.Metric) ([]metrics.Metric, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	result, err := s.inMemoryStorage.AddMetricValue(ctx, metric)
+	result, err := s.inMemoryStorage.AddMetricValues(ctx, metric)
 	if err != nil {
 		return result, err
 	}
 
 	if s.syncMode {
-		_, err = s.backupStorage.AddMetricValue(ctx, result)
+		_, err = s.backupStorage.AddMetricValues(ctx, result)
 		if err != nil {
 			return nil, err
 		}

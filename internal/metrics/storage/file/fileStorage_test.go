@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"os"
 	"testing"
 
@@ -87,11 +88,14 @@ func TestFileStorage_AddGaugeMetricValue(t *testing.T) {
 			}(filePath)
 
 			storage := NewFileStorage(&config{filePath: filePath})
-			for _, kv := range tt.values {
-				value, err := storage.AddMetricValue(context.Background(), test.CreateGaugeMetric(kv.Key, kv.Value))
-				assert.Equal(t, kv.Value, value.GetValue())
-				assert.NoError(t, err)
+
+			metricsList := make([]metrics.Metric, len(tt.values))
+			for i, m := range tt.values {
+				metricsList[i] = test.CreateGaugeMetric(m.Key, m.Value)
 			}
+
+			_, err := storage.AddMetricValues(context.Background(), metricsList)
+			assert.NoError(t, err)
 
 			actualRecords := readRecords(t, filePath)
 			assert.Equal(t, tt.expecredRecords, actualRecords)
@@ -137,11 +141,14 @@ func TestFileStorage_AddCounterMetricValue(t *testing.T) {
 			}(filePath)
 
 			storage := NewFileStorage(&config{filePath: filePath})
-			for _, kv := range tt.values {
-				value, err := storage.AddMetricValue(context.Background(), test.CreateCounterMetric(kv.Key, kv.Value))
-				assert.Equal(t, kv.Value, value.GetValue())
-				assert.NoError(t, err)
+
+			metricsList := make([]metrics.Metric, len(tt.values))
+			for i, m := range tt.values {
+				metricsList[i] = test.CreateCounterMetric(m.Key, m.Value)
 			}
+
+			_, err := storage.AddMetricValues(context.Background(), metricsList)
+			assert.NoError(t, err)
 
 			actualRecords := readRecords(t, filePath)
 			assert.Equal(t, tt.expectedRecords, actualRecords)
