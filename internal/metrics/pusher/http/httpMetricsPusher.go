@@ -44,57 +44,64 @@ func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConver
 }
 
 func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) error {
-	logger.InfoFormat("Push %v metrics", len(metrics))
+	metricsCount := len(metrics)
+	if metricsCount == 0 {
+		logger.Info("Nothing to push")
+	}
+	logger.InfoFormat("Push %v metrics", metricsCount)
 
 	pushCtx, cancel := context.WithTimeout(ctx, p.pushTimeout)
 	defer cancel()
 
-	for _, metric := range metrics {
-
-		metricName := metric.GetName()
-		modelRequest, err := p.converter.ToModelMetric(metric)
+	modelMetrics := make([]*model.Metrics, metricsCount)
+	for i, metric := range metrics {
+		modelMetric, err := p.converter.ToModelMetric(metric)
 		if err != nil {
 			logger.ErrorFormat("Fail to create model request: %v", err)
 			return err
 		}
 
-		var buffer bytes.Buffer
-		err = json.NewEncoder(&buffer).Encode(modelRequest)
-		if err != nil {
-			logger.ErrorFormat("Fail to serialize model request: %v", err)
-			return err
-		}
-
-		request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, p.metricsServerURL+"/update", &buffer)
-		if err != nil {
-			logger.ErrorFormat("Fail to create push request: %v", err)
-			return err
-		}
-		request.Header.Add("Content-Type", "application/json")
-
-		response, err := p.client.Do(request)
-		if err != nil {
-			logger.ErrorFormat("Fail to push metric: %v", err)
-			return err
-		}
-		defer response.Body.Close()
-
-		content, err := io.ReadAll(response.Body)
-		if err != nil {
-			logger.ErrorFormat("Fail to read response body: %v", err)
-			return err
-		}
-
-		stringContent := string(content)
-		if response.StatusCode != http.StatusOK {
-			logger.ErrorFormat("Unexpected response status code: %v %v", response.Status, stringContent)
-			return fmt.Errorf("fail to push metric: %v", stringContent)
-		}
-
-		metric.Flush()
-		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v %v",
-			metricName, metric.GetStringValue(), response.Status, stringContent)
+		modelMetrics[i] = modelMetric
 	}
+
+	var buffer bytes.Buffer
+	err := json.NewEncoder(&buffer).Encode(modelMetrics)
+	if err != nil {
+		logger.ErrorFormat("Fail to serialize model request: %v", err)
+		return err
+	}
+
+	request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, p.metricsServerURL+"/updates", &buffer)
+	if err != nil {
+		logger.ErrorFormat("Fail to create push request: %v", err)
+		return err
+	}
+	request.Header.Add("Content-Type", "application/json")
+
+	response, err := p.client.Do(request)
+	if err != nil {
+		logger.ErrorFormat("Fail to push metric: %v", err)
+		return err
+	}
+	defer response.Body.Close()
+
+	content, err := io.ReadAll(response.Body)
+	if err != nil {
+		logger.ErrorFormat("Fail to read response body: %v", err)
+		return err
+	}
+
+	stringContent := string(content)
+	if response.StatusCode != http.StatusOK {
+		logger.ErrorFormat("Unexpected response status code: %v %v", response.Status, stringContent)
+		return fmt.Errorf("fail to push metric: %v", stringContent)
+	}
+
+	for _, metric := range metrics {
+		metric.Flush()
+		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v", metric.GetName(), metric.GetStringValue(), response.Status)
+	}
+
 	return nil
 }
 

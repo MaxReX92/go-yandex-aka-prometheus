@@ -100,10 +100,12 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 				assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
 				defer r.Body.Close()
-				modelRequest := &model.Metrics{}
-				err := json.NewDecoder(r.Body).Decode(modelRequest)
+				modelRequest := []*model.Metrics{}
+				err := json.NewDecoder(r.Body).Decode(&modelRequest)
 				assert.NoError(t, err)
-				called[modelRequest.ID+modelRequest.MType] = true
+				for _, modelMetric := range modelRequest {
+					called[modelMetric.ID+modelMetric.MType] = true
+				}
 
 				w.WriteHeader(tt.responseStatusCode)
 			}))
