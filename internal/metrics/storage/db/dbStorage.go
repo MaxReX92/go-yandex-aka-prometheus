@@ -77,7 +77,6 @@ func (d *dbStorage) GetMetric(ctx context.Context, metricType string, metricName
 }
 
 func (d *dbStorage) Restore(ctx context.Context, metricValues map[string]map[string]string) error {
-
 	records := []*database.DBRecord{}
 	for metricType, metricsByType := range metricValues {
 		for metricName, metricValue := range metricsByType {

@@ -533,6 +533,85 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 	}
 }
 
+func TestStorageStrategy_Close(t *testing.T) {
+
+	values := map[string]map[string]string{}
+
+	tests := []struct {
+		name               string
+		syncMode           bool
+		currentStateValues map[string]map[string]string
+		currentStateError  error
+		restoreError       error
+		expectedError      error
+	}{
+		{
+			name:              "noSync_currentState_error",
+			syncMode:          false,
+			currentStateError: errTest,
+			expectedError:     errTest,
+		},
+		{
+			name:              "sync_currentState_error",
+			syncMode:          true,
+			currentStateError: errTest,
+			expectedError:     errTest,
+		},
+		{
+			name:               "noSync_restore_error",
+			syncMode:           false,
+			currentStateValues: values,
+			restoreError:       errTest,
+			expectedError:      errTest,
+		},
+		{
+			name:               "sync_restore_error",
+			syncMode:           true,
+			currentStateValues: values,
+			restoreError:       errTest,
+			expectedError:      errTest,
+		},
+		{
+			name:               "noSync_success",
+			syncMode:           true,
+			currentStateValues: values,
+		},
+		{
+			name:               "sync_success",
+			syncMode:           true,
+			currentStateValues: values,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			ctx := context.Background()
+
+			confMock := new(configMock)
+			inMemoryStorageMock := new(metricStorageMock)
+			backupStorageMock := new(metricStorageMock)
+
+			confMock.On("SyncMode").Return(tt.syncMode)
+			inMemoryStorageMock.On("GetMetricValues", ctx).Return(tt.currentStateValues, tt.currentStateError)
+			backupStorageMock.On("Restore", ctx, tt.currentStateValues).Return(tt.restoreError)
+
+			strategy := NewStorageStrategy(confMock, inMemoryStorageMock, backupStorageMock)
+			actualError := strategy.Close()
+
+			assert.ErrorIs(t, actualError, tt.expectedError)
+
+			inMemoryStorageMock.AssertCalled(t, "GetMetricValues", ctx)
+
+			if tt.currentStateError == nil {
+				backupStorageMock.AssertCalled(t, "Restore", ctx, tt.currentStateValues)
+			} else {
+				backupStorageMock.AssertNotCalled(t, "Restore", mock.Anything, mock.Anything)
+			}
+		})
+	}
+}
+
 func (c *configMock) SyncMode() bool {
 	args := c.Called()
 	return args.Bool(0)

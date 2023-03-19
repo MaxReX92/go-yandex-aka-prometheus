@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -28,7 +29,11 @@ func TestPeriodicWorker_SuccessCall(t *testing.T) {
 	defer cancel()
 
 	worker := NewPeriodicWorker(func(context.Context) error {
-		wasCalled = true
+		if !wasCalled {
+			wasCalled = true
+			return errors.New("test error")
+		}
+
 		cancel()
 		return nil
 	})
