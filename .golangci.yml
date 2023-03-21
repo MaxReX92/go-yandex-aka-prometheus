@@ -64,7 +64,6 @@ linters:
     - makezero
     - maligned
     - misspell
-    - musttag
     - nakedret
     - nestif
     - nilerr
