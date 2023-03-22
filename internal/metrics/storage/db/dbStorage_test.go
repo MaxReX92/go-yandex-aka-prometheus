@@ -3,13 +3,14 @@ package db
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 type databaseMock struct {
@@ -35,8 +36,6 @@ func TestDbStorage_AddMetricValues(t *testing.T) {
 		},
 	}
 
-	testError := errors.New("test error message")
-
 	tests := []struct {
 		name          string
 		updateError   error
@@ -44,8 +43,8 @@ func TestDbStorage_AddMetricValues(t *testing.T) {
 	}{
 		{
 			name:          "update_error",
-			updateError:   testError,
-			expectedError: testError,
+			updateError:   test.ErrTest,
+			expectedError: test.ErrTest,
 		},
 		{
 			name: "success",
@@ -74,8 +73,6 @@ func TestDbStorage_AddMetricValues(t *testing.T) {
 }
 
 func TestDbStorage_GetMetricValues(t *testing.T) {
-	testError := errors.New("test error message")
-
 	tests := []struct {
 		name            string
 		allRecords      []*database.DBRecord
@@ -86,8 +83,8 @@ func TestDbStorage_GetMetricValues(t *testing.T) {
 	}{
 		{
 			name:                 "get_records_error",
-			getRecordsError:      testError,
-			expectedErrorMessage: testError.Error(),
+			getRecordsError:      test.ErrTest,
+			expectedErrorMessage: test.ErrTest.Error(),
 		},
 		{
 			name: "invalid_record_type",
@@ -151,8 +148,6 @@ func TestDbStorage_GetMetricValues(t *testing.T) {
 }
 
 func TestDbStorage_GetMetric(t *testing.T) {
-
-	testError := errors.New("test error message")
 	metricType := "testMetricType"
 	metricName := "testMetricName"
 	metricValie := float64(100)
@@ -167,8 +162,8 @@ func TestDbStorage_GetMetric(t *testing.T) {
 	}{
 		{
 			name:                 "read_record_error",
-			readRecordError:      testError,
-			expectedErrorMessage: testError.Error(),
+			readRecordError:      test.ErrTest,
+			expectedErrorMessage: test.ErrTest.Error(),
 		},
 		{
 			name:                 "invalid_metric_type",
@@ -263,7 +258,7 @@ func TestDbStorage_Restore(t *testing.T) {
 				Name:       sql.NullString{Valid: true, String: "metricName"},
 				Value:      sql.NullFloat64{Valid: true, Float64: 100},
 			}},
-			updateError:          errors.New("test error message"),
+			updateError:          test.ErrTest,
 			expectedErrorMessage: "test error message",
 		},
 		{

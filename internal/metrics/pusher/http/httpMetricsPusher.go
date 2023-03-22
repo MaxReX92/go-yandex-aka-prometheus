@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -43,8 +42,8 @@ func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConver
 	}, nil
 }
 
-func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) error {
-	metricsCount := len(metrics)
+func (p *httpMetricsPusher) Push(ctx context.Context, metricsList []metrics.Metric) error {
+	metricsCount := len(metricsList)
 	if metricsCount == 0 {
 		logger.Info("Nothing to push")
 	}
@@ -54,7 +53,7 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 	defer cancel()
 
 	modelMetrics := make([]*model.Metrics, metricsCount)
-	for i, metric := range metrics {
+	for i, metric := range metricsList {
 		modelMetric, err := p.converter.ToModelMetric(metric)
 		if err != nil {
 			return logger.WrapError("create model request", err)
@@ -89,10 +88,10 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 	stringContent := string(content)
 	if response.StatusCode != http.StatusOK {
 		logger.ErrorFormat("Unexpected response status code: %v %v", response.Status, stringContent)
-		return fmt.Errorf("failed to push metric: %v", stringContent)
+		return logger.WrapError(fmt.Sprintf("push metric: %s", stringContent), metrics.ErrUnexpectedStatusCode)
 	}
 
-	for _, metric := range metrics {
+	for _, metric := range metricsList {
 		metric.Flush()
 		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v", metric.GetName(), metric.GetStringValue(), response.Status)
 	}
@@ -102,7 +101,7 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metrics []metrics.Metric) 
 
 func normalizeURL(urlStr string) (*url.URL, error) {
 	if urlStr == "" {
-		return nil, errors.New("empty url string")
+		return nil, logger.WrapError("normalize url", metrics.ErrEmptyURL)
 	}
 
 	result, err := url.ParseRequestURI(urlStr)

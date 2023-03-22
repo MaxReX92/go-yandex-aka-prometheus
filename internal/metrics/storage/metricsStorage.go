@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 )
 

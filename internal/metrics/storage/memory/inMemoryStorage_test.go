@@ -3,11 +3,11 @@ package memory
 import (
 	"context"
 	"errors"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 

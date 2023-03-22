@@ -2,11 +2,11 @@ package custom
 
 import (
 	"context"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"math/rand"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
 type customMetricsProvider struct {

@@ -90,7 +90,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 					}
 
 					// Unexpected metric types
-					if expected == nil && metricType != "gauge" && metricType != "counter" {
+					if expected == nil && metricType != gaugeMetricName && metricType != counterMetricName {
 						if metricType == "" || metricName == "" || metricValue == "" {
 							expected = expectedNotFound()
 						} else {
@@ -107,15 +107,18 @@ func Test_UpdateUrlRequest(t *testing.T) {
 					if expected == nil {
 						if metricValue == "" {
 							expected = expectedNotFound()
-						} else if metricType == "gauge" {
-							_, err := strconv.ParseFloat(metricValue, 64)
-							if err != nil {
-								expected = expectedBadRequest(fmt.Sprintf("failed to parse value: %v: %v\n", metricValue, err))
-							}
-						} else if metricType == "counter" {
-							_, err := strconv.ParseInt(metricValue, 10, 64)
-							if err != nil {
-								expected = expectedBadRequest(fmt.Sprintf("failed to parse value: %v: %v\n", metricValue, err))
+						} else {
+							switch metricType {
+							case gaugeMetricName:
+								_, err := strconv.ParseFloat(metricValue, 64)
+								if err != nil {
+									expected = expectedBadRequest(fmt.Sprintf("failed to parse value: %v: %v\n", metricValue, err))
+								}
+							case counterMetricName:
+								_, err := strconv.ParseInt(metricValue, 10, 64)
+								if err != nil {
+									expected = expectedBadRequest(fmt.Sprintf("failed to parse value: %v: %v\n", metricValue, err))
+								}
 							}
 						}
 					}
@@ -186,7 +189,7 @@ func Test_UpdateJsonRequest_MethodNotAllowed(t *testing.T) {
 }
 
 func Test_UpdateJsonRequest_MetricName(t *testing.T) {
-	for _, metricType := range []string{"counter", "gauge"} {
+	for _, metricType := range []string{counterMetricName, gaugeMetricName} {
 		for _, metricName := range getMetricName() {
 			requestObj := modelRequest{
 				ID:    metricName,
@@ -197,14 +200,14 @@ func Test_UpdateJsonRequest_MetricName(t *testing.T) {
 			if metricName == "" {
 				expected = expectedBadRequest("metric name is missed\n")
 			} else {
-				if metricType == "counter" {
+				if metricType == counterMetricName {
 					delta := int64(100)
 					requestObj.Delta = &delta
-					expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", &delta, nil)
-				} else if metricType == "gauge" {
+					expected = getExpectedObj(requestObj.MType, requestObj.ID, &delta, nil)
+				} else if metricType == gaugeMetricName {
 					value := float64(100)
 					requestObj.Value = &value
-					expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
+					expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, &value)
 				}
 			}
 
@@ -224,17 +227,18 @@ func Test_UpdateJsonRequest_MetricType(t *testing.T) {
 		}
 
 		var expected *callResult
-		if metricType == "" {
+		switch metricType {
+		case "":
 			expected = expectedBadRequest("metric types is missed\n")
-		} else if metricType == "counter" {
+		case counterMetricName:
 			delta := int64(100)
 			requestObj.Delta = &delta
-			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", &delta, nil)
-		} else if metricType == "gauge" {
+			expected = getExpectedObj(requestObj.MType, requestObj.ID, &delta, nil)
+		case gaugeMetricName:
 			value := float64(100)
 			requestObj.Value = &value
-			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
-		} else {
+			expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, &value)
+		default:
 			expected = expectedNotImplemented(metricType)
 		}
 
@@ -250,7 +254,7 @@ func Test_UpdateJsonRequest_CounterMetricValue(t *testing.T) {
 	for _, metricValue := range []*int64{nil, &delta} {
 		requestObj := modelRequest{
 			ID:    "testMetricName",
-			MType: "counter",
+			MType: counterMetricName,
 			Delta: metricValue,
 		}
 
@@ -261,7 +265,7 @@ func Test_UpdateJsonRequest_CounterMetricValue(t *testing.T) {
 			expected = expectedBadRequest("metric value is missed\n")
 		} else {
 			valueString = parser.IntToString(*metricValue)
-			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", metricValue, nil)
+			expected = getExpectedObj(requestObj.MType, requestObj.ID, metricValue, nil)
 		}
 
 		t.Run("json_"+valueString+"_counterMetricValue", func(t *testing.T) {
@@ -276,7 +280,7 @@ func Test_UpdateJsonRequest_GaugeMetricValue(t *testing.T) {
 	for _, metricValue := range []*float64{nil, &value} {
 		requestObj := modelRequest{
 			ID:    "testMetricName",
-			MType: "gauge",
+			MType: gaugeMetricName,
 			Value: metricValue,
 		}
 
@@ -287,7 +291,7 @@ func Test_UpdateJsonRequest_GaugeMetricValue(t *testing.T) {
 			expected = expectedBadRequest("metric value is missed\n")
 		} else {
 			valueString = parser.FloatToString(*metricValue)
-			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, metricValue)
+			expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, metricValue)
 		}
 
 		t.Run("json_"+valueString+"_gaugeMetricValue", func(t *testing.T) {
@@ -312,13 +316,13 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 		},
 		{
 			name:          "metric_name_not_found",
-			metricType:    "counter",
+			metricType:    counterMetricName,
 			metricName:    "not_existed_metric_name",
 			expectSuccess: false,
 		},
 		{
 			name:          "success_get_value",
-			metricType:    "counter",
+			metricType:    counterMetricName,
 			metricName:    "metricName",
 			expectSuccess: true,
 		},
@@ -383,7 +387,7 @@ func Test_GetMetricJsonRequest_MethodNotAllowed(t *testing.T) {
 }
 
 func Test_GetMetricJsonRequest_MetricName(t *testing.T) {
-	for _, metricType := range []string{"counter", "gauge"} {
+	for _, metricType := range []string{counterMetricName, gaugeMetricName} {
 		for _, metricName := range getMetricName() {
 			requestObj := modelRequest{
 				ID:    metricName,
@@ -396,14 +400,14 @@ func Test_GetMetricJsonRequest_MetricName(t *testing.T) {
 			if metricName == "" {
 				expected = expectedBadRequest("metric name is missed\n")
 			} else {
-				if metricType == "counter" {
+				if metricType == counterMetricName {
 					delta := int64(100)
 					metricList = append(metricList, createCounterMetric(requestObj.ID, float64(delta)))
-					expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", &delta, nil)
-				} else if metricType == "gauge" {
+					expected = getExpectedObj(requestObj.MType, requestObj.ID, &delta, nil)
+				} else if metricType == gaugeMetricName {
 					value := float64(100)
 					metricList = append(metricList, createGaugeMetric(requestObj.ID, value))
-					expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
+					expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, &value)
 				}
 			}
 
@@ -430,17 +434,18 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 		var expected *callResult
 		metricList := []metrics.Metric{}
 
-		if metricType == "" {
+		switch metricType {
+		case "":
 			expected = expectedBadRequest("metric types is missed\n")
-		} else if metricType == "counter" {
+		case counterMetricName:
 			delta := int64(100)
 			metricList = append(metricList, createCounterMetric(requestObj.ID, float64(delta)))
-			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", &delta, nil)
-		} else if metricType == "gauge" {
+			expected = getExpectedObj(requestObj.MType, requestObj.ID, &delta, nil)
+		case gaugeMetricName:
 			value := float64(100)
 			metricList = append(metricList, createGaugeMetric(requestObj.ID, value))
-			expected = getExpectedObj(200, requestObj.MType, requestObj.ID, "", nil, &value)
-		} else {
+			expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, &value)
+		default:
 			expected = expectedNotFoundMessage("Metric not found\n")
 		}
 
@@ -533,10 +538,9 @@ func getExpected(status int, response string) *callResult {
 	}
 }
 
-func getExpectedObj(status int, metricType string, metricName string, errorString string, delta *int64, value *float64) *callResult {
+func getExpectedObj(metricType string, metricName string, delta *int64, value *float64) *callResult {
 	return &callResult{
-		status:   status,
-		response: errorString,
+		status: 200,
 		responseObj: &model.Metrics{
 			ID:    metricName,
 			MType: metricType,
@@ -561,8 +565,8 @@ func getMethods() []string {
 
 func getMetricType() []string {
 	return []string{
-		"gauge",
-		"counter",
+		gaugeMetricName,
+		counterMetricName,
 		"test",
 		"",
 	}
@@ -615,16 +619,16 @@ func (t testDBStorage) Close() error {
 }
 
 func (t *testDBStorage) UpdateRecords(ctx context.Context, records []*database.DBRecord) error {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (t *testDBStorage) ReadRecord(ctx context.Context, metricType string, metricName string) (*database.DBRecord, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (t *testDBStorage) ReadAll(ctx context.Context) ([]*database.DBRecord, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }

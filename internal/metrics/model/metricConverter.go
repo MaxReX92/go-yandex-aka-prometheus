@@ -1,19 +1,17 @@
 package model
 
 import (
-	"errors"
-
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
-type ErrUnknownMetricType struct {
+type UnknownMetricTypeError struct {
 	UnknownType string
 }
 
-func (e *ErrUnknownMetricType) Error() string {
+func (e *UnknownMetricTypeError) Error() string {
 	return "unknown metric type: " + e.UnknownType
 }
 
@@ -48,7 +46,7 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error
 		modelMetric.Value = &metricValue
 	default:
 		logger.ErrorFormat("unknown metric type: %v", modelMetric.MType)
-		return nil, &ErrUnknownMetricType{UnknownType: modelMetric.MType}
+		return nil, &UnknownMetricTypeError{UnknownType: modelMetric.MType}
 	}
 
 	if c.signMetrics {
@@ -70,21 +68,21 @@ func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric
 	switch modelMetric.MType {
 	case "counter":
 		if modelMetric.Delta == nil {
-			return nil, errors.New("metric value is missed")
+			return nil, logger.WrapError("convert metric", metrics.ErrMetricValueMissed)
 		}
 
 		metric = types.NewCounterMetric(modelMetric.ID)
 		value = float64(*modelMetric.Delta)
 	case "gauge":
 		if modelMetric.Value == nil {
-			return nil, errors.New("metric value is missed")
+			return nil, logger.WrapError("convert metric", metrics.ErrMetricValueMissed)
 		}
 
 		metric = types.NewGaugeMetric(modelMetric.ID)
 		value = *modelMetric.Value
 	default:
 		logger.ErrorFormat("unknown metric type: %v", modelMetric.MType)
-		return nil, &ErrUnknownMetricType{UnknownType: modelMetric.MType}
+		return nil, &UnknownMetricTypeError{UnknownType: modelMetric.MType}
 	}
 
 	metric.SetValue(value)
@@ -96,7 +94,7 @@ func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric
 		}
 
 		if !ok {
-			return nil, errors.New("invalid signature")
+			return nil, logger.WrapError("check signature", metrics.ErrInvalidSignature)
 		}
 	}
 

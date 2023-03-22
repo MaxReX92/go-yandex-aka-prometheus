@@ -2,13 +2,14 @@ package provider
 
 import (
 	"context"
-	"errors"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
 type aggregateMetricsProviderMock struct {
@@ -64,8 +65,6 @@ func TestAggregateMetricsProvider_GetMetrics(t *testing.T) {
 func TestAggregateMetricsProvider_Update(t *testing.T) {
 
 	ctx := context.Background()
-	testError := errors.New("testError")
-
 	tests := []struct {
 		name                string
 		firstProviderError  error
@@ -74,13 +73,13 @@ func TestAggregateMetricsProvider_Update(t *testing.T) {
 	}{
 		{
 			name:               "first_provider_error",
-			firstProviderError: testError,
-			expectedError:      testError,
+			firstProviderError: test.ErrTest,
+			expectedError:      test.ErrTest,
 		},
 		{
 			name:                "second_provider_error",
-			secondProviderError: testError,
-			expectedError:       testError,
+			secondProviderError: test.ErrTest,
+			expectedError:       test.ErrTest,
 		},
 		{
 			name: "success",

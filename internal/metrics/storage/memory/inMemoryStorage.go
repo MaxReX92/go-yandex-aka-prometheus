@@ -3,12 +3,12 @@ package memory
 import (
 	"context"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"sync"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
@@ -73,12 +73,12 @@ func (s *inMemoryStorage) GetMetric(ctx context.Context, metricType string, metr
 
 	metricsByName, ok := s.metricsByType[metricType]
 	if !ok {
-		return nil, fmt.Errorf("metrics with types %v not found", metricType)
+		return nil, logger.WrapError(fmt.Sprintf("get metric with type %s", metricType), metrics.ErrMetricNotFound)
 	}
 
 	metric, ok := metricsByName[metricName]
 	if !ok {
-		return nil, fmt.Errorf("metrics with name %v and types %v not found", metricName, metricType)
+		return nil, logger.WrapError(fmt.Sprintf("metrics with name %v and types %v not found", metricName, metricType), metrics.ErrMetricNotFound)
 	}
 
 	return metric, nil
@@ -95,7 +95,7 @@ func (s *inMemoryStorage) Restore(ctx context.Context, metricValues map[string]m
 		if metricType == "counter" {
 			metricFactory = types.NewCounterMetric
 		} else if metricType != "gauge" {
-			return fmt.Errorf("unknown metric types from backup: %v", metricType)
+			return logger.WrapError(fmt.Sprintf("handle backup metric with type %s", metricType), metrics.ErrUnknownMetricType)
 		}
 
 		for metricName, metricValue := range metricsByType {

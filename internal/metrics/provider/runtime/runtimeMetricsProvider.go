@@ -58,7 +58,7 @@ func getFieldValue(stats *runtime.MemStats, fieldName string) (float64, error) {
 
 	value, ok := convertValue(f)
 	if !ok {
-		return value, fmt.Errorf("field name %v was not found", fieldName)
+		return value, logger.WrapError(fmt.Sprintf("get field with name %s", fieldName), metrics.ErrFieldNameNotFound)
 	}
 
 	return value, nil

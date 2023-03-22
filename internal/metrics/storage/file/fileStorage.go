@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"io"
 	"os"
 	"sync"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
@@ -61,7 +61,7 @@ func (f *fileStorage) GetMetric(ctx context.Context, metricType string, metricNa
 		return nil, logger.WrapError("read records from file", err)
 	}
 	if len(records) != 1 {
-		return nil, fmt.Errorf("metrics with name %v and types %v not found", metricName, metricType)
+		return nil, logger.WrapError(fmt.Sprintf("get metric with name %v and type %v ", metricName, metricType), metrics.ErrMetricNotFound)
 	}
 
 	return f.toMetric(*records[0])
@@ -213,7 +213,7 @@ func (f *fileStorage) toMetric(record storageRecord) (metrics.Metric, error) {
 	case "gauge":
 		metric = types.NewGaugeMetric(record.Name)
 	default:
-		return nil, fmt.Errorf("unknown metric types: %s", record.Type)
+		return nil, logger.WrapError(fmt.Sprintf("convert to metric with type %s", record.Type), metrics.ErrUnknownMetricType)
 	}
 
 	value, err := parser.ToFloat64(record.Value)

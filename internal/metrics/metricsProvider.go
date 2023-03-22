@@ -1,6 +1,8 @@
 package metrics
 
-import "context"
+import (
+	"context"
+)
 
 type MetricsProvider interface {
 	GetMetrics() []Metric

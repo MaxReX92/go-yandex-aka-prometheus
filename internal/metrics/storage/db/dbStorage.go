@@ -3,9 +3,9 @@ package db
 import (
 	"context"
 	"database/sql"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
@@ -42,7 +42,7 @@ func (d *dbStorage) GetMetricValues(ctx context.Context) (map[string]map[string]
 	result := map[string]map[string]string{}
 	for _, record := range records {
 		if !record.MetricType.Valid {
-			return nil, NewErrInvalidRecord("invalid record metric type")
+			return nil, logger.WrapError("read record", metrics.ErrInvalidRecordMetricType)
 		}
 
 		metricType := record.MetricType.String
@@ -53,12 +53,12 @@ func (d *dbStorage) GetMetricValues(ctx context.Context) (map[string]map[string]
 		}
 
 		if !record.Name.Valid {
-			return nil, NewErrInvalidRecord("invalid record metric name")
+			return nil, logger.WrapError("read record", metrics.ErrInvalidRecordMetricName)
 		}
 		metricName := record.Name.String
 
 		if !record.Value.Valid {
-			return nil, NewErrInvalidRecord("invalid record metric value")
+			return nil, logger.WrapError("read record", metrics.ErrInvalidRecordMetricValue)
 		}
 
 		metricsByType[metricName] = parser.FloatToString(record.Value.Float64)

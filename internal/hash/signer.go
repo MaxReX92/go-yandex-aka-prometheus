@@ -4,7 +4,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"hash"
 	"sync"
 
@@ -42,9 +41,7 @@ func (s *Signer) GetSignString(holder HashHolder) (string, error) {
 
 func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 	if s.hash == nil {
-		err := errors.New("secret key was not initialized")
-		logger.ErrorObj(err)
-		return nil, err
+		return nil, logger.WrapError("get signature", ErrMissedSecretKey)
 	}
 
 	s.lock.Lock()

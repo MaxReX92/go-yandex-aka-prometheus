@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"time"
 
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/custom"

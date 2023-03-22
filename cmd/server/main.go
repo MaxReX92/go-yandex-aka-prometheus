@@ -31,6 +31,11 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
+const (
+	counterMetricName = "counter"
+	gaugeMetricName   = "gauge"
+)
+
 var compressContentTypes = []string{
 	"application/javascript",
 	"application/json",
@@ -201,7 +206,7 @@ func fillGaugeURLContext(next http.Handler) http.Handler {
 			return
 		}
 
-		metricsContext.requestMetrics[0].MType = "gauge"
+		metricsContext.requestMetrics[0].MType = gaugeMetricName
 		metricsContext.requestMetrics[0].Value = &value
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -223,7 +228,7 @@ func fillCounterURLContext(next http.Handler) http.Handler {
 			return
 		}
 
-		metricsContext.requestMetrics[0].MType = "counter"
+		metricsContext.requestMetrics[0].MType = counterMetricName
 		metricsContext.requestMetrics[0].Delta = &value
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -321,7 +326,7 @@ func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConve
 				if err != nil {
 					logger.ErrorFormat("Fail to parse metric: %v", err)
 
-					var errUnknownMetricType *model.ErrUnknownMetricType
+					var errUnknownMetricType *model.UnknownMetricTypeError
 					if errors.As(err, &errUnknownMetricType) {
 						http.Error(w, fmt.Sprintf("unknown metric type: %s", errUnknownMetricType.UnknownType), http.StatusNotImplemented)
 					} else {
@@ -447,8 +452,8 @@ func successSingleJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 
 func successMultiJSONResponse() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//_, metricsContext := ensureMetricsContext(r)
-		//metricsContext.resultMetrics <-- update results
+		// _, metricsContext := ensureMetricsContext(r)
+		// metricsContext.resultMetrics <-- update results
 
 		// just a stub, maybe temporary
 		stubResult := &model.Metrics{}

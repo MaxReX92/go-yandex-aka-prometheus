@@ -2,7 +2,7 @@ package worker
 
 import (
 	"context"
-	"errors"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"testing"
 	"time"
 
@@ -31,7 +31,7 @@ func TestPeriodicWorker_SuccessCall(t *testing.T) {
 	worker := NewPeriodicWorker(func(context.Context) error {
 		if !wasCalled {
 			wasCalled = true
-			return errors.New("test error")
+			return test.ErrTest
 		}
 
 		cancel()

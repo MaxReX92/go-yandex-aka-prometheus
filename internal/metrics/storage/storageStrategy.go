@@ -2,9 +2,10 @@ package storage
 
 import (
 	"context"
+	"sync"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"sync"
 )
 
 type storageStrategyConfig interface {
@@ -85,5 +86,5 @@ func (s *StorageStrategy) RestoreFromBackup(ctx context.Context) error {
 }
 
 func (s *StorageStrategy) Close() error {
-	return s.CreateBackup(context.Background()) //force backup
+	return s.CreateBackup(context.Background()) // force backup
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
@@ -19,17 +20,17 @@ func toDBRecord(metric metrics.Metric) *database.DBRecord {
 
 func fromDBRecord(record *database.DBRecord) (metrics.Metric, error) {
 	if !record.MetricType.Valid {
-		return nil, NewErrInvalidRecord("invalid record metric type")
+		return nil, logger.WrapError("read record", metrics.ErrInvalidRecordMetricType)
 	}
 	metricType := record.MetricType.String
 
 	if !record.Name.Valid {
-		return nil, NewErrInvalidRecord("invalid record metric name")
+		return nil, logger.WrapError("read record", metrics.ErrInvalidRecordMetricName)
 	}
 	metricName := record.Name.String
 
 	if !record.Value.Valid {
-		return nil, NewErrInvalidRecord("invalid record metric value")
+		return nil, logger.WrapError("read record", metrics.ErrInvalidRecordMetricValue)
 	}
 	value := record.Value.Float64
 
@@ -40,7 +41,7 @@ func fromDBRecord(record *database.DBRecord) (metrics.Metric, error) {
 	case "counter":
 		metric = types.NewCounterMetric(metricName)
 	default:
-		return nil, fmt.Errorf("unknown metric type: %s", metricType)
+		return nil, logger.WrapError(fmt.Sprintf("read record with type %s", metricType), metrics.ErrUnknownMetricType)
 	}
 
 	metric.SetValue(value)
