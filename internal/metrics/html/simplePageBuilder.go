@@ -6,8 +6,7 @@ import (
 	"strings"
 )
 
-type simplePageBuilder struct {
-}
+type simplePageBuilder struct{}
 
 func NewSimplePageBuilder() PageBuilder {
 	return &simplePageBuilder{}

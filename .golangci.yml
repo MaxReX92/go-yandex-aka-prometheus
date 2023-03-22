@@ -27,6 +27,9 @@ linters:
     - gocritic
     - godot
     - goerr113
+    - gofmt
+    - gofumpt
+    - goheader
     - goimports
     - gosimple
     - govet

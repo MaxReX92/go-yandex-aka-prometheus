@@ -133,9 +133,7 @@ func createConfig() (*config, error) {
 	return conf, err
 }
 
-func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter,
-	htmlPageBuilder html.PageBuilder, dbStorage database.DataBase) *chi.Mux {
-
+func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsConverter, htmlPageBuilder html.PageBuilder, dbStorage database.DataBase) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))

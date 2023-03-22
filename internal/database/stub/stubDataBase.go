@@ -6,8 +6,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 )
 
-type StubDataBase struct {
-}
+type StubDataBase struct{}
 
 func (s *StubDataBase) UpdateRecords(ctx context.Context, records []*database.DBRecord) error {
 	// TODO implement me

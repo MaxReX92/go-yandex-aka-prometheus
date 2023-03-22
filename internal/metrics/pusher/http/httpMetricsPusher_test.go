@@ -33,8 +33,10 @@ type testMetric struct {
 }
 
 func TestHttpMetricsPusher_Push(t *testing.T) {
-	var counterValue int64 = 100
-	var gaugeValue = 100.001
+	var (
+		counterValue int64 = 100
+		gaugeValue         = 100.001
+	)
 
 	tests := []struct {
 		name                 string

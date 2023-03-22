@@ -16,6 +16,8 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
+const fileMode os.FileMode = 0o644
+
 type storageRecord struct {
 	Type  string `json:"types"`
 	Name  string `json:"name"`
@@ -191,7 +193,7 @@ func (f *fileStorage) workWithFileResult(flag int, work func(file *os.File) (sto
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	fileStream, err := os.OpenFile(f.filePath, flag, 0644)
+	fileStream, err := os.OpenFile(f.filePath, flag, fileMode)
 	if err != nil {
 		return nil, logger.WrapError("open file", err)
 	}

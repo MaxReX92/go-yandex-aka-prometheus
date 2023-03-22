@@ -17,7 +17,6 @@ type aggregateMetricsProviderMock struct {
 }
 
 func TestAggregateMetricsProvider_GetMetrics(t *testing.T) {
-
 	counter := types.NewCounterMetric("counterMetric")
 	gauge := types.NewCounterMetric("gaugeMetric")
 
@@ -43,7 +42,6 @@ func TestAggregateMetricsProvider_GetMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			firstProvider := new(aggregateMetricsProviderMock)
 			secondProvider := new(aggregateMetricsProviderMock)
 
@@ -57,13 +55,11 @@ func TestAggregateMetricsProvider_GetMetrics(t *testing.T) {
 
 			firstProvider.AssertCalled(t, "GetMetrics")
 			secondProvider.AssertCalled(t, "GetMetrics")
-
 		})
 	}
 }
 
 func TestAggregateMetricsProvider_Update(t *testing.T) {
-
 	ctx := context.Background()
 	tests := []struct {
 		name                string
@@ -88,7 +84,6 @@ func TestAggregateMetricsProvider_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			firstProvider := new(aggregateMetricsProviderMock)
 			secondProvider := new(aggregateMetricsProviderMock)
 

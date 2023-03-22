@@ -19,16 +19,22 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 		{
 			name: "single_metric",
 			counterMetrics: []test.KeyValue{
-				{Key: "metricName1", Value: 100}},
+				{Key: "metricName1", Value: 100},
+			},
 			expected: map[string]map[string]string{
-				"counter": {"metricName1": "100"}},
-		}, {
+				"counter": {"metricName1": "100"},
+			},
+		},
+		{
 			name: "single_negative_metric",
 			counterMetrics: []test.KeyValue{
-				{Key: "metricName1", Value: -100}},
+				{Key: "metricName1", Value: -100},
+			},
 			expected: map[string]map[string]string{
-				"counter": {"metricName1": "-100"}},
-		}, {
+				"counter": {"metricName1": "-100"},
+			},
+		},
+		{
 			name: "multi_metrics",
 			counterMetrics: []test.KeyValue{
 				{Key: "metricName1", Value: 100},
@@ -38,7 +44,8 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 				"counter": {
 					"metricName1": "100",
 					"metricName2": "200",
-				}},
+				},
+			},
 		},
 		{
 			name: "same_metrics",
@@ -47,7 +54,8 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 				{Key: "metricName1", Value: 200},
 			},
 			expected: map[string]map[string]string{
-				"counter": {"metricName1": "300"}},
+				"counter": {"metricName1": "300"},
+			},
 		},
 	}
 
@@ -77,16 +85,22 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 		{
 			name: "single_metric",
 			gaugeMetrics: []test.KeyValue{
-				{Key: "metricName1", Value: 100.001}},
+				{Key: "metricName1", Value: 100.001},
+			},
 			expected: map[string]map[string]string{
-				"gauge": {"metricName1": "100.001"}},
-		}, {
+				"gauge": {"metricName1": "100.001"},
+			},
+		},
+		{
 			name: "single_negative_metric",
 			gaugeMetrics: []test.KeyValue{
-				{Key: "metricName1", Value: -100.001}},
+				{Key: "metricName1", Value: -100.001},
+			},
 			expected: map[string]map[string]string{
-				"gauge": {"metricName1": "-100.001"}},
-		}, {
+				"gauge": {"metricName1": "-100.001"},
+			},
+		},
+		{
 			name: "multi_metrics",
 			gaugeMetrics: []test.KeyValue{
 				{Key: "metricName1", Value: 100.001},
@@ -96,7 +110,8 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 				"gauge": {
 					"metricName1": "100.001",
 					"metricName2": "200.002",
-				}},
+				},
+			},
 		},
 		{
 			name: "same_metrics",
@@ -105,7 +120,8 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 				{Key: "metricName1", Value: 200.002},
 			},
 			expected: map[string]map[string]string{
-				"gauge": {"metricName1": "200.002"}},
+				"gauge": {"metricName1": "200.002"},
+			},
 		},
 	}
 
@@ -136,18 +152,21 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 		{
 			name:     "no_metric",
 			expected: map[string]map[string]string{},
-		}, {
+		},
+		{
 			name: "all_metric",
 			counterMetrics: []test.KeyValue{
 				{Key: "metricName2", Value: 300},
 				{Key: "metricName1", Value: 100},
 				{Key: "metricName3", Value: -400},
-				{Key: "metricName1", Value: 200}},
+				{Key: "metricName1", Value: 200},
+			},
 			gaugeMetrics: []test.KeyValue{
 				{Key: "metricName5", Value: 300.003},
 				{Key: "metricName4", Value: 100.001},
 				{Key: "metricName6", Value: -400.004},
-				{Key: "metricName4", Value: 200.002}},
+				{Key: "metricName4", Value: 200.002},
+			},
 			expected: map[string]map[string]string{
 				"counter": {
 					"metricName1": "300",
@@ -184,7 +203,6 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 }
 
 func TestInMemoryStorage_Restore(t *testing.T) {
-
 	tests := []struct {
 		name                 string
 		values               map[string]map[string]string
@@ -253,11 +271,13 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 			counterMetrics: []test.KeyValue{
 				{Key: "metricName1", Value: 100},
 				{Key: "metricName2", Value: 300},
-				{Key: "metricName3", Value: -400}},
+				{Key: "metricName3", Value: -400},
+			},
 			gaugeMetrics: []test.KeyValue{
 				{Key: "metricName4", Value: 100.001},
 				{Key: "metricName5", Value: 300.003},
-				{Key: "metricName6", Value: -400.004}},
+				{Key: "metricName6", Value: -400.004},
+			},
 			expectedOk:       false,
 			expectedCounters: []test.KeyValue{{Key: "not_existed_metric", Value: 0}},
 			expectedGauges:   []test.KeyValue{{Key: "not_existed_metric", Value: 0}},
@@ -267,20 +287,24 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 			counterMetrics: []test.KeyValue{
 				{Key: "metricName1", Value: 100},
 				{Key: "metricName2", Value: 300},
-				{Key: "metricName3", Value: -400}},
+				{Key: "metricName3", Value: -400},
+			},
 			gaugeMetrics: []test.KeyValue{
 				{Key: "metricName4", Value: 100.001},
 				{Key: "metricName5", Value: 300.003},
-				{Key: "metricName6", Value: -400.004}},
+				{Key: "metricName6", Value: -400.004},
+			},
 			expectedOk: true,
 			expectedCounters: []test.KeyValue{
 				{Key: "metricName1", Value: 100},
 				{Key: "metricName2", Value: 300},
-				{Key: "metricName3", Value: -400}},
+				{Key: "metricName3", Value: -400},
+			},
 			expectedGauges: []test.KeyValue{
 				{Key: "metricName4", Value: 100.001},
 				{Key: "metricName5", Value: 300.003},
-				{Key: "metricName6", Value: -400.004}},
+				{Key: "metricName6", Value: -400.004},
+			},
 		},
 	}
 

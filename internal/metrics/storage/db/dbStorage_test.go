@@ -237,7 +237,6 @@ func TestDbStorage_GetMetric(t *testing.T) {
 }
 
 func TestDbStorage_Restore(t *testing.T) {
-
 	tests := []struct {
 		name                 string
 		metricValues         map[string]map[string]string
@@ -296,7 +295,6 @@ func TestDbStorage_Restore(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func (d *databaseMock) Ping(ctx context.Context) error {

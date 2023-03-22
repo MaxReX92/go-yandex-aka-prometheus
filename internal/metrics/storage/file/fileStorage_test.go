@@ -17,7 +17,6 @@ type config struct {
 }
 
 func TestFileStorage_New(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		filePath string
@@ -49,7 +48,6 @@ func TestFileStorage_New(t *testing.T) {
 }
 
 func TestFileStorage_AddGaugeMetricValue(t *testing.T) {
-
 	tests := []struct {
 		name            string
 		values          []test.KeyValue
@@ -136,7 +134,7 @@ func TestFileStorage_AddCounterMetricValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			filePath := os.TempDir() + "TestFileStorage_AddCounterMetricValue"
 			defer func(name string) {
-				_ = os.Remove(name)
+				assert.NoError(t, os.Remove(name))
 			}(filePath)
 
 			storage := NewFileStorage(&config{filePath: filePath})
@@ -156,7 +154,6 @@ func TestFileStorage_AddCounterMetricValue(t *testing.T) {
 }
 
 func TestFileStorage_GetMetric(t *testing.T) {
-
 	expectedMetricType := "gauge"
 	expectedMetricName := "expectedMetricName"
 	expectedValue := float64(300)
@@ -222,7 +219,7 @@ func readRecords(t *testing.T, filePath string) storageRecords {
 }
 
 func writeRecords(t *testing.T, filePath string, records storageRecords) {
-	fileStream, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
+	fileStream, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0o644)
 	assert.NoError(t, err)
 	defer func(fileStream *os.File) {
 		_ = fileStream.Close()

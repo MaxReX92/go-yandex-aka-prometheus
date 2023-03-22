@@ -23,11 +23,13 @@ func TestSimplePageBuilder_BuildMetricsPage(t *testing.T) {
 			counterMetrics: map[string]string{
 				"metricName2": "300",
 				"metricName3": "-400",
-				"metricName1": "200"},
+				"metricName1": "200",
+			},
 			gaugeMetrics: map[string]string{
 				"metricName5": "300.003",
 				"metricName4": "100.001",
-				"metricName6": "-400.004"},
+				"metricName6": "-400.004",
+			},
 			expected: "<html>" +
 				"metricName1: 200<br>" +
 				"metricName2: 300<br>" +

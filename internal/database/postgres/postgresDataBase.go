@@ -35,8 +35,8 @@ func (p *postgresDataBase) UpdateRecords(ctx context.Context, records []*databas
 			_, err := tx.ExecContext(ctx, "CALL UpdateOrCreateMetric(@metricType, @metricName, @metricValue)", pgx.NamedArgs{
 				"metricType":  record.MetricType.String,
 				"metricName":  record.Name.String,
-				"metricValue": record.Value.Float64})
-
+				"metricValue": record.Value.Float64,
+			})
 			if err != nil {
 				return logger.WrapError("update records in postgresql database", err)
 			}
@@ -61,7 +61,6 @@ func (p *postgresDataBase) ReadRecord(ctx context.Context, metricType string, me
 			"metricName": metricName,
 		})
 	})
-
 	if err != nil {
 		return nil, logger.WrapError("read records from postgresql database", err)
 	}
@@ -131,7 +130,6 @@ func (p *postgresDataBase) callInTransactionResult(ctx context.Context, action f
 
 func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command string, args ...any) ([]*database.DBRecord, error) {
 	rows, err := tx.QueryContext(ctx, command, args...)
-
 	if err != nil {
 		return nil, logger.WrapError("call query", err)
 	}

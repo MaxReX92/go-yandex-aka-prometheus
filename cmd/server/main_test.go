@@ -59,8 +59,7 @@ type testConf struct {
 	singEnabled bool
 }
 
-type testDBStorage struct {
-}
+type testDBStorage struct{}
 
 func Test_UpdateUrlRequest(t *testing.T) {
 	tests := []testDescription{}

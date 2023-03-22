@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,12 +25,7 @@ const (
 	metricValue float64 = 100
 )
 
-var (
-	errTest = errors.New("errTest")
-)
-
 func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
-
 	tests := []struct {
 		name                    string
 		syncMode                bool
@@ -43,26 +37,26 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 		{
 			name:                 "noSync_inMemoryStorage_error",
 			syncMode:             false,
-			inMemoryStorageError: errTest,
-			expectedError:        errTest,
+			inMemoryStorageError: test.ErrTest,
+			expectedError:        test.ErrTest,
 		},
 		{
 			name:                 "sync_inMemoryStorage_error",
 			syncMode:             true,
-			inMemoryStorageError: errTest,
-			expectedError:        errTest,
+			inMemoryStorageError: test.ErrTest,
+			expectedError:        test.ErrTest,
 		},
 		{
 			name:                    "noSync_backupStorage_error",
 			syncMode:                false,
-			backupStorageErrorError: errTest,
+			backupStorageErrorError: test.ErrTest,
 			expectedResult:          []metrics.Metric{test.CreateGaugeMetric("resultMetric", 100)},
 		},
 		{
 			name:                    "sync_backupStorage_error",
 			syncMode:                true,
-			backupStorageErrorError: errTest,
-			expectedError:           errTest,
+			backupStorageErrorError: test.ErrTest,
+			expectedError:           test.ErrTest,
 		},
 		{
 			name:           "noSync_success",
@@ -78,7 +72,6 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ctx := context.Background()
 
 			confMock := new(configMock)
@@ -113,7 +106,6 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 }
 
 func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
-
 	tests := []struct {
 		name                    string
 		syncMode                bool
@@ -125,26 +117,26 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 		{
 			name:                 "noSync_inMemoryStorage_error",
 			syncMode:             false,
-			inMemoryStorageError: errTest,
-			expectedError:        errTest,
+			inMemoryStorageError: test.ErrTest,
+			expectedError:        test.ErrTest,
 		},
 		{
 			name:                 "sync_inMemoryStorage_error",
 			syncMode:             true,
-			inMemoryStorageError: errTest,
-			expectedError:        errTest,
+			inMemoryStorageError: test.ErrTest,
+			expectedError:        test.ErrTest,
 		},
 		{
 			name:                    "noSync_backupStorage_error",
 			syncMode:                false,
-			backupStorageErrorError: errTest,
+			backupStorageErrorError: test.ErrTest,
 			expectedResult:          []metrics.Metric{test.CreateCounterMetric("resultMetric", 100)},
 		},
 		{
 			name:                    "sync_backupStorage_error",
 			syncMode:                true,
-			backupStorageErrorError: errTest,
-			expectedError:           errTest,
+			backupStorageErrorError: test.ErrTest,
+			expectedError:           test.ErrTest,
 		},
 		{
 			name:           "noSync_success",
@@ -160,7 +152,6 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ctx := context.Background()
 
 			confMock := new(configMock)
@@ -195,7 +186,6 @@ func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 }
 
 func TestStorageStrategy_GetMetricValues(t *testing.T) {
-
 	result := map[string]map[string]string{}
 
 	tests := []struct {
@@ -209,14 +199,14 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 		{
 			name:          "noSync_error",
 			syncMode:      false,
-			storageError:  errTest,
-			expectedError: errTest,
+			storageError:  test.ErrTest,
+			expectedError: test.ErrTest,
 		},
 		{
 			name:          "sync_error",
 			syncMode:      true,
-			storageError:  errTest,
-			expectedError: errTest,
+			storageError:  test.ErrTest,
+			expectedError: test.ErrTest,
 		},
 		{
 			name:           "noSync_success",
@@ -234,7 +224,6 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ctx := context.Background()
 
 			confMock := new(configMock)
@@ -258,7 +247,6 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 }
 
 func TestStorageStrategy_GetMetric(t *testing.T) {
-
 	resultMetric := test.CreateGaugeMetric(metricName, metricValue)
 	tests := []struct {
 		name           string
@@ -271,14 +259,14 @@ func TestStorageStrategy_GetMetric(t *testing.T) {
 		{
 			name:          "noSync_error",
 			syncMode:      false,
-			storageError:  errTest,
-			expectedError: errTest,
+			storageError:  test.ErrTest,
+			expectedError: test.ErrTest,
 		},
 		{
 			name:          "sync_error",
 			syncMode:      true,
-			storageError:  errTest,
-			expectedError: errTest,
+			storageError:  test.ErrTest,
+			expectedError: test.ErrTest,
 		},
 		{
 			name:           "noSync_success",
@@ -296,7 +284,6 @@ func TestStorageStrategy_GetMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ctx := context.Background()
 
 			confMock := new(configMock)
@@ -320,7 +307,6 @@ func TestStorageStrategy_GetMetric(t *testing.T) {
 }
 
 func TestStorageStrategy_Restore(t *testing.T) {
-
 	values := map[string]map[string]string{}
 
 	tests := []struct {
@@ -332,14 +318,14 @@ func TestStorageStrategy_Restore(t *testing.T) {
 		{
 			name:          "noSync_error",
 			syncMode:      false,
-			storageError:  errTest,
-			expectedError: errTest,
+			storageError:  test.ErrTest,
+			expectedError: test.ErrTest,
 		},
 		{
 			name:          "sync_error",
 			syncMode:      true,
-			storageError:  errTest,
-			expectedError: errTest,
+			storageError:  test.ErrTest,
+			expectedError: test.ErrTest,
 		},
 		{
 			name:     "noSync_success",
@@ -353,7 +339,6 @@ func TestStorageStrategy_Restore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ctx := context.Background()
 
 			confMock := new(configMock)
@@ -376,7 +361,6 @@ func TestStorageStrategy_Restore(t *testing.T) {
 }
 
 func TestStorageStrategy_CreateBackup(t *testing.T) {
-
 	values := map[string]map[string]string{}
 
 	tests := []struct {
@@ -390,28 +374,28 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 		{
 			name:              "noSync_currentState_error",
 			syncMode:          false,
-			currentStateError: errTest,
-			expectedError:     errTest,
+			currentStateError: test.ErrTest,
+			expectedError:     test.ErrTest,
 		},
 		{
 			name:              "sync_currentState_error",
 			syncMode:          true,
-			currentStateError: errTest,
-			expectedError:     errTest,
+			currentStateError: test.ErrTest,
+			expectedError:     test.ErrTest,
 		},
 		{
 			name:               "noSync_restore_error",
 			syncMode:           false,
 			currentStateValues: values,
-			restoreError:       errTest,
-			expectedError:      errTest,
+			restoreError:       test.ErrTest,
+			expectedError:      test.ErrTest,
 		},
 		{
 			name:               "sync_restore_error",
 			syncMode:           true,
 			currentStateValues: values,
-			restoreError:       errTest,
-			expectedError:      errTest,
+			restoreError:       test.ErrTest,
+			expectedError:      test.ErrTest,
 		},
 		{
 			name:               "noSync_success",
@@ -427,7 +411,6 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ctx := context.Background()
 
 			confMock := new(configMock)
@@ -455,7 +438,6 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 }
 
 func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
-
 	values := map[string]map[string]string{}
 
 	tests := []struct {
@@ -469,28 +451,28 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 		{
 			name:              "noSync_currentState_error",
 			syncMode:          false,
-			currentStateError: errTest,
-			expectedError:     errTest,
+			currentStateError: test.ErrTest,
+			expectedError:     test.ErrTest,
 		},
 		{
 			name:              "sync_currentState_error",
 			syncMode:          true,
-			currentStateError: errTest,
-			expectedError:     errTest,
+			currentStateError: test.ErrTest,
+			expectedError:     test.ErrTest,
 		},
 		{
 			name:               "noSync_restore_error",
 			syncMode:           false,
 			currentStateValues: values,
-			restoreError:       errTest,
-			expectedError:      errTest,
+			restoreError:       test.ErrTest,
+			expectedError:      test.ErrTest,
 		},
 		{
 			name:               "sync_restore_error",
 			syncMode:           true,
 			currentStateValues: values,
-			restoreError:       errTest,
-			expectedError:      errTest,
+			restoreError:       test.ErrTest,
+			expectedError:      test.ErrTest,
 		},
 		{
 			name:               "noSync_success",
@@ -506,7 +488,6 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ctx := context.Background()
 
 			confMock := new(configMock)
@@ -534,7 +515,6 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 }
 
 func TestStorageStrategy_Close(t *testing.T) {
-
 	values := map[string]map[string]string{}
 
 	tests := []struct {
@@ -548,28 +528,28 @@ func TestStorageStrategy_Close(t *testing.T) {
 		{
 			name:              "noSync_currentState_error",
 			syncMode:          false,
-			currentStateError: errTest,
-			expectedError:     errTest,
+			currentStateError: test.ErrTest,
+			expectedError:     test.ErrTest,
 		},
 		{
 			name:              "sync_currentState_error",
 			syncMode:          true,
-			currentStateError: errTest,
-			expectedError:     errTest,
+			currentStateError: test.ErrTest,
+			expectedError:     test.ErrTest,
 		},
 		{
 			name:               "noSync_restore_error",
 			syncMode:           false,
 			currentStateValues: values,
-			restoreError:       errTest,
-			expectedError:      errTest,
+			restoreError:       test.ErrTest,
+			expectedError:      test.ErrTest,
 		},
 		{
 			name:               "sync_restore_error",
 			syncMode:           true,
 			currentStateValues: values,
-			restoreError:       errTest,
-			expectedError:      errTest,
+			restoreError:       test.ErrTest,
+			expectedError:      test.ErrTest,
 		},
 		{
 			name:               "noSync_success",
@@ -585,7 +565,6 @@ func TestStorageStrategy_Close(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ctx := context.Background()
 
 			confMock := new(configMock)
