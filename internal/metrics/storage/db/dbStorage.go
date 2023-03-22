@@ -93,5 +93,10 @@ func (d *dbStorage) Restore(ctx context.Context, metricValues map[string]map[str
 		}
 	}
 
-	return d.dataBase.UpdateRecords(ctx, records)
+	err := d.dataBase.UpdateRecords(ctx, records)
+	if err != nil {
+		return logger.WrapError("update records", err)
+	}
+
+	return nil
 }

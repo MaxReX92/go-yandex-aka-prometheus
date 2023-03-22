@@ -25,6 +25,7 @@ func NewSigner(config SignerConfig) *Signer {
 	if key != nil {
 		h = hmac.New(sha256.New, key)
 	}
+
 	return &Signer{
 		hash: h,
 	}

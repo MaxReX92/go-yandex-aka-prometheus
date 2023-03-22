@@ -182,7 +182,6 @@ func Test_URLNormalization(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError, err.Error())
-
 			} else {
 				assert.Equal(t, tt.expectedURL, actual.String())
 			}

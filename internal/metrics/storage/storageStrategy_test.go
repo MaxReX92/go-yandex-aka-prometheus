@@ -601,20 +601,18 @@ func (s *metricStorageMock) GetMetric(ctx context.Context, metricType string, me
 	result := args.Get(0)
 	if result == nil {
 		return nil, args.Error(1)
-	} else {
-		return result.(metrics.Metric), args.Error(1)
 	}
+	return result.(metrics.Metric), args.Error(1)
 }
 
 func (s *metricStorageMock) AddMetricValues(ctx context.Context, metric []metrics.Metric) ([]metrics.Metric, error) {
 	args := s.Called(ctx, metric)
-
 	result := args.Get(0)
 	if result == nil {
 		return nil, args.Error(1)
-	} else {
-		return result.([]metrics.Metric), args.Error(1)
 	}
+
+	return result.([]metrics.Metric), args.Error(1)
 }
 
 func (s *metricStorageMock) GetMetricValues(ctx context.Context) (map[string]map[string]string, error) {

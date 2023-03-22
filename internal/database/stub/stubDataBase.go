@@ -8,22 +8,22 @@ import (
 
 type StubDataBase struct{}
 
-func (s *StubDataBase) UpdateRecords(ctx context.Context, records []*database.DBRecord) error {
+func (s *StubDataBase) UpdateRecords(context.Context, []*database.DBRecord) error {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (s *StubDataBase) ReadRecord(ctx context.Context, metricType string, metricName string) (*database.DBRecord, error) {
+func (s *StubDataBase) ReadRecord(context.Context, string, string) (*database.DBRecord, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (s *StubDataBase) ReadAll(ctx context.Context) ([]*database.DBRecord, error) {
+func (s *StubDataBase) ReadAll(context.Context) ([]*database.DBRecord, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (s *StubDataBase) Ping(ctx context.Context) error {
+func (s *StubDataBase) Ping(context.Context) error {
 	return nil
 }
 

@@ -67,7 +67,6 @@ func Test_UpdateUrlRequest(t *testing.T) {
 		for _, metricType := range getMetricType() {
 			for _, metricName := range getMetricName() {
 				for _, metricValue := range getMetricValue() {
-
 					var expected *callResult
 
 					// json api
@@ -461,6 +460,8 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 }
 
 func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
+	t.Helper()
+
 	var buffer bytes.Buffer
 	metricsStorage := memory.NewInMemoryStorage()
 	if apiRequest.metrics != nil {

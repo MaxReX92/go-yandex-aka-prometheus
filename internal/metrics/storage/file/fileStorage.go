@@ -175,7 +175,12 @@ func (f *fileStorage) writeRecordsToFile(records storageRecords) error {
 func (f *fileStorage) writeRecords(fileStream *os.File, records storageRecords) error {
 	encoder := json.NewEncoder(fileStream)
 	encoder.SetIndent("", " ")
-	return encoder.Encode(records)
+	err := encoder.Encode(records)
+	if err != nil {
+		return logger.WrapError("write records", err)
+	}
+
+	return nil
 }
 
 func (f *fileStorage) workWithFile(flag int, work func(file *os.File) error) error {

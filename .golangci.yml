@@ -31,15 +31,50 @@ linters:
     - gofumpt
     - goheader
     - goimports
+    - gomodguard
+    - gomoddirectives
+    - goprintffuncname
     - gosimple
     - govet
+    - grouper
+    - importas
     - ineffassign
+    - interfacebloat
+    - loggercheck
+    - maintidx
+    - makezero
     - misspell
+    - musttag
+    - nakedret
+    - nilerr
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
     - prealloc
+    - predeclared
+    - promlinter
+    - reassign
+    - rowserrcheck
+    - sqlclosecheck
     - staticcheck
     - stylecheck
+    - tagliatelle
+    - tenv
+    - testableexamples
+    - thelper
+    - tparallel
     - typecheck
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
     - varcheck
+    - wastedassign
+    - whitespace
+    
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - wrapcheck

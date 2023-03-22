@@ -32,12 +32,14 @@ func (m *counterMetric) GetName() string {
 func (m *counterMetric) GetValue() float64 {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
+
 	return float64(m.value)
 }
 
 func (m *counterMetric) GetStringValue() string {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
+
 	return parser.IntToString(m.value)
 }
 
@@ -57,6 +59,7 @@ func (m *counterMetric) GetHash(hash hash.Hash) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return hash.Sum(nil), nil
 }
 

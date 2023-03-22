@@ -32,12 +32,14 @@ func (m *gaugeMetric) GetName() string {
 func (m *gaugeMetric) GetValue() float64 {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
+
 	return m.value
 }
 
 func (m *gaugeMetric) GetStringValue() string {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
+
 	return parser.FloatToString(m.value)
 }
 
@@ -45,6 +47,7 @@ func (m *gaugeMetric) SetValue(value float64) float64 {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.value = value
+
 	return m.value
 }
 

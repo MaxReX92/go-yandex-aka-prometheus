@@ -205,6 +205,7 @@ func TestFileStorage_GetMetric(t *testing.T) {
 }
 
 func readRecords(t *testing.T, filePath string) storageRecords {
+	t.Helper()
 	_, err := os.Stat(filePath)
 	assert.NoError(t, err)
 
@@ -219,6 +220,7 @@ func readRecords(t *testing.T, filePath string) storageRecords {
 }
 
 func writeRecords(t *testing.T, filePath string, records storageRecords) {
+	t.Helper()
 	fileStream, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0o644)
 	assert.NoError(t, err)
 	defer func(fileStream *os.File) {
