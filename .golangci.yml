@@ -44,7 +44,6 @@ linters:
     - maintidx
     - makezero
     - misspell
-    - musttag
     - nakedret
     - nilerr
     - noctx

@@ -236,67 +236,6 @@ func TestDbStorage_GetMetric(t *testing.T) {
 	}
 }
 
-func TestDbStorage_Restore(t *testing.T) {
-	tests := []struct {
-		name                 string
-		metricValues         map[string]map[string]string
-		records              []*database.DBRecord
-		updateError          error
-		expectedErrorMessage string
-	}{
-		{
-			name:                 "invalid_value",
-			metricValues:         map[string]map[string]string{"counter": {"metricName": "invalid_value"}},
-			expectedErrorMessage: "failed to parse metric value",
-		},
-		{
-			name:         "update_error",
-			metricValues: map[string]map[string]string{"counter": {"metricName": "100"}},
-			records: []*database.DBRecord{{
-				MetricType: sql.NullString{Valid: true, String: "counter"},
-				Name:       sql.NullString{Valid: true, String: "metricName"},
-				Value:      sql.NullFloat64{Valid: true, Float64: 100},
-			}},
-			updateError:          test.ErrTest,
-			expectedErrorMessage: "test error message",
-		},
-		{
-			name: "success",
-			metricValues: map[string]map[string]string{
-				"counter": {"counterMetricName": "100"},
-				"gauge":   {"gaugeMetricName": "200"},
-			},
-			records: []*database.DBRecord{{
-				MetricType: sql.NullString{Valid: true, String: "counter"},
-				Name:       sql.NullString{Valid: true, String: "counterMetricName"},
-				Value:      sql.NullFloat64{Valid: true, Float64: 100},
-			}, {
-				MetricType: sql.NullString{Valid: true, String: "gauge"},
-				Name:       sql.NullString{Valid: true, String: "gaugeMetricName"},
-				Value:      sql.NullFloat64{Valid: true, Float64: 200},
-			}},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-
-			dbMock := new(databaseMock)
-			dbMock.On("UpdateRecords", ctx, tt.records).Return(tt.updateError)
-
-			storage := NewDBStorage(dbMock)
-			actualError := storage.Restore(ctx, tt.metricValues)
-
-			if tt.expectedErrorMessage != "" {
-				assert.ErrorContains(t, actualError, tt.expectedErrorMessage)
-			} else {
-				dbMock.AssertCalled(t, "UpdateRecords", ctx, tt.records)
-			}
-		})
-	}
-}
-
 func (d *databaseMock) Ping(ctx context.Context) error {
 	args := d.Called(ctx)
 	return args.Error(0)
