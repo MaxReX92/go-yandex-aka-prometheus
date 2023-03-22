@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 type aggregateMetricsProviderMock struct {

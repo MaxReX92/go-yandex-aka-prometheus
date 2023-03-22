@@ -41,7 +41,7 @@ func fromDBRecord(record *database.DBRecord) (metrics.Metric, error) {
 	case "counter":
 		metric = types.NewCounterMetric(metricName)
 	default:
-		return nil, logger.WrapError(fmt.Sprintf("read record with type %s", metricType), metrics.ErrUnknownMetricType)
+		return nil, logger.WrapError(fmt.Sprintf("read record with type '%s'", metricType), metrics.ErrUnknownMetricType)
 	}
 
 	metric.SetValue(value)

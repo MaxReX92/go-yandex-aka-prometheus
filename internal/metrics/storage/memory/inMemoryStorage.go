@@ -95,7 +95,7 @@ func (s *inMemoryStorage) Restore(ctx context.Context, metricValues map[string]m
 		if metricType == "counter" {
 			metricFactory = types.NewCounterMetric
 		} else if metricType != "gauge" {
-			return logger.WrapError(fmt.Sprintf("handle backup metric with type %s", metricType), metrics.ErrUnknownMetricType)
+			return logger.WrapError(fmt.Sprintf("handle backup metric with type '%s'", metricType), metrics.ErrUnknownMetricType)
 		}
 
 		for metricName, metricValue := range metricsByType {

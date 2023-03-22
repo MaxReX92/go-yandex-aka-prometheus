@@ -262,7 +262,7 @@ func Test_UpdateJsonRequest_CounterMetricValue(t *testing.T) {
 		var expected *callResult
 		if metricValue == nil {
 			valueString = "nil"
-			expected = expectedBadRequest("metric value is missed\n")
+			expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
 		} else {
 			valueString = parser.IntToString(*metricValue)
 			expected = getExpectedObj(requestObj.MType, requestObj.ID, metricValue, nil)
@@ -288,7 +288,7 @@ func Test_UpdateJsonRequest_GaugeMetricValue(t *testing.T) {
 		var expected *callResult
 		if metricValue == nil {
 			valueString = "nil"
-			expected = expectedBadRequest("metric value is missed\n")
+			expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
 		} else {
 			valueString = parser.FloatToString(*metricValue)
 			expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, metricValue)

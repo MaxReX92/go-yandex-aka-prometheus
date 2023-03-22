@@ -61,7 +61,7 @@ func (f *fileStorage) GetMetric(ctx context.Context, metricType string, metricNa
 		return nil, logger.WrapError("read records from file", err)
 	}
 	if len(records) != 1 {
-		return nil, logger.WrapError(fmt.Sprintf("get metric with name %v and type %v ", metricName, metricType), metrics.ErrMetricNotFound)
+		return nil, logger.WrapError(fmt.Sprintf("get metric with name '%s' and type '%s'", metricName, metricType), metrics.ErrMetricNotFound)
 	}
 
 	return f.toMetric(*records[0])

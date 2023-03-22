@@ -12,5 +12,5 @@ var (
 	ErrMetricNotFound           = errors.New("metric not found")
 	ErrMetricValueMissed        = errors.New("metric value is missed")
 	ErrUnexpectedStatusCode     = errors.New("unexpected status code")
-	ErrUnknownMetricType        = errors.New("unknown metric types")
+	ErrUnknownMetricType        = errors.New("unknown metric type")
 )

@@ -2,7 +2,6 @@ package memory
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -187,13 +186,13 @@ func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 func TestInMemoryStorage_Restore(t *testing.T) {
 
 	tests := []struct {
-		name          string
-		values        map[string]map[string]string
-		expectedError error
+		name                 string
+		values               map[string]map[string]string
+		expectedErrorMessage string
 	}{
 		{
-			name:          "unknown_metric_type",
-			expectedError: errors.New("unknown metric types from backup: unknownType"),
+			name:                 "unknown_metric_type",
+			expectedErrorMessage: "failed to handle backup metric with type 'unknownType': unknown metric type",
 			values: map[string]map[string]string{
 				"unknownType": {
 					"metricName1": "300",
@@ -222,11 +221,11 @@ func TestInMemoryStorage_Restore(t *testing.T) {
 			storage := NewInMemoryStorage()
 
 			actualError := storage.Restore(context.Background(), tt.values)
-			assert.Equal(t, tt.expectedError, actualError)
-
-			if tt.expectedError == nil {
+			if tt.expectedErrorMessage == "" {
 				actual, _ := storage.GetMetricValues(context.Background())
 				assert.Equal(t, tt.values, actual)
+			} else {
+				assert.ErrorContains(t, actualError, tt.expectedErrorMessage)
 			}
 		})
 	}

@@ -3,7 +3,6 @@ package file
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"os"
 	"testing"
 
@@ -163,21 +162,21 @@ func TestFileStorage_GetMetric(t *testing.T) {
 	expectedValue := float64(300)
 
 	tests := []struct {
-		name          string
-		stored        storageRecords
-		expectedError error
+		name                 string
+		stored               storageRecords
+		expectedErrorMessage string
 	}{
 		{
-			name:          "empty_store",
-			stored:        storageRecords{},
-			expectedError: errors.New("metrics with name expectedMetricName and types gauge not found"),
+			name:                 "empty_store",
+			stored:               storageRecords{},
+			expectedErrorMessage: "failed to get metric with name 'expectedMetricName' and type 'gauge': metric not found",
 		},
 		{
 			name: "notFound",
 			stored: storageRecords{
 				{Type: "counter", Name: "metricName", Value: "100"},
 			},
-			expectedError: errors.New("metrics with name expectedMetricName and types gauge not found"),
+			expectedErrorMessage: "failed to get metric with name 'expectedMetricName' and type 'gauge': metric not found",
 		},
 		{
 			name: "success",
@@ -198,10 +197,11 @@ func TestFileStorage_GetMetric(t *testing.T) {
 
 			storage := NewFileStorage(&config{filePath: filePath})
 			actualValue, err := storage.GetMetric(context.Background(), expectedMetricType, expectedMetricName)
-			assert.Equal(t, tt.expectedError, err)
 
-			if tt.expectedError == nil {
+			if tt.expectedErrorMessage == "" {
 				assert.Equal(t, expectedValue, actualValue.GetValue())
+			} else {
+				assert.ErrorContains(t, err, tt.expectedErrorMessage)
 			}
 		})
 	}

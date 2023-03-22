@@ -144,7 +144,7 @@ func Test_URLNormalization(t *testing.T) {
 		{
 			name:          "empty_url",
 			input:         "",
-			expectedError: "empty url string",
+			expectedError: "failed to normalize url: empty url string",
 		},
 		{
 			name:        "no_schema_no_port",

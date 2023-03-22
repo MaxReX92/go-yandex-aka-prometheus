@@ -194,7 +194,7 @@ func TestDbStorage_GetMetric(t *testing.T) {
 				Name:       sql.NullString{Valid: true, String: metricName},
 				Value:      sql.NullFloat64{Valid: true, Float64: metricValie},
 			},
-			expectedErrorMessage: "unknown metric type: testMetricType",
+			expectedErrorMessage: "failed to read record with type 'testMetricType': unknown metric type",
 		},
 		{
 			name: "success_counter_metric",

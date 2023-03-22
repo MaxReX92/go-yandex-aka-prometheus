@@ -2,11 +2,12 @@ package worker
 
 import (
 	"context"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 func TestPeriodicWorker_CloseContext(t *testing.T) {
