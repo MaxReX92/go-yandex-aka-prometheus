@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 func TestPeriodicWorker_CloseContext(t *testing.T) {
@@ -28,7 +30,11 @@ func TestPeriodicWorker_SuccessCall(t *testing.T) {
 	defer cancel()
 
 	worker := NewPeriodicWorker(func(context.Context) error {
-		wasCalled = true
+		if !wasCalled {
+			wasCalled = true
+			return test.ErrTest
+		}
+
 		cancel()
 		return nil
 	})

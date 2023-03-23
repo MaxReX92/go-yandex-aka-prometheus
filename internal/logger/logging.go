@@ -32,3 +32,10 @@ func ErrorObj(err error) {
 func ErrorFormat(format string, v ...any) {
 	Error(fmt.Sprintf(format, v...))
 }
+
+func WrapError(message string, err error) error {
+	wrap := fmt.Errorf("failed to "+message+": %w", err) //nolint:goerr113
+	ErrorObj(wrap)
+
+	return wrap
+}
