@@ -28,6 +28,17 @@ func (c *customMetricsProvider) GetMetrics() []metrics.Metric {
 	}
 }
 
+func (c *customMetricsProvider) GetMetricsChan() <-chan metrics.Metric {
+	result := make(chan metrics.Metric)
+	go func() {
+		defer close(result)
+		result <- c.poolMetric
+		result <- c.randomMetric
+	}()
+
+	return result
+}
+
 func (c *customMetricsProvider) Update(context.Context) error {
 	logger.Info("Start collect custom metrics")
 

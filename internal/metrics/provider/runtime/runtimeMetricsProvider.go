@@ -52,6 +52,18 @@ func (p *runtimeMetricsProvider) GetMetrics() []metrics.Metric {
 	return p.metrics
 }
 
+func (p *runtimeMetricsProvider) GetMetricsChan() <-chan metrics.Metric {
+	result := make(chan metrics.Metric)
+	go func() {
+		defer close(result)
+		for _, metric := range p.metrics {
+			result <- metric
+		}
+	}()
+
+	return result
+}
+
 func getFieldValue(stats *runtime.MemStats, fieldName string) (float64, error) {
 	r := reflect.ValueOf(stats)
 	f := reflect.Indirect(r).FieldByName(fieldName)

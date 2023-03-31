@@ -23,6 +23,7 @@ type testConf struct {
 	timeout          time.Duration
 	signEnabled      bool
 	key              []byte
+	parallelLimit    int
 }
 
 type testMetric struct {
@@ -117,6 +118,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 				timeout:          10 * time.Second,
 				signEnabled:      false,
 				key:              nil,
+				parallelLimit:    10,
 			}
 			signer := internalHash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
@@ -243,4 +245,8 @@ func (c *testConf) SignMetrics() bool {
 
 func (c *testConf) GetKey() []byte {
 	return c.key
+}
+
+func (c *testConf) ParallelLimit() int {
+	return c.parallelLimit
 }

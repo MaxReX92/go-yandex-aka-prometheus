@@ -114,3 +114,8 @@ func (a *aggregateMetricsProviderMock) Update(ctx context.Context) error {
 	args := a.Called(ctx)
 	return args.Error(0)
 }
+
+func (a *aggregateMetricsProviderMock) GetMetricsChan() <-chan metrics.Metric {
+	args := a.Called()
+	return args.Get(0).(<-chan metrics.Metric)
+}

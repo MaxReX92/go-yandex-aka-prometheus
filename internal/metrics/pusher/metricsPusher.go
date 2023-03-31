@@ -8,4 +8,5 @@ import (
 
 type MetricsPusher interface {
 	Push(ctx context.Context, metrics []metrics.Metric) error
+	PushChan(ctx context.Context, metrics <-chan metrics.Metric) error
 }

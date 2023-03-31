@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"sync"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
@@ -24,6 +25,28 @@ func (a *aggregateMetricsProvider) GetMetrics() []metrics.Metric {
 	}
 
 	return resultMetrics
+}
+
+func (a *aggregateMetricsProvider) GetMetricsChan() <-chan metrics.Metric {
+	result := make(chan metrics.Metric)
+
+	go func() {
+		wg := sync.WaitGroup{}
+		for _, provider := range a.providers {
+			wg.Add(1)
+			go func(p metrics.MetricsProvider) {
+				for metric := range p.GetMetricsChan() {
+					result <- metric
+				}
+				wg.Done()
+			}(provider)
+		}
+
+		wg.Wait()
+		close(result)
+	}()
+
+	return result
 }
 
 func (a *aggregateMetricsProvider) Update(ctx context.Context) error {
