@@ -58,7 +58,7 @@ func (g *GopsutilMetricsProvider) Update(ctx context.Context) error {
 }
 
 func (g *GopsutilMetricsProvider) updateMemoryMetrics(ctx context.Context) error {
-	memoryStats, err := mem.SwapMemoryWithContext(ctx)
+	memoryStats, err := mem.VirtualMemoryWithContext(ctx)
 	if err != nil {
 		return logger.WrapError("get memory stats", err)
 	}
