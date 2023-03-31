@@ -96,11 +96,7 @@ func TestAggregateMetricsProvider_Update(t *testing.T) {
 			assert.ErrorIs(t, actualError, tt.expectedError)
 
 			firstProvider.AssertCalled(t, "Update", mock.Anything)
-			if tt.firstProviderError == nil {
-				secondProvider.AssertCalled(t, "Update", mock.Anything)
-			} else {
-				secondProvider.AssertNotCalled(t, "Update", mock.Anything)
-			}
+			secondProvider.AssertCalled(t, "Update", mock.Anything)
 		})
 	}
 }
