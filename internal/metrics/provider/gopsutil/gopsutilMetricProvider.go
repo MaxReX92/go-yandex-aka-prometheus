@@ -29,7 +29,7 @@ func NewGopsutilMetricsProvider() *GopsutilMetricsProvider {
 	}
 
 	return &GopsutilMetricsProvider{
-		totalMetric:           types.NewCounterMetric("TotalMemory"),
+		totalMetric:           types.NewGaugeMetric("TotalMemory"),
 		freeMetric:            types.NewGaugeMetric("FreeMemory"),
 		cpuUtilizationMetrics: cpuUtilizationMetrics,
 	}
