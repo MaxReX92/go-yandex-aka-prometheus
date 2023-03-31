@@ -87,17 +87,17 @@ func TestAggregateMetricsProvider_Update(t *testing.T) {
 			firstProvider := new(aggregateMetricsProviderMock)
 			secondProvider := new(aggregateMetricsProviderMock)
 
-			firstProvider.On("Update", ctx).Return(tt.firstProviderError)
-			secondProvider.On("Update", ctx).Return(tt.secondProviderError)
+			firstProvider.On("Update", mock.Anything).Return(tt.firstProviderError)
+			secondProvider.On("Update", mock.Anything).Return(tt.secondProviderError)
 
 			provider := NewAggregateMetricsProvider(firstProvider, secondProvider)
 			actualError := provider.Update(ctx)
 
 			assert.ErrorIs(t, actualError, tt.expectedError)
 
-			firstProvider.AssertCalled(t, "Update", ctx)
+			firstProvider.AssertCalled(t, "Update", mock.Anything)
 			if tt.firstProviderError == nil {
-				secondProvider.AssertCalled(t, "Update", ctx)
+				secondProvider.AssertCalled(t, "Update", mock.Anything)
 			} else {
 				secondProvider.AssertNotCalled(t, "Update", mock.Anything)
 			}

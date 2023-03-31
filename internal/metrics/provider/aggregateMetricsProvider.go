@@ -6,6 +6,7 @@ import (
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"golang.org/x/sync/errgroup"
 )
 
 type aggregateMetricsProvider struct {
@@ -41,12 +42,19 @@ func (a *aggregateMetricsProvider) GetMetrics() <-chan metrics.Metric {
 }
 
 func (a *aggregateMetricsProvider) Update(ctx context.Context) error {
-	for _, provider := range a.providers {
-		err := provider.Update(ctx)
-		if err != nil {
-			return logger.WrapError("update metrics", err)
-		}
+	eg, ctx := errgroup.WithContext(ctx)
+
+	for i := 0; i < len(a.providers); i++ {
+		num := i
+		eg.Go(func() error {
+			err := a.providers[num].Update(ctx)
+			if err != nil {
+				return logger.WrapError("update metrics", err)
+			}
+
+			return nil
+		})
 	}
 
-	return nil
+	return eg.Wait()
 }
