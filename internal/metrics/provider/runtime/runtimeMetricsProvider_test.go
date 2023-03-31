@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 type config struct {

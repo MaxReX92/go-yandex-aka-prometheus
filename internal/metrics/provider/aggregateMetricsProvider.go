@@ -4,9 +4,10 @@ import (
 	"context"
 	"sync"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"golang.org/x/sync/errgroup"
 )
 
 type aggregateMetricsProvider struct {

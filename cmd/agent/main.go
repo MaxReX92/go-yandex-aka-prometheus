@@ -5,15 +5,15 @@ import (
 	"flag"
 	"time"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/custom"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/gopsutil"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/runtime"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/custom"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/gopsutil"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/runtime"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
