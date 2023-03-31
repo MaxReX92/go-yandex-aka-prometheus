@@ -21,14 +21,7 @@ func NewCustomMetricsProvider() metrics.MetricsProvider {
 	}
 }
 
-func (c *customMetricsProvider) GetMetrics() []metrics.Metric {
-	return []metrics.Metric{
-		c.poolMetric,
-		c.randomMetric,
-	}
-}
-
-func (c *customMetricsProvider) GetMetricsChan() <-chan metrics.Metric {
+func (c *customMetricsProvider) GetMetrics() <-chan metrics.Metric {
 	result := make(chan metrics.Metric)
 	go func() {
 		defer close(result)

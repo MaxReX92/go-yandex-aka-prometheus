@@ -18,16 +18,7 @@ func NewAggregateMetricsProvider(providers ...metrics.MetricsProvider) metrics.M
 	}
 }
 
-func (a *aggregateMetricsProvider) GetMetrics() []metrics.Metric {
-	resultMetrics := []metrics.Metric{}
-	for _, provider := range a.providers {
-		resultMetrics = append(resultMetrics, provider.GetMetrics()...)
-	}
-
-	return resultMetrics
-}
-
-func (a *aggregateMetricsProvider) GetMetricsChan() <-chan metrics.Metric {
+func (a *aggregateMetricsProvider) GetMetrics() <-chan metrics.Metric {
 	result := make(chan metrics.Metric)
 
 	go func() {
@@ -35,7 +26,7 @@ func (a *aggregateMetricsProvider) GetMetricsChan() <-chan metrics.Metric {
 		for _, provider := range a.providers {
 			wg.Add(1)
 			go func(p metrics.MetricsProvider) {
-				for metric := range p.GetMetricsChan() {
+				for metric := range p.GetMetrics() {
 					result <- metric
 				}
 				wg.Done()

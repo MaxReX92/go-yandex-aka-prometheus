@@ -47,7 +47,7 @@ func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConver
 	}, nil
 }
 
-func (p *httpMetricsPusher) PushChan(ctx context.Context, metricsChan <-chan metrics.Metric) error {
+func (p *httpMetricsPusher) Push(ctx context.Context, metricsChan <-chan metrics.Metric) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	for i := 0; i < p.parallelLimit; i++ {
@@ -71,63 +71,6 @@ func (p *httpMetricsPusher) PushChan(ctx context.Context, metricsChan <-chan met
 	}
 
 	return eg.Wait()
-}
-
-func (p *httpMetricsPusher) Push(ctx context.Context, metricsList []metrics.Metric) error {
-	metricsCount := len(metricsList)
-	if metricsCount == 0 {
-		logger.Info("Nothing to push")
-	}
-	logger.InfoFormat("Push %v metrics", metricsCount)
-
-	pushCtx, cancel := context.WithTimeout(ctx, p.pushTimeout)
-	defer cancel()
-
-	modelMetrics := make([]*model.Metrics, metricsCount)
-	for i, metric := range metricsList {
-		modelMetric, err := p.converter.ToModelMetric(metric)
-		if err != nil {
-			return logger.WrapError("create model request", err)
-		}
-
-		modelMetrics[i] = modelMetric
-	}
-
-	var buffer bytes.Buffer
-	err := json.NewEncoder(&buffer).Encode(modelMetrics)
-	if err != nil {
-		return logger.WrapError("serialize model request", err)
-	}
-
-	request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, p.metricsServerURL+"/updates", &buffer)
-	if err != nil {
-		return logger.WrapError("create push request", err)
-	}
-	request.Header.Add("Content-Type", "application/json")
-
-	response, err := p.client.Do(request)
-	if err != nil {
-		return logger.WrapError("push metrics", err)
-	}
-	defer response.Body.Close()
-
-	content, err := io.ReadAll(response.Body)
-	if err != nil {
-		return logger.WrapError("read response body", err)
-	}
-
-	stringContent := string(content)
-	if response.StatusCode != http.StatusOK {
-		logger.ErrorFormat("Unexpected response status code: %v %v", response.Status, stringContent)
-		return logger.WrapError(fmt.Sprintf("push metric: %s", stringContent), metrics.ErrUnexpectedStatusCode)
-	}
-
-	for _, metric := range metricsList {
-		metric.Flush()
-		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v", metric.GetName(), metric.GetStringValue(), response.Status)
-	}
-
-	return nil
 }
 
 func (p *httpMetricsPusher) pushMetrics(ctx context.Context, metricsList []metrics.Metric) error {

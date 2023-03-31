@@ -5,7 +5,6 @@ import (
 )
 
 type MetricsProvider interface {
-	GetMetricsChan() <-chan (Metric)
-	GetMetrics() []Metric
+	GetMetrics() <-chan (Metric)
 	Update(ctx context.Context) error
 }

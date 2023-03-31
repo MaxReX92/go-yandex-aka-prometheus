@@ -6,9 +6,11 @@ import (
 	"hash"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"github.com/stretchr/testify/assert"
 
 	internalHash "github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
@@ -37,6 +39,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 	var (
 		counterValue int64 = 100
 		gaugeValue         = 100.001
+		lock               = sync.Mutex{}
 	)
 
 	tests := []struct {
@@ -106,6 +109,9 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 				err := json.NewDecoder(r.Body).Decode(&modelRequest)
 				assert.NoError(t, err)
 				for _, modelMetric := range modelRequest {
+					lock.Lock()
+					defer lock.Unlock()
+
 					called[modelMetric.ID+modelMetric.MType] = true
 				}
 
@@ -125,7 +131,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			pusher, err := NewMetricsPusher(conf, converter)
 			assert.NoError(t, err)
 
-			err = pusher.Push(ctx, tt.metricsToPush)
+			err = pusher.Push(ctx, test.ArrayToChan(tt.metricsToPush))
 
 			if tt.expectedErrorMessage != "" {
 				assert.ErrorContains(t, err, tt.expectedErrorMessage)

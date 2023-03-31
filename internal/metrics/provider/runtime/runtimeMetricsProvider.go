@@ -48,11 +48,7 @@ func (p *runtimeMetricsProvider) Update(context.Context) error {
 	return nil
 }
 
-func (p *runtimeMetricsProvider) GetMetrics() []metrics.Metric {
-	return p.metrics
-}
-
-func (p *runtimeMetricsProvider) GetMetricsChan() <-chan metrics.Metric {
+func (p *runtimeMetricsProvider) GetMetrics() <-chan metrics.Metric {
 	result := make(chan metrics.Metric)
 	go func() {
 		defer close(result)
