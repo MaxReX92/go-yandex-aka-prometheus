@@ -123,8 +123,8 @@ func (p *httpMetricsPusher) pushMetrics(ctx context.Context, metricsList []metri
 	}
 
 	for _, metric := range metricsList {
-		metric.Flush()
 		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v", metric.GetName(), metric.GetStringValue(), response.Status)
+		metric.Flush()
 	}
 
 	return nil
