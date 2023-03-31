@@ -94,7 +94,7 @@ func createConfig() (*config, error) {
 
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Metrics server URL")
-	flag.IntVar(&conf.PushRateLimit, "l", 10, "Push metrics parallel workers limit")
+	flag.IntVar(&conf.PushRateLimit, "l", 20, "Push metrics parallel workers limit")
 	flag.DurationVar(&conf.PushTimeout, "t", time.Second*10, "Push metrics timeout")
 	flag.DurationVar(&conf.SendMetricsInterval, "r", time.Second*10, "Send metrics interval")
 	flag.DurationVar(&conf.UpdateMetricsInterval, "p", time.Second*2, "Update metrics interval")
