@@ -45,13 +45,13 @@ func TestAggregateMetricsProvider_GetMetrics(t *testing.T) {
 			firstProvider := new(aggregateMetricsProviderMock)
 			secondProvider := new(aggregateMetricsProviderMock)
 
-			firstProvider.On("GetMetrics").Return(tt.firstProviderMetrics)
-			secondProvider.On("GetMetrics").Return(tt.secondProviderMetrics)
+			firstProvider.On("GetMetrics").Return(test.ArrayToChan(tt.firstProviderMetrics))
+			secondProvider.On("GetMetrics").Return(test.ArrayToChan(tt.secondProviderMetrics))
 
 			provider := NewAggregateMetricsProvider(firstProvider, secondProvider)
-			actualMetrics := provider.GetMetrics()
+			actualMetrics := test.ChanToArray(provider.GetMetrics())
 
-			assert.Equal(t, tt.expectedMetrics, actualMetrics)
+			assert.ElementsMatch(t, tt.expectedMetrics, actualMetrics)
 
 			firstProvider.AssertCalled(t, "GetMetrics")
 			secondProvider.AssertCalled(t, "GetMetrics")
@@ -87,30 +87,26 @@ func TestAggregateMetricsProvider_Update(t *testing.T) {
 			firstProvider := new(aggregateMetricsProviderMock)
 			secondProvider := new(aggregateMetricsProviderMock)
 
-			firstProvider.On("Update", ctx).Return(tt.firstProviderError)
-			secondProvider.On("Update", ctx).Return(tt.secondProviderError)
+			firstProvider.On("Update", mock.Anything).Return(tt.firstProviderError)
+			secondProvider.On("Update", mock.Anything).Return(tt.secondProviderError)
 
 			provider := NewAggregateMetricsProvider(firstProvider, secondProvider)
 			actualError := provider.Update(ctx)
 
 			assert.ErrorIs(t, actualError, tt.expectedError)
 
-			firstProvider.AssertCalled(t, "Update", ctx)
-			if tt.firstProviderError == nil {
-				secondProvider.AssertCalled(t, "Update", ctx)
-			} else {
-				secondProvider.AssertNotCalled(t, "Update", mock.Anything)
-			}
+			firstProvider.AssertCalled(t, "Update", mock.Anything)
+			secondProvider.AssertCalled(t, "Update", mock.Anything)
 		})
 	}
-}
-
-func (a *aggregateMetricsProviderMock) GetMetrics() []metrics.Metric {
-	args := a.Called()
-	return args.Get(0).([]metrics.Metric)
 }
 
 func (a *aggregateMetricsProviderMock) Update(ctx context.Context) error {
 	args := a.Called(ctx)
 	return args.Error(0)
+}
+
+func (a *aggregateMetricsProviderMock) GetMetrics() <-chan metrics.Metric {
+	args := a.Called()
+	return args.Get(0).(<-chan metrics.Metric)
 }

@@ -48,8 +48,16 @@ func (p *runtimeMetricsProvider) Update(context.Context) error {
 	return nil
 }
 
-func (p *runtimeMetricsProvider) GetMetrics() []metrics.Metric {
-	return p.metrics
+func (p *runtimeMetricsProvider) GetMetrics() <-chan metrics.Metric {
+	result := make(chan metrics.Metric)
+	go func() {
+		defer close(result)
+		for _, metric := range p.metrics {
+			result <- metric
+		}
+	}()
+
+	return result
 }
 
 func getFieldValue(stats *runtime.MemStats, fieldName string) (float64, error) {

@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
@@ -17,11 +19,13 @@ import (
 )
 
 type metricsPusherConfig interface {
+	ParallelLimit() int
 	MetricsServerURL() string
 	PushMetricsTimeout() time.Duration
 }
 
 type httpMetricsPusher struct {
+	parallelLimit    int
 	client           http.Client
 	metricsServerURL string
 	pushTimeout      time.Duration
@@ -35,6 +39,7 @@ func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConver
 	}
 
 	return &httpMetricsPusher{
+		parallelLimit:    config.ParallelLimit(),
 		client:           http.Client{},
 		metricsServerURL: serverURL.String(),
 		pushTimeout:      config.PushMetricsTimeout(),
@@ -42,7 +47,33 @@ func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConver
 	}, nil
 }
 
-func (p *httpMetricsPusher) Push(ctx context.Context, metricsList []metrics.Metric) error {
+func (p *httpMetricsPusher) Push(ctx context.Context, metricsChan <-chan metrics.Metric) error {
+	eg, ctx := errgroup.WithContext(ctx)
+
+	for i := 0; i < p.parallelLimit; i++ {
+		eg.Go(func() error {
+			for {
+				select {
+				case metric, ok := <-metricsChan:
+					if !ok {
+						return nil
+					}
+
+					err := p.pushMetrics(ctx, []metrics.Metric{metric})
+					if err != nil {
+						return err
+					}
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+		})
+	}
+
+	return eg.Wait()
+}
+
+func (p *httpMetricsPusher) pushMetrics(ctx context.Context, metricsList []metrics.Metric) error {
 	metricsCount := len(metricsList)
 	if metricsCount == 0 {
 		logger.Info("Nothing to push")
@@ -92,8 +123,8 @@ func (p *httpMetricsPusher) Push(ctx context.Context, metricsList []metrics.Metr
 	}
 
 	for _, metric := range metricsList {
-		metric.Flush()
 		logger.InfoFormat("Pushed metric: %v. value: %v, status: %v", metric.GetName(), metric.GetStringValue(), response.Status)
+		metric.Flush()
 	}
 
 	return nil

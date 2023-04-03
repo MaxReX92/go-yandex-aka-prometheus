@@ -21,11 +21,15 @@ func NewCustomMetricsProvider() metrics.MetricsProvider {
 	}
 }
 
-func (c *customMetricsProvider) GetMetrics() []metrics.Metric {
-	return []metrics.Metric{
-		c.poolMetric,
-		c.randomMetric,
-	}
+func (c *customMetricsProvider) GetMetrics() <-chan metrics.Metric {
+	result := make(chan metrics.Metric)
+	go func() {
+		defer close(result)
+		result <- c.poolMetric
+		result <- c.randomMetric
+	}()
+
+	return result
 }
 
 func (c *customMetricsProvider) Update(context.Context) error {

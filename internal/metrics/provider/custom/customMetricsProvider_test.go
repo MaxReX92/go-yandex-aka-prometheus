@@ -5,12 +5,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 func TestCustomMetricsProvider_GetMetrics(t *testing.T) {
 	provider := NewCustomMetricsProvider()
 
-	metrics := provider.GetMetrics()
+	metrics := test.ChanToArray(provider.GetMetrics())
 	assert.Len(t, metrics, 2)
 
 	poolMetric := metrics[0]
@@ -28,7 +30,7 @@ func TestCustomMetricsProvider_Update(t *testing.T) {
 	ctx := context.Background()
 	provider := NewCustomMetricsProvider()
 
-	metrics := provider.GetMetrics()
+	metrics := test.ChanToArray(provider.GetMetrics())
 	assert.Len(t, metrics, 2)
 
 	poolMetric := metrics[0]

@@ -7,5 +7,5 @@ import (
 )
 
 type MetricsPusher interface {
-	Push(ctx context.Context, metrics []metrics.Metric) error
+	Push(ctx context.Context, metrics <-chan metrics.Metric) error
 }

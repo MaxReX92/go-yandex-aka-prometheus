@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 type config struct {
@@ -60,7 +62,7 @@ func TestRuntimeMetricsProvider_Update(t *testing.T) {
 			if tt.expected.expectError {
 				assert.Error(t, err)
 			} else {
-				actualMetrics := provider.GetMetrics()
+				actualMetrics := test.ChanToArray(provider.GetMetrics())
 				assert.Equal(t, len(tt.expected.expectMetrics), len(actualMetrics))
 				for _, actualMetric := range actualMetrics {
 					assert.Contains(t, tt.expected.expectMetrics, actualMetric.GetName())
@@ -77,7 +79,7 @@ func TestRuntimeMetricsProvider_GetMetrics(t *testing.T) {
 	provider := NewRuntimeMetricsProvider(&config{metricNames: expectedMetrics})
 	assert.NoErrorf(t, provider.Update(ctx), "fail to update metrics")
 
-	actualMetrics := provider.GetMetrics()
+	actualMetrics := test.ChanToArray(provider.GetMetrics())
 	assert.Len(t, actualMetrics, len(expectedMetrics))
 	for _, actualMetric := range actualMetrics {
 		assert.Contains(t, expectedMetrics, actualMetric.GetName())

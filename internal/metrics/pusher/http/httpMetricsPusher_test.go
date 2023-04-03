@@ -6,9 +6,11 @@ import (
 	"hash"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"github.com/stretchr/testify/assert"
 
 	internalHash "github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
@@ -23,6 +25,7 @@ type testConf struct {
 	timeout          time.Duration
 	signEnabled      bool
 	key              []byte
+	parallelLimit    int
 }
 
 type testMetric struct {
@@ -36,6 +39,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 	var (
 		counterValue int64 = 100
 		gaugeValue         = 100.001
+		lock               = sync.Mutex{}
 	)
 
 	tests := []struct {
@@ -105,6 +109,9 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 				err := json.NewDecoder(r.Body).Decode(&modelRequest)
 				assert.NoError(t, err)
 				for _, modelMetric := range modelRequest {
+					lock.Lock()
+					defer lock.Unlock()
+
 					called[modelMetric.ID+modelMetric.MType] = true
 				}
 
@@ -117,13 +124,14 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 				timeout:          10 * time.Second,
 				signEnabled:      false,
 				key:              nil,
+				parallelLimit:    10,
 			}
 			signer := internalHash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
 			pusher, err := NewMetricsPusher(conf, converter)
 			assert.NoError(t, err)
 
-			err = pusher.Push(ctx, tt.metricsToPush)
+			err = pusher.Push(ctx, test.ArrayToChan(tt.metricsToPush))
 
 			if tt.expectedErrorMessage != "" {
 				assert.ErrorContains(t, err, tt.expectedErrorMessage)
@@ -243,4 +251,8 @@ func (c *testConf) SignMetrics() bool {
 
 func (c *testConf) GetKey() []byte {
 	return c.key
+}
+
+func (c *testConf) ParallelLimit() int {
+	return c.parallelLimit
 }

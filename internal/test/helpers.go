@@ -23,3 +23,24 @@ func CreateMetric(metricFactory func(string) metrics.Metric, name string, value 
 	metric.SetValue(value)
 	return metric
 }
+
+func ArrayToChan[T any](items []T) <-chan T {
+	result := make(chan T)
+	go func() {
+		defer close(result)
+		for _, item := range items {
+			result <- item
+		}
+	}()
+
+	return result
+}
+
+func ChanToArray[T any](items <-chan T) []T {
+	result := []T{}
+	for item := range items {
+		result = append(result, item)
+	}
+
+	return result
+}
