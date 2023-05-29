@@ -1,29 +1,26 @@
 package model
 
 import (
+	"fmt"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
-type UnknownMetricTypeError struct {
-	UnknownType string
-}
-
-func (e *UnknownMetricTypeError) Error() string {
-	return "unknown metric type: " + e.UnknownType
-}
-
+// MetricsConverterConfig contains required metrics converter settings.
 type MetricsConverterConfig interface {
 	SignMetrics() bool
 }
 
+// MetricsConverter provides model converter functionality.
 type MetricsConverter struct {
 	signer      *hash.Signer
 	signMetrics bool
 }
 
+// NewMetricsConverter create new instance of MetricsConverter.
 func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *MetricsConverter {
 	return &MetricsConverter{
 		signMetrics: conf.SignMetrics(),
@@ -31,6 +28,7 @@ func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *Metr
 	}
 }
 
+// ToModelMetric convert internal dsl metric to model metric.
 func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error) {
 	modelMetric := &Metrics{
 		ID:    metric.GetName(),
@@ -45,8 +43,7 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error
 	case "gauge":
 		modelMetric.Value = &metricValue
 	default:
-		logger.ErrorFormat("unknown metric type: %v", modelMetric.MType)
-		return nil, &UnknownMetricTypeError{UnknownType: modelMetric.MType}
+		return nil, logger.WrapError(fmt.Sprintf("convert metric with type %s", modelMetric.MType), metrics.ErrUnknownMetricType)
 	}
 
 	if c.signMetrics {
@@ -61,6 +58,7 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error
 	return modelMetric, nil
 }
 
+// FromModelMetric convert model metric to internal dsl metric.
 func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric, error) {
 	var metric metrics.Metric
 	var value float64
@@ -81,8 +79,8 @@ func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric
 		metric = types.NewGaugeMetric(modelMetric.ID)
 		value = *modelMetric.Value
 	default:
-		logger.ErrorFormat("unknown metric type: %v", modelMetric.MType)
-		return nil, &UnknownMetricTypeError{UnknownType: modelMetric.MType}
+
+		return nil, logger.WrapError(fmt.Sprintf("convert metric with type %s", modelMetric.MType), metrics.ErrUnknownMetricType)
 	}
 
 	metric.SetValue(value)

@@ -341,9 +341,8 @@ func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConve
 				if err != nil {
 					logger.ErrorFormat("Fail to parse metric: %v", err)
 
-					var errUnknownMetricType *model.UnknownMetricTypeError
-					if errors.As(err, &errUnknownMetricType) {
-						http.Error(w, fmt.Sprintf("unknown metric type: %s", errUnknownMetricType.UnknownType), http.StatusNotImplemented)
+					if errors.Is(err, metrics.ErrUnknownMetricType) {
+						http.Error(w, fmt.Sprintf("unknown metric type: %s", metricContext.MType), http.StatusNotImplemented)
 					} else {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 					}

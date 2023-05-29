@@ -60,7 +60,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			metricsToPush: []metrics.Metric{
 				&testMetric{metricType: "invalid_type"},
 			},
-			expectedErrorMessage: "unknown metric type: invalid_type",
+			expectedErrorMessage: "failed to convert metric with type invalid_type",
 		},
 		{
 			name: "wrong_status_code",

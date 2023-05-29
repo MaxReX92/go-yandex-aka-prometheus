@@ -11,6 +11,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
+// PostgresDataaBaseConfig contains required postgres connection settings.
 type PostgresDataaBaseConfig interface {
 	GetConnectionString() string
 }
@@ -19,7 +20,8 @@ type postgresDataBase struct {
 	conn *sql.DB
 }
 
-func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (database.DataBase, error) {
+// NewPostgresDataBase create new instance of postgres db connector.
+func NewPostgresDataBase(ctx context.Context, conf PostgresDataaBaseConfig) (*postgresDataBase, error) {
 	conn, err := initDB(ctx, conf.GetConnectionString())
 	if err != nil {
 		return nil, logger.WrapError("init postgresql database", err)

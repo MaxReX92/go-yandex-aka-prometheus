@@ -19,7 +19,8 @@ type runtimeMetricsProvider struct {
 	metrics []metrics.Metric
 }
 
-func NewRuntimeMetricsProvider(config runtimeMetricsProviderConfig) metrics.MetricsProvider {
+// NewRuntimeMetricsProvider create new instance of runtime metrics provider.
+func NewRuntimeMetricsProvider(config runtimeMetricsProviderConfig) *runtimeMetricsProvider {
 	metricNames := config.MetricsList()
 	metricsList := make([]metrics.Metric, len(metricNames))
 	for i, metricName := range metricNames {

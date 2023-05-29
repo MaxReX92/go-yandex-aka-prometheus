@@ -15,12 +15,14 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
+// GopsutilMetricsProvider is a provider of Gopsutil metrics.
 type GopsutilMetricsProvider struct {
 	totalMetric           metrics.Metric
 	freeMetric            metrics.Metric
 	cpuUtilizationMetrics map[int]metrics.Metric
 }
 
+// NewGopsutilMetricsProvider create new instance of GopsutilMetricsProvider.
 func NewGopsutilMetricsProvider() *GopsutilMetricsProvider {
 	numCPU := runtime.NumCPU()
 	cpuUtilizationMetrics := make(map[int]metrics.Metric, numCPU)

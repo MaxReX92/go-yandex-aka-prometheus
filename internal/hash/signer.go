@@ -10,15 +10,18 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 )
 
+// SignerConfig contains required Signer settings.
 type SignerConfig interface {
 	GetKey() []byte
 }
 
+// Signer provide sign functional.
 type Signer struct {
 	hash hash.Hash
 	lock sync.Mutex
 }
 
+// NewSigner create new instance on Signer.
 func NewSigner(config SignerConfig) *Signer {
 	var h hash.Hash
 	key := config.GetKey()
@@ -31,6 +34,7 @@ func NewSigner(config SignerConfig) *Signer {
 	}
 }
 
+// GetSignString returns signed string.
 func (s *Signer) GetSignString(holder HashHolder) (string, error) {
 	sign, err := s.GetSign(holder)
 	if err != nil {
@@ -40,6 +44,7 @@ func (s *Signer) GetSignString(holder HashHolder) (string, error) {
 	return hex.EncodeToString(sign), nil
 }
 
+// GetSign returns object signature.
 func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 	if s.hash == nil {
 		return nil, logger.WrapError("get signature", ErrMissedSecretKey)
@@ -52,6 +57,7 @@ func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 	return holder.GetHash(s.hash)
 }
 
+// CheckSign validate object signature.
 func (s *Signer) CheckSign(holder HashHolder, signature string) (bool, error) {
 	sign, err := hex.DecodeString(signature)
 	if err != nil {
