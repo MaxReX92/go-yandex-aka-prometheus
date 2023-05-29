@@ -3,36 +3,22 @@ package types
 import (
 	"fmt"
 	"hash"
+	"sync"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
 type gaugeMetric struct {
-	name         string
-	value        float64
-	getValueChan chan float64
-	setValueChan chan float64
+	name  string
+	value float64
+	lock  sync.RWMutex
 }
 
 func NewGaugeMetric(name string) metrics.Metric {
-	gauge := &gaugeMetric{
-		name:         name,
-		getValueChan: make(chan float64),
-		setValueChan: make(chan float64),
+	return &gaugeMetric{
+		name: name,
 	}
-
-	go func(metric *gaugeMetric) {
-		for {
-			select {
-			case metric.getValueChan <- metric.value:
-			case metric.value = <-metric.setValueChan:
-			}
-		}
-
-	}(gauge)
-
-	return gauge
 }
 
 func (m *gaugeMetric) GetType() string {
@@ -44,24 +30,35 @@ func (m *gaugeMetric) GetName() string {
 }
 
 func (m *gaugeMetric) GetValue() float64 {
-	return <-m.getValueChan
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	return m.value
 }
 
 func (m *gaugeMetric) GetStringValue() string {
-	return parser.FloatToString(m.GetValue())
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	return parser.FloatToString(m.value)
 }
 
 func (m *gaugeMetric) SetValue(value float64) float64 {
-	m.setValueChan <- value
-	return value
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.value = value
+
+	return m.value
 }
 
 func (m *gaugeMetric) Flush() {
 }
 
 func (m *gaugeMetric) GetHash(hash hash.Hash) ([]byte, error) {
-	value := <-m.getValueChan
-	_, err := hash.Write([]byte(fmt.Sprintf("%s:gauge:%f", m.name, value)))
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	_, err := hash.Write([]byte(fmt.Sprintf("%s:gauge:%f", m.name, m.value)))
 	if err != nil {
 		return nil, err
 	}
