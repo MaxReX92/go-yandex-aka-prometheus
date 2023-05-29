@@ -1,8 +1,10 @@
 package html
 
 import (
+	"math/rand"
 	"testing"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,5 +54,24 @@ func TestSimplePageBuilder_BuildMetricsPage(t *testing.T) {
 			actual := builder.BuildMetricsPage(metricsByType)
 			assert.Equal(t, tt.expected, actual)
 		})
+	}
+}
+
+func BenchmarkSimplePageBuilder_BuildMetricsPage(b *testing.B) {
+	b.StopTimer()
+
+	metricsList := map[string]map[string]string{
+		"counter": {},
+		"gauge":   {},
+	}
+	for i := 0; i < 100; i++ {
+		metricsList["counter"]["counter"+parser.IntToString(rand.Int63())] = parser.IntToString(rand.Int63())
+		metricsList["gauge"]["gauge"+parser.IntToString(rand.Int63())] = parser.FloatToString(rand.Float64())
+	}
+	builder := NewSimplePageBuilder()
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		builder.BuildMetricsPage(metricsList)
 	}
 }
