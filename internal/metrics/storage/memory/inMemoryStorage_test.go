@@ -5,10 +5,10 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 

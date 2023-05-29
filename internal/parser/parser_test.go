@@ -3,8 +3,9 @@ package parser_test
 import (
 	"testing"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
 func TestToFloat64(t *testing.T) {

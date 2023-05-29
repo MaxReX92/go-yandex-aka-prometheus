@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
