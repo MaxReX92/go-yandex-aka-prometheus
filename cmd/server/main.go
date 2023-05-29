@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	_ "net/http/pprof"
 	"time"
 
 	"github.com/caarlos0/env/v7"
@@ -168,6 +169,10 @@ func initRouter(metricsStorage storage.MetricsStorage, converter *model.MetricsC
 		r.Get("/", handleDBPing(dbStorage))
 	})
 
+	router.Route("/debug", func(r chi.Router) {
+		r.Handle("/*", http.DefaultServeMux)
+	})
+
 	router.Route("/", func(r chi.Router) {
 		r.Get("/", handleMetricsPage(htmlPageBuilder, metricsStorage))
 		r.Get("/metrics", handleMetricsPage(htmlPageBuilder, metricsStorage))
@@ -243,10 +248,16 @@ func fillSingleJSONContext(next http.Handler) http.Handler {
 				return
 			}
 			reader = gz
-			defer gz.Close()
 		} else {
 			reader = r.Body
 		}
+
+		defer func() {
+			closer, ok := reader.(io.Closer)
+			if ok {
+				closer.Close()
+			}
+		}()
 
 		metricContext := &model.Metrics{}
 		metricsContext.requestMetrics = append(metricsContext.requestMetrics, metricContext)
@@ -284,10 +295,16 @@ func fillMultiJSONContext(next http.Handler) http.Handler {
 				return
 			}
 			reader = gz
-			defer gz.Close()
 		} else {
 			reader = r.Body
 		}
+
+		defer func() {
+			closer, ok := reader.(io.Closer)
+			if ok {
+				closer.Close()
+			}
+		}()
 
 		metricsContext.requestMetrics = []*model.Metrics{}
 		err := json.NewDecoder(reader).Decode(&metricsContext.requestMetrics)
