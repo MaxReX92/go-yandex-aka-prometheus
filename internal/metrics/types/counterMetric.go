@@ -3,22 +3,36 @@ package types
 import (
 	"fmt"
 	"hash"
-	"sync"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
 type counterMetric struct {
-	name  string
-	value int64
-	lock  sync.RWMutex
+	name         string
+	value        int64
+	getValueChan chan int64
+	setValueChan chan int64
 }
 
 func NewCounterMetric(name string) metrics.Metric {
-	return &counterMetric{
-		name: name,
+	counter := &counterMetric{
+		name:         name,
+		getValueChan: make(chan int64),
+		setValueChan: make(chan int64),
 	}
+
+	go func(metric *counterMetric) {
+		for {
+			select {
+			case metric.getValueChan <- metric.value:
+			case metric.value = <-metric.setValueChan:
+			}
+		}
+
+	}(counter)
+
+	return counter
 }
 
 func (m *counterMetric) GetType() string {
@@ -30,21 +44,15 @@ func (m *counterMetric) GetName() string {
 }
 
 func (m *counterMetric) GetValue() float64 {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	return float64(m.value)
+	return float64(<-m.getValueChan)
 }
 
 func (m *counterMetric) GetStringValue() string {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	return parser.IntToString(m.value)
+	return parser.IntToString(<-m.getValueChan)
 }
 
 func (m *counterMetric) SetValue(value float64) float64 {
-	return m.setValue(m.value + int64(value))
+	return m.setValue(<-m.getValueChan + int64(value))
 }
 
 func (m *counterMetric) Flush() {
@@ -52,10 +60,8 @@ func (m *counterMetric) Flush() {
 }
 
 func (m *counterMetric) GetHash(hash hash.Hash) ([]byte, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	_, err := hash.Write([]byte(fmt.Sprintf("%s:counter:%d", m.name, m.value)))
+	value := <-m.getValueChan
+	_, err := hash.Write([]byte(fmt.Sprintf("%s:counter:%d", m.name, value)))
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +70,6 @@ func (m *counterMetric) GetHash(hash hash.Hash) ([]byte, error) {
 }
 
 func (m *counterMetric) setValue(value int64) float64 {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	m.value = value
-	return float64(m.value)
+	m.setValueChan <- value
+	return float64(value)
 }

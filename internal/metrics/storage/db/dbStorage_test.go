@@ -226,7 +226,14 @@ func TestDbStorage_GetMetric(t *testing.T) {
 			storage := NewDBStorage(dbMock)
 			actualResult, actualError := storage.GetMetric(ctx, metricType, metricName)
 
-			assert.Equal(t, tt.expectedResult, actualResult)
+			if tt.expectedResult == nil {
+				assert.Nil(t, actualResult)
+			} else {
+				assert.Equal(t, tt.expectedResult.GetType(), actualResult.GetType())
+				assert.Equal(t, tt.expectedResult.GetName(), actualResult.GetName())
+				assert.Equal(t, tt.expectedResult.GetValue(), actualResult.GetValue())
+			}
+
 			if tt.expectedErrorMessage != "" {
 				assert.ErrorContains(t, actualError, tt.expectedErrorMessage)
 			}
