@@ -354,7 +354,7 @@ func BenchmarkInMemoryStorage_AddCounterMetricValue(b *testing.B) {
 	ctx := context.Background()
 	count := 1000
 	metricsList := make([]metrics.Metric, count)
-	for i := 0; i < count; i = i + 2 {
+	for i := 0; i < count; i += 2 {
 		metricsList[i] = test.CreateCounterMetric("counter"+parser.IntToString(int64(i)), rand.Float64())
 		metricsList[i+1] = test.CreateGaugeMetric("gauge"+parser.IntToString(int64(i)), rand.Float64())
 	}
@@ -364,6 +364,6 @@ func BenchmarkInMemoryStorage_AddCounterMetricValue(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		storage.AddMetricValues(ctx, metricsList)
+		_, _ = storage.AddMetricValues(ctx, metricsList)
 	}
 }

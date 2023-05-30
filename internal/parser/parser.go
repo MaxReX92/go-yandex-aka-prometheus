@@ -5,12 +5,12 @@ import (
 	"strconv"
 )
 
-// ToFloat64 parse strings to float64
+// ToFloat64 parse strings to float64.
 func ToFloat64(str string) (float64, error) {
 	return strconv.ParseFloat(str, 64)
 }
 
-// ToInt64 parse string to int64
+// ToInt64 parse string to int64.
 func ToInt64(str string) (int64, error) {
 	return strconv.ParseInt(str, 10, 64)
 }

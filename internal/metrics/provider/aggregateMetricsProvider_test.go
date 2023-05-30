@@ -143,7 +143,7 @@ func BenchmarkAggregateMetricsProvider_Update(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		provider.Update(ctx)
+		_ = provider.Update(ctx)
 	}
 }
 

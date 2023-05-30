@@ -15,7 +15,7 @@ func InfoFormat(format string, v ...any) {
 	Info(fmt.Sprintf(format, v...))
 }
 
-// Warn log warning message
+// Warn log warning message.
 func Warn(message string) {
 	log.Printf("[WARN]: %v\r\n", message)
 }
