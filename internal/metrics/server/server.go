@@ -48,7 +48,7 @@ type ServerConfig interface {
 }
 
 type Server struct {
-	listenUrl string
+	listenURL string
 	mux       *chi.Mux
 }
 
@@ -56,17 +56,17 @@ func New(conf ServerConfig,
 	metricsStorage storage.MetricsStorage,
 	converter *model.MetricsConverter,
 	htmlPageBuilder html.PageBuilder,
-	dbStorage database.DataBase) *Server {
+	dbStorage database.DataBase,
+) *Server {
 	return &Server{
-		listenUrl: conf.ListenURL(),
+		listenURL: conf.ListenURL(),
 		mux:       createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage),
 	}
 }
 
 func (s *Server) Start() error {
-
-	logger.Info("Start listen " + s.listenUrl)
-	err := http.ListenAndServe(s.listenUrl, s.mux)
+	logger.Info("Start listen " + s.listenURL)
+	err := http.ListenAndServe(s.listenURL, s.mux)
 	if err != nil {
 		return logger.WrapError("start http server", err)
 	}
@@ -78,8 +78,8 @@ func createRouter(
 	metricsStorage storage.MetricsStorage,
 	converter *model.MetricsConverter,
 	htmlPageBuilder html.PageBuilder,
-	dbStorage database.DataBase) *chi.Mux {
-
+	dbStorage database.DataBase,
+) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))
