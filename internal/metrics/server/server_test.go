@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -155,7 +156,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -343,7 +344,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -459,6 +460,100 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 	}
 }
 
+func Example() {
+	// Server configuration.
+	ctx := context.Background()
+	serverURL := "http://localhost:8080"
+
+	// Create metric.
+	metricName := "metricName"
+	metricType := "counter"
+	metricValue := int64(100)
+	metricValueString := strconv.FormatInt(metricValue, 10)
+	metricModel := model.Metrics{
+		ID:    metricName,
+		MType: metricType,
+		Delta: &metricValue,
+	}
+
+	// Send request and handle response function.
+	sendMetricRequest := func(request *http.Request) {
+		client := http.Client{}
+		response, err := client.Do(request)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer response.Body.Close()
+
+		content, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		stringContent := string(content)
+		if response.StatusCode != http.StatusOK {
+			log.Fatal(err)
+		}
+
+		log.Print(stringContent)
+	}
+
+	// Use JSON model to update single metric value...
+	var buffer bytes.Buffer
+	err := json.NewEncoder(&buffer).Encode(metricModel)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/update", &buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request.Header.Add("Content-Type", "application/json")
+	sendMetricRequest(request)
+
+	// ... and get single metric value.
+	request, err = http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/value", &buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request.Header.Add("Content-Type", "application/json")
+	sendMetricRequest(request)
+
+	// Use URL path params to update single metric value...
+	request, err = http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/update/"+metricType+"/"+metricName+"/"+metricValueString, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sendMetricRequest(request)
+
+	// ... and get single metric value.
+	request, err = http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/value/"+metricType+"/"+metricName, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sendMetricRequest(request)
+
+	// Use JSON model to update batch metrics values.
+	buffer.Reset()
+	err = json.NewEncoder(&buffer).Encode([]model.Metrics{metricModel})
+	if err != nil {
+		log.Fatal(err)
+	}
+	request, err = http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/updates", &buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request.Header.Add("Content-Type", "application/json")
+	sendMetricRequest(request)
+
+	// Get metrics report.
+	request, err = http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sendMetricRequest(request)
+}
+
 func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	t.Helper()
 
@@ -482,7 +577,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	conf := &testConf{}
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+	router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 	router.ServeHTTP(w, request)
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}
