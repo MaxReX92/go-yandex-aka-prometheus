@@ -27,9 +27,10 @@ import (
 )
 
 type callResult struct {
-	status      int
-	response    string
-	responseObj *model.Metrics
+	status          int
+	response        string
+	responseObj     *model.Metrics
+	responseObjects []*model.Metrics
 }
 
 type modelRequest struct {
@@ -40,10 +41,11 @@ type modelRequest struct {
 }
 
 type jsonAPIRequest struct {
-	httpMethod string
-	path       string
-	request    *modelRequest
-	metrics    []metrics.Metric
+	httpMethod   string
+	path         string
+	request      *modelRequest
+	multiRequest []modelRequest
+	metrics      []metrics.Metric
 }
 
 type testDescription struct {
@@ -297,6 +299,66 @@ func Test_UpdateJsonRequest_GaugeMetricValue(t *testing.T) {
 			actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "update", request: &requestObj})
 			assert.Equal(t, expected, actual)
 		})
+	}
+}
+
+func Test_UpdatesJsonRequest(t *testing.T) {
+	counterValue := int64(100)
+	gaugeValue := float64(100)
+
+	counterMetric := modelRequest{
+		ID:    "testMetricName",
+		MType: counterMetricName,
+	}
+	gaugeMetric := modelRequest{
+		ID:    "testMetricName",
+		MType: gaugeMetricName,
+	}
+
+	for _, counterMetricValue := range []*int64{nil, &counterValue} {
+		for _, gaugeMetricValue := range []*float64{nil, &gaugeValue} {
+			counterMetric.Delta = counterMetricValue
+			gaugeMetric.Value = gaugeMetricValue
+			requestObj := []modelRequest{
+				counterMetric,
+				gaugeMetric,
+			}
+
+			var valueString string
+			var expected *callResult
+			switch {
+			case counterMetricValue == nil && gaugeMetricValue == nil:
+				valueString = "counter_gauge_nil"
+				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+			case counterMetricValue == nil:
+				valueString = "counter_nil"
+				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+			case gaugeMetricValue == nil:
+				valueString = "gauge_nil"
+				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+			default:
+				valueString = parser.IntToString(*counterMetricValue) + parser.FloatToString(*gaugeMetricValue)
+				expected = &callResult{
+					status: 200,
+					responseObjects: []*model.Metrics{
+						{
+							ID:    counterMetric.ID,
+							MType: counterMetric.MType,
+							Delta: counterMetric.Delta,
+						}, {
+							ID:    gaugeMetric.ID,
+							MType: gaugeMetric.MType,
+							Value: gaugeMetric.Value,
+						},
+					},
+				}
+			}
+
+			t.Run("json_"+valueString+"_multiMetricsValue", func(t *testing.T) {
+				actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "updates", multiRequest: requestObj})
+				assert.Equal(t, expected, actual)
+			})
+		}
 	}
 }
 
@@ -569,6 +631,10 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 		encoder := json.NewEncoder(&buffer)
 		err := encoder.Encode(apiRequest.request)
 		require.NoError(t, err)
+	} else if apiRequest.multiRequest != nil {
+		encoder := json.NewEncoder(&buffer)
+		err := encoder.Encode(apiRequest.multiRequest)
+		require.NoError(t, err)
 	}
 
 	request := httptest.NewRequest(apiRequest.httpMethod, "http://localhost:8080/"+apiRequest.path, &buffer)
@@ -587,7 +653,13 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	resultObj := &model.Metrics{}
 	err := json.Unmarshal(resBody, resultObj)
 	if err != nil {
-		result.response = string(resBody)
+		resultObjects := []*model.Metrics{}
+		err = json.Unmarshal(resBody, &resultObjects)
+		if err != nil {
+			result.response = string(resBody)
+		} else {
+			result.responseObjects = resultObjects
+		}
 	} else {
 		result.responseObj = resultObj
 	}
