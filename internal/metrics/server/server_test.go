@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -26,9 +27,10 @@ import (
 )
 
 type callResult struct {
-	status      int
-	response    string
-	responseObj *model.Metrics
+	status          int
+	response        string
+	responseObj     *model.Metrics
+	responseObjects []*model.Metrics
 }
 
 type modelRequest struct {
@@ -39,10 +41,11 @@ type modelRequest struct {
 }
 
 type jsonAPIRequest struct {
-	httpMethod string
-	path       string
-	request    *modelRequest
-	metrics    []metrics.Metric
+	httpMethod   string
+	path         string
+	request      *modelRequest
+	multiRequest []modelRequest
+	metrics      []metrics.Metric
 }
 
 type testDescription struct {
@@ -155,7 +158,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -299,6 +302,66 @@ func Test_UpdateJsonRequest_GaugeMetricValue(t *testing.T) {
 	}
 }
 
+func Test_UpdatesJsonRequest(t *testing.T) {
+	counterValue := int64(100)
+	gaugeValue := float64(100)
+
+	counterMetric := modelRequest{
+		ID:    "testMetricName",
+		MType: counterMetricName,
+	}
+	gaugeMetric := modelRequest{
+		ID:    "testMetricName",
+		MType: gaugeMetricName,
+	}
+
+	for _, counterMetricValue := range []*int64{nil, &counterValue} {
+		for _, gaugeMetricValue := range []*float64{nil, &gaugeValue} {
+			counterMetric.Delta = counterMetricValue
+			gaugeMetric.Value = gaugeMetricValue
+			requestObj := []modelRequest{
+				counterMetric,
+				gaugeMetric,
+			}
+
+			var valueString string
+			var expected *callResult
+			switch {
+			case counterMetricValue == nil && gaugeMetricValue == nil:
+				valueString = "counter_gauge_nil"
+				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+			case counterMetricValue == nil:
+				valueString = "counter_nil"
+				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+			case gaugeMetricValue == nil:
+				valueString = "gauge_nil"
+				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+			default:
+				valueString = parser.IntToString(*counterMetricValue) + parser.FloatToString(*gaugeMetricValue)
+				expected = &callResult{
+					status: 200,
+					responseObjects: []*model.Metrics{
+						{
+							ID:    counterMetric.ID,
+							MType: counterMetric.MType,
+							Delta: counterMetric.Delta,
+						}, {
+							ID:    gaugeMetric.ID,
+							MType: gaugeMetric.MType,
+							Value: gaugeMetric.Value,
+						},
+					},
+				}
+			}
+
+			t.Run("json_"+valueString+"_multiMetricsValue", func(t *testing.T) {
+				actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "updates", multiRequest: requestObj})
+				assert.Equal(t, expected, actual)
+			})
+		}
+	}
+}
+
 func Test_GetMetricUrlRequest(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -343,7 +406,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -459,6 +522,100 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 	}
 }
 
+func Example() {
+	// Server configuration.
+	ctx := context.Background()
+	serverURL := "http://localhost:8080"
+
+	// Create metric.
+	metricName := "metricName"
+	metricType := "counter"
+	metricValue := int64(100)
+	metricValueString := strconv.FormatInt(metricValue, 10)
+	metricModel := model.Metrics{
+		ID:    metricName,
+		MType: metricType,
+		Delta: &metricValue,
+	}
+
+	// Send request and handle response function.
+	sendMetricRequest := func(request *http.Request) {
+		client := http.Client{}
+		response, err := client.Do(request)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer response.Body.Close()
+
+		content, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		stringContent := string(content)
+		if response.StatusCode != http.StatusOK {
+			log.Fatal(err)
+		}
+
+		log.Print(stringContent)
+	}
+
+	// Use JSON model to update single metric value...
+	var buffer bytes.Buffer
+	err := json.NewEncoder(&buffer).Encode(metricModel)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/update", &buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request.Header.Add("Content-Type", "application/json")
+	sendMetricRequest(request)
+
+	// ... and get single metric value.
+	request, err = http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/value", &buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request.Header.Add("Content-Type", "application/json")
+	sendMetricRequest(request)
+
+	// Use URL path params to update single metric value...
+	request, err = http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/update/"+metricType+"/"+metricName+"/"+metricValueString, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sendMetricRequest(request)
+
+	// ... and get single metric value.
+	request, err = http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/value/"+metricType+"/"+metricName, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sendMetricRequest(request)
+
+	// Use JSON model to update batch metrics values.
+	buffer.Reset()
+	err = json.NewEncoder(&buffer).Encode([]model.Metrics{metricModel})
+	if err != nil {
+		log.Fatal(err)
+	}
+	request, err = http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/updates", &buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request.Header.Add("Content-Type", "application/json")
+	sendMetricRequest(request)
+
+	// Get metrics report.
+	request, err = http.NewRequestWithContext(ctx, http.MethodGet, serverURL+"/", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sendMetricRequest(request)
+}
+
 func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	t.Helper()
 
@@ -474,6 +631,10 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 		encoder := json.NewEncoder(&buffer)
 		err := encoder.Encode(apiRequest.request)
 		require.NoError(t, err)
+	} else if apiRequest.multiRequest != nil {
+		encoder := json.NewEncoder(&buffer)
+		err := encoder.Encode(apiRequest.multiRequest)
+		require.NoError(t, err)
 	}
 
 	request := httptest.NewRequest(apiRequest.httpMethod, "http://localhost:8080/"+apiRequest.path, &buffer)
@@ -482,7 +643,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	conf := &testConf{}
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	router := initRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+	router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 	router.ServeHTTP(w, request)
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}
@@ -492,7 +653,13 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	resultObj := &model.Metrics{}
 	err := json.Unmarshal(resBody, resultObj)
 	if err != nil {
-		result.response = string(resBody)
+		resultObjects := []*model.Metrics{}
+		err = json.Unmarshal(resBody, &resultObjects)
+		if err != nil {
+			result.response = string(resBody)
+		} else {
+			result.responseObjects = resultObjects
+		}
 	} else {
 		result.responseObj = resultObj
 	}

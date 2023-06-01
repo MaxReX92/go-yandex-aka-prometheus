@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"github.com/stretchr/testify/assert"
 
 	internalHash "github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
@@ -18,6 +17,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 type testConf struct {
@@ -60,7 +60,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			metricsToPush: []metrics.Metric{
 				&testMetric{metricType: "invalid_type"},
 			},
-			expectedErrorMessage: "unknown metric type: invalid_type",
+			expectedErrorMessage: "failed to convert metric with type invalid_type",
 		},
 		{
 			name: "wrong_status_code",

@@ -8,7 +8,7 @@ import (
 
 type simplePageBuilder struct{}
 
-func NewSimplePageBuilder() PageBuilder {
+func NewSimplePageBuilder() *simplePageBuilder {
 	return &simplePageBuilder{}
 }
 
@@ -35,8 +35,7 @@ func (s simplePageBuilder) BuildMetricsPage(metricsByType map[string]map[string]
 		sort.Strings(metricNames)
 
 		for _, metricName := range metricNames {
-			sb.WriteString(fmt.Sprintf("%v: %v", metricName, metricsList[metricName]))
-			sb.WriteString("<br>")
+			sb.WriteString(fmt.Sprintf("%v: %v<br>", metricName, metricsList[metricName]))
 		}
 	}
 

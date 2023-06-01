@@ -15,6 +15,7 @@ type gaugeMetric struct {
 	lock  sync.RWMutex
 }
 
+// NewGaugeMetric creates new instance of gauge metric.
 func NewGaugeMetric(name string) metrics.Metric {
 	return &gaugeMetric{
 		name: name,

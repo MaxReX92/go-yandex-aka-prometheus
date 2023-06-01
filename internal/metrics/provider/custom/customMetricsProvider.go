@@ -14,7 +14,8 @@ type customMetricsProvider struct {
 	randomMetric metrics.Metric
 }
 
-func NewCustomMetricsProvider() metrics.MetricsProvider {
+// NewCustomMetricsProvider create new instance of custom metrics provider.
+func NewCustomMetricsProvider() *customMetricsProvider {
 	return &customMetricsProvider{
 		poolMetric:   types.NewCounterMetric("PollCount"),
 		randomMetric: types.NewGaugeMetric("RandomValue"),

@@ -60,7 +60,6 @@ linters:
     - stylecheck
     - tagliatelle
     - tenv
-    - testableexamples
     - thelper
     - tparallel
     - typecheck

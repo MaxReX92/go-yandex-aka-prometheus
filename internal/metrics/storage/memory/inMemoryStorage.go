@@ -7,7 +7,6 @@ import (
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
@@ -17,7 +16,7 @@ type inMemoryStorage struct {
 	lock          sync.RWMutex
 }
 
-func NewInMemoryStorage() storage.MetricsStorage {
+func NewInMemoryStorage() *inMemoryStorage {
 	return &inMemoryStorage{
 		metricsByType: map[string]map[string]metrics.Metric{},
 		lock:          sync.RWMutex{},

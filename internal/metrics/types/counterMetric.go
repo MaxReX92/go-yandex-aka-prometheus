@@ -15,6 +15,7 @@ type counterMetric struct {
 	lock  sync.RWMutex
 }
 
+// NewCounterMetric creates new instance of caunter metric.
 func NewCounterMetric(name string) metrics.Metric {
 	return &counterMetric{
 		name: name,

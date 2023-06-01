@@ -32,6 +32,7 @@ type httpMetricsPusher struct {
 	converter        *model.MetricsConverter
 }
 
+// NewMetricsPusher create new instance of http metrics pusher.
 func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {

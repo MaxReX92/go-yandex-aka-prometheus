@@ -14,7 +14,8 @@ type aggregateMetricsProvider struct {
 	providers []metrics.MetricsProvider
 }
 
-func NewAggregateMetricsProvider(providers ...metrics.MetricsProvider) metrics.MetricsProvider {
+// NewAggregateMetricsProvider create new instance of aggregate metric provider.
+func NewAggregateMetricsProvider(providers ...metrics.MetricsProvider) *aggregateMetricsProvider {
 	return &aggregateMetricsProvider{
 		providers: providers,
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
@@ -98,6 +99,51 @@ func TestAggregateMetricsProvider_Update(t *testing.T) {
 			firstProvider.AssertCalled(t, "Update", mock.Anything)
 			secondProvider.AssertCalled(t, "Update", mock.Anything)
 		})
+	}
+}
+
+func BenchmarkAggregateMetricsProvider_GetMetrics(b *testing.B) {
+	b.StopTimer()
+
+	count := 100
+	providers := make([]metrics.MetricsProvider, count)
+
+	for i := 0; i < 100; i++ {
+		subProvider := new(aggregateMetricsProviderMock)
+		subProvider.On("GetMetrics").Return(test.ArrayToChan([]metrics.Metric{
+			types.NewCounterMetric("counterMetric" + parser.IntToString(int64(i))),
+			types.NewGaugeMetric("gaugeMetric" + parser.IntToString(int64(i))),
+		}))
+
+		providers[i] = subProvider
+	}
+
+	provider := NewAggregateMetricsProvider(providers...)
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		test.ChanToArray(provider.GetMetrics())
+	}
+}
+
+func BenchmarkAggregateMetricsProvider_Update(b *testing.B) {
+	b.StopTimer()
+
+	ctx := context.Background()
+	count := 100
+	providers := make([]metrics.MetricsProvider, count)
+
+	for i := 0; i < 100; i++ {
+		subProvider := new(aggregateMetricsProviderMock)
+		subProvider.On("Update", mock.Anything).Return(nil)
+		providers[i] = subProvider
+	}
+
+	provider := NewAggregateMetricsProvider(providers...)
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = provider.Update(ctx)
 	}
 }
 

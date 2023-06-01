@@ -2,11 +2,13 @@ package memory
 
 import (
 	"context"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
@@ -343,5 +345,25 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func BenchmarkInMemoryStorage_AddCounterMetricValue(b *testing.B) {
+	b.StopTimer()
+
+	ctx := context.Background()
+	count := 1000
+	metricsList := make([]metrics.Metric, count)
+	for i := 0; i < count; i += 2 {
+		metricsList[i] = test.CreateCounterMetric("counter"+parser.IntToString(int64(i)), rand.Float64())
+		metricsList[i+1] = test.CreateGaugeMetric("gauge"+parser.IntToString(int64(i)), rand.Float64())
+	}
+
+	storage := NewInMemoryStorage()
+
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = storage.AddMetricValues(ctx, metricsList)
 	}
 }

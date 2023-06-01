@@ -12,6 +12,7 @@ type storageStrategyConfig interface {
 	SyncMode() bool
 }
 
+// StorageStrategy combine in memory and long-term metrics storages.
 type StorageStrategy struct {
 	backupStorage   MetricsStorage
 	inMemoryStorage MetricsStorage
@@ -19,6 +20,7 @@ type StorageStrategy struct {
 	lock            sync.RWMutex
 }
 
+// NewStorageStrategy creates new instance of StorageStrategy.
 func NewStorageStrategy(config storageStrategyConfig, inMemoryStorage MetricsStorage, fileStorage MetricsStorage) *StorageStrategy {
 	return &StorageStrategy{
 		backupStorage:   fileStorage,
