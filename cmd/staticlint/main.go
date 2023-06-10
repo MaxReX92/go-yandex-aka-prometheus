@@ -1,6 +1,9 @@
 package main
 
 import (
+	"strings"
+
+	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
 	"golang.org/x/tools/go/analysis/passes/assign"
@@ -46,10 +49,35 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
+	"honnef.co/go/tools/staticcheck"
 )
 
 func main() {
 	multichecker.Main(
+		concat([][]*analysis.Analyzer{
+			passesAnalyzers(),
+			staticCheckAnalyzers(),
+		})...,
+	)
+}
+
+func concat[T any](slices [][]T) []T {
+	var totalLen int
+	for _, s := range slices {
+		totalLen += len(s)
+	}
+
+	var i int
+	result := make([]T, totalLen)
+	for _, s := range slices {
+		i += copy(result[i:], s)
+	}
+
+	return result
+}
+
+func passesAnalyzers() []*analysis.Analyzer {
+	return []*analysis.Analyzer{
 		asmdecl.Analyzer,
 		assign.Analyzer,
 		atomic.Analyzer,
@@ -94,5 +122,16 @@ func main() {
 		unusedresult.Analyzer,
 		unusedwrite.Analyzer,
 		usesgenerics.Analyzer,
-	)
+	}
+}
+
+func staticCheckAnalyzers() []*analysis.Analyzer {
+	var checks []*analysis.Analyzer
+	for _, analyser := range staticcheck.Analyzers {
+		if strings.HasPrefix(analyser.Analyzer.Name, "SA") {
+			checks = append(checks, analyser.Analyzer)
+		}
+	}
+
+	return checks
 }
