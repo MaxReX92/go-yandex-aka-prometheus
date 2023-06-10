@@ -50,7 +50,6 @@ import (
 	"honnef.co/go/tools/analysis/lint"
 	"honnef.co/go/tools/quickfix"
 	"honnef.co/go/tools/staticcheck"
-	"honnef.co/go/tools/stylecheck"
 )
 
 func main() {
@@ -115,8 +114,8 @@ func staticCheckAnalyzers() []*analysis.Analyzer {
 	var checks []*analysis.Analyzer
 	for _, analyser := range concat([][]*lint.Analyzer{
 		staticcheck.Analyzers,
-		stylecheck.Analyzers,
-		quickfix.Analyzers}) {
+		quickfix.Analyzers,
+	}) {
 		checks = append(checks, analyser.Analyzer)
 	}
 
