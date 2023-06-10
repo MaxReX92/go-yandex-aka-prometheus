@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
@@ -49,7 +47,10 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
+	"honnef.co/go/tools/analysis/lint"
+	"honnef.co/go/tools/quickfix"
 	"honnef.co/go/tools/staticcheck"
+	"honnef.co/go/tools/stylecheck"
 )
 
 func main() {
@@ -59,21 +60,6 @@ func main() {
 			staticCheckAnalyzers(),
 		})...,
 	)
-}
-
-func concat[T any](slices [][]T) []T {
-	var totalLen int
-	for _, s := range slices {
-		totalLen += len(s)
-	}
-
-	var i int
-	result := make([]T, totalLen)
-	for _, s := range slices {
-		i += copy(result[i:], s)
-	}
-
-	return result
 }
 
 func passesAnalyzers() []*analysis.Analyzer {
@@ -127,11 +113,27 @@ func passesAnalyzers() []*analysis.Analyzer {
 
 func staticCheckAnalyzers() []*analysis.Analyzer {
 	var checks []*analysis.Analyzer
-	for _, analyser := range staticcheck.Analyzers {
-		if strings.HasPrefix(analyser.Analyzer.Name, "SA") {
-			checks = append(checks, analyser.Analyzer)
-		}
+	for _, analyser := range concat([][]*lint.Analyzer{
+		staticcheck.Analyzers,
+		stylecheck.Analyzers,
+		quickfix.Analyzers}) {
+		checks = append(checks, analyser.Analyzer)
 	}
 
 	return checks
+}
+
+func concat[T any](slices [][]T) []T {
+	var totalLen int
+	for _, s := range slices {
+		totalLen += len(s)
+	}
+
+	var i int
+	result := make([]T, totalLen)
+	for _, s := range slices {
+		i += copy(result[i:], s)
+	}
+
+	return result
 }
