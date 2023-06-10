@@ -63,10 +63,10 @@ func TestAggregateMetricsProvider_GetMetrics(t *testing.T) {
 func TestAggregateMetricsProvider_Update(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name                string
 		firstProviderError  error
 		secondProviderError error
 		expectedError       error
+		name                string
 	}{
 		{
 			name:               "first_provider_error",

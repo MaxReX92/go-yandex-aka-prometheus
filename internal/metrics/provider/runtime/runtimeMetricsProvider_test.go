@@ -19,8 +19,8 @@ func (c *config) MetricsList() []string {
 
 func TestRuntimeMetricsProvider_Update(t *testing.T) {
 	type expected struct {
-		expectError   bool
 		expectMetrics []string
+		expectError   bool
 	}
 
 	tests := []struct {

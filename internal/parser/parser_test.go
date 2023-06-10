@@ -131,8 +131,8 @@ func TestToInt64(t *testing.T) {
 func TestFloatToString(t *testing.T) {
 	tests := []struct {
 		name     string
-		value    float64
 		expected string
+		value    float64
 	}{
 		{
 			name:     "zero",
@@ -181,8 +181,8 @@ func TestFloatToString(t *testing.T) {
 func TestIntToString(t *testing.T) {
 	tests := []struct {
 		name     string
-		value    int64
 		expected string
+		value    int64
 	}{
 		{
 			name:     "zero",

@@ -37,9 +37,9 @@ func TestDbStorage_AddMetricValues(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
 		updateError   error
 		expectedError error
+		name          string
 	}{
 		{
 			name:          "update_error",
@@ -74,12 +74,11 @@ func TestDbStorage_AddMetricValues(t *testing.T) {
 
 func TestDbStorage_GetMetricValues(t *testing.T) {
 	tests := []struct {
-		name            string
-		allRecords      []*database.DBRecord
-		getRecordsError error
-
+		getRecordsError      error
 		expectedResult       map[string]map[string]string
+		name                 string
 		expectedErrorMessage string
+		allRecords           []*database.DBRecord
 	}{
 		{
 			name:                 "get_records_error",

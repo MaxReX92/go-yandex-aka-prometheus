@@ -48,8 +48,8 @@ type ServerConfig interface {
 }
 
 type Server struct {
-	listenURL string
 	mux       *chi.Mux
+	listenURL string
 }
 
 func New(conf ServerConfig,

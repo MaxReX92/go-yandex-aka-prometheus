@@ -22,17 +22,17 @@ import (
 
 type testConf struct {
 	connectionString string
-	timeout          time.Duration
-	signEnabled      bool
 	key              []byte
+	timeout          time.Duration
 	parallelLimit    int
+	signEnabled      bool
 }
 
 type testMetric struct {
 	name       string
 	metricType string
-	value      float64
 	hash       []byte
+	value      float64
 }
 
 func TestHttpMetricsPusher_Push(t *testing.T) {
@@ -44,9 +44,9 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 
 	tests := []struct {
 		name                 string
+		expectedErrorMessage string
 		metricsToPush        []metrics.Metric
 		expectedRequests     []model.Metrics
-		expectedErrorMessage string
 		responseStatusCode   int
 	}{
 		{

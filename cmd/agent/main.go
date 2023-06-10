@@ -19,13 +19,13 @@ import (
 )
 
 type config struct {
-	Key                   string        `env:"KEY"`
-	ServerURL             string        `env:"ADDRESS"`
+	Key                   string `env:"KEY"`
+	ServerURL             string `env:"ADDRESS"`
+	CollectMetricsList    []string
 	PushRateLimit         int           `env:"RATE_LIMIT"`
 	PushTimeout           time.Duration `env:"PUSH_TIMEOUT"`
 	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL"`
 	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL"`
-	CollectMetricsList    []string
 }
 
 func main() {

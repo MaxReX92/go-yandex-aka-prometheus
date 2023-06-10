@@ -27,12 +27,12 @@ const (
 
 func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 	tests := []struct {
-		name                    string
-		syncMode                bool
 		inMemoryStorageError    error
 		backupStorageErrorError error
-		expectedResult          []metrics.Metric
 		expectedError           error
+		name                    string
+		expectedResult          []metrics.Metric
+		syncMode                bool
 	}{
 		{
 			name:                 "noSync_inMemoryStorage_error",
@@ -107,12 +107,12 @@ func TestStorageStrategy_AddGaugeMetricValue(t *testing.T) {
 
 func TestStorageStrategy_AddCounterMetricValue(t *testing.T) {
 	tests := []struct {
-		name                    string
-		syncMode                bool
 		inMemoryStorageError    error
 		backupStorageErrorError error
-		expectedResult          []metrics.Metric
 		expectedError           error
+		name                    string
+		expectedResult          []metrics.Metric
+		syncMode                bool
 	}{
 		{
 			name:                 "noSync_inMemoryStorage_error",
@@ -189,12 +189,12 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 	result := map[string]map[string]string{}
 
 	tests := []struct {
+		storageError   error
+		expectedError  error
+		storageResult  map[string]map[string]string
+		expectedResult map[string]map[string]string
 		name           string
 		syncMode       bool
-		storageResult  map[string]map[string]string
-		storageError   error
-		expectedResult map[string]map[string]string
-		expectedError  error
 	}{
 		{
 			name:          "noSync_error",
@@ -249,12 +249,12 @@ func TestStorageStrategy_GetMetricValues(t *testing.T) {
 func TestStorageStrategy_GetMetric(t *testing.T) {
 	resultMetric := test.CreateGaugeMetric(metricName, metricValue)
 	tests := []struct {
-		name           string
-		syncMode       bool
 		storageResult  metrics.Metric
 		storageError   error
 		expectedResult metrics.Metric
 		expectedError  error
+		name           string
+		syncMode       bool
 	}{
 		{
 			name:          "noSync_error",
@@ -310,10 +310,10 @@ func TestStorageStrategy_Restore(t *testing.T) {
 	values := map[string]map[string]string{}
 
 	tests := []struct {
-		name          string
-		syncMode      bool
 		storageError  error
 		expectedError error
+		name          string
+		syncMode      bool
 	}{
 		{
 			name:          "noSync_error",
@@ -364,12 +364,12 @@ func TestStorageStrategy_CreateBackup(t *testing.T) {
 	values := map[string]map[string]string{}
 
 	tests := []struct {
-		name               string
-		syncMode           bool
-		currentStateValues map[string]map[string]string
 		currentStateError  error
 		restoreError       error
 		expectedError      error
+		currentStateValues map[string]map[string]string
+		name               string
+		syncMode           bool
 	}{
 		{
 			name:              "noSync_currentState_error",
@@ -441,12 +441,12 @@ func TestStorageStrategy_RestoreFromBackup(t *testing.T) {
 	values := map[string]map[string]string{}
 
 	tests := []struct {
-		name               string
-		syncMode           bool
-		currentStateValues map[string]map[string]string
 		currentStateError  error
 		restoreError       error
 		expectedError      error
+		currentStateValues map[string]map[string]string
+		name               string
+		syncMode           bool
 	}{
 		{
 			name:              "noSync_currentState_error",
@@ -518,12 +518,12 @@ func TestStorageStrategy_Close(t *testing.T) {
 	values := map[string]map[string]string{}
 
 	tests := []struct {
-		name               string
-		syncMode           bool
-		currentStateValues map[string]map[string]string
 		currentStateError  error
 		restoreError       error
 		expectedError      error
+		currentStateValues map[string]map[string]string
+		name               string
+		syncMode           bool
 	}{
 		{
 			name:              "noSync_currentState_error",
