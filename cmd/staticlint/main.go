@@ -1,8 +1,8 @@
 package main
 
 import (
-	internalAnalysis "github.com/MaxReX92/go-yandex-aka-prometheus/internal/analysis"
-
+	"github.com/kisielk/errcheck/errcheck"
+	magic_numbers "github.com/tommy-muehle/go-mnd/v2"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
@@ -51,12 +51,15 @@ import (
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
 	"honnef.co/go/tools/quickfix"
 	"honnef.co/go/tools/staticcheck"
+
+	internalAnalysis "github.com/MaxReX92/go-yandex-aka-prometheus/internal/analysis"
 )
 
 func main() {
 	multichecker.Main(concat(
 		passesAnalyzers(),
 		staticCheckAnalyzers(),
+		externalAnalyzers(),
 		customAnalyzers(),
 	)...)
 }
@@ -120,6 +123,13 @@ func staticCheckAnalyzers() []*analysis.Analyzer {
 	}
 
 	return checks
+}
+
+func externalAnalyzers() []*analysis.Analyzer {
+	return []*analysis.Analyzer{
+		errcheck.Analyzer,
+		magic_numbers.Analyzer,
+	}
 }
 
 func customAnalyzers() []*analysis.Analyzer {
