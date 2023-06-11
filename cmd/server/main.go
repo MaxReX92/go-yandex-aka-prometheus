@@ -41,9 +41,9 @@ type config struct {
 }
 
 func main() {
-	fmt.Printf("Build version: %s\n", buildVersion)
-	fmt.Printf("Build date: %s\n", buildDate)
-	fmt.Printf("Build commit: %s\n", buildCommit)
+	logger.InfoFormat("Build version: %s\n", buildVersion)
+	logger.InfoFormat("Build date: %s\n", buildDate)
+	logger.InfoFormat("Build commit: %s\n", buildCommit)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
