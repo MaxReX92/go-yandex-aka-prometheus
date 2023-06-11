@@ -1,6 +1,8 @@
 package main
 
 import (
+	internalAnalysis "github.com/MaxReX92/go-yandex-aka-prometheus/internal/analysis"
+
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
@@ -47,18 +49,16 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
-	"honnef.co/go/tools/analysis/lint"
 	"honnef.co/go/tools/quickfix"
 	"honnef.co/go/tools/staticcheck"
 )
 
 func main() {
-	multichecker.Main(
-		concat([][]*analysis.Analyzer{
-			passesAnalyzers(),
-			staticCheckAnalyzers(),
-		})...,
-	)
+	multichecker.Main(concat(
+		passesAnalyzers(),
+		staticCheckAnalyzers(),
+		customAnalyzers(),
+	)...)
 }
 
 func passesAnalyzers() []*analysis.Analyzer {
@@ -112,17 +112,23 @@ func passesAnalyzers() []*analysis.Analyzer {
 
 func staticCheckAnalyzers() []*analysis.Analyzer {
 	var checks []*analysis.Analyzer
-	for _, analyser := range concat([][]*lint.Analyzer{
+	for _, analyser := range concat(
 		staticcheck.Analyzers,
 		quickfix.Analyzers,
-	}) {
+	) {
 		checks = append(checks, analyser.Analyzer)
 	}
 
 	return checks
 }
 
-func concat[T any](slices [][]T) []T {
+func customAnalyzers() []*analysis.Analyzer {
+	return []*analysis.Analyzer{
+		internalAnalysis.Analyzer,
+	}
+}
+
+func concat[T any](slices ...[]T) []T {
 	var totalLen int
 	for _, s := range slices {
 		totalLen += len(s)
