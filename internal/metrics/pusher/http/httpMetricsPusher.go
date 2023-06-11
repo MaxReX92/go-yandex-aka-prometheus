@@ -110,8 +110,8 @@ func (p *httpMetricsPusher) pushMetrics(ctx context.Context, metricsList []metri
 	if err != nil {
 		return logger.WrapError("push metrics", err)
 	}
-	defer func(Body io.ReadCloser) {
-		err = Body.Close()
+	defer func(body io.ReadCloser) {
+		err = body.Close()
 		if err != nil {
 			logger.ErrorObj(err)
 		}

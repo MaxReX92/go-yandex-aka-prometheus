@@ -105,8 +105,8 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
-				defer func(Body io.ReadCloser) {
-					assert.NoError(t, Body.Close())
+				defer func(body io.ReadCloser) {
+					assert.NoError(t, body.Close())
 				}(r.Body)
 				modelRequest := []*model.Metrics{}
 				err := json.NewDecoder(r.Body).Decode(&modelRequest)

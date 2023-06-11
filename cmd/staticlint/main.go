@@ -114,11 +114,13 @@ func passesAnalyzers() []*analysis.Analyzer {
 }
 
 func staticCheckAnalyzers() []*analysis.Analyzer {
-	var checks []*analysis.Analyzer
-	for _, analyser := range concat(
+	staticChecks := concat(
 		staticcheck.Analyzers,
 		quickfix.Analyzers,
-	) {
+	)
+
+	checks := make([]*analysis.Analyzer, 0, len(staticChecks))
+	for _, analyser := range staticChecks {
 		checks = append(checks, analyser.Analyzer)
 	}
 

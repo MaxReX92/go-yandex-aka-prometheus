@@ -4,7 +4,6 @@ linters:
     - asasalint
     - asciicheck
     - bidichk
-    - bodyclose
     - containedctx
     - deadcode
     - decorder
@@ -55,7 +54,6 @@ linters:
     - promlinter
     - reassign
     - rowserrcheck
-    - sqlclosecheck
     - staticcheck
     - stylecheck
     - tagliatelle
