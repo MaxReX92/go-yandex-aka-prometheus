@@ -160,11 +160,13 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			converter := model.NewMetricsConverter(conf, signer)
 			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 			router.ServeHTTP(w, request)
-			actual := w.Result()
+			actual := w.Result() //nolint:bodyclose //github.com/timakin/bodyclose/issues/30
 
 			assert.Equal(t, tt.expected.status, actual.StatusCode)
 
-			defer assert.NoError(t, actual.Body.Close())
+			defer func(body io.ReadCloser) {
+				assert.NoError(t, body.Close())
+			}(actual.Body)
 			resBody, err := io.ReadAll(actual.Body)
 			if err != nil {
 				t.Fatal(err)
@@ -409,11 +411,13 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 			converter := model.NewMetricsConverter(conf, signer)
 			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 			router.ServeHTTP(w, request)
-			actual := w.Result()
+			actual := w.Result() //nolint:bodyclose //github.com/timakin/bodyclose/issues/30
 
 			if tt.expectSuccess {
 				assert.Equal(t, http.StatusOK, actual.StatusCode)
-				defer assert.NoError(t, actual.Body.Close())
+				defer func(body io.ReadCloser) {
+					assert.NoError(t, body.Close())
+				}(actual.Body)
 				body, err := io.ReadAll(actual.Body)
 				if err != nil {
 					t.Fatal(err)
@@ -422,7 +426,9 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 				assert.Equal(t, "100", string(body))
 			} else {
 				assert.Equal(t, http.StatusNotFound, actual.StatusCode)
-				defer assert.NoError(t, actual.Body.Close())
+				defer func(body io.ReadCloser) {
+					assert.NoError(t, body.Close())
+				}(actual.Body)
 				body, err := io.ReadAll(actual.Body)
 				if err != nil {
 					t.Fatal(err)
@@ -543,11 +549,16 @@ func Example() {
 	// Send request and handle response function.
 	sendMetricRequest := func(request *http.Request) {
 		client := http.Client{}
-		response, err := client.Do(request)
+		response, err := client.Do(request) //nolint:bodyclose //github.com/timakin/bodyclose/issues/30
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer log.Println(response.Body.Close())
+		defer func(body io.ReadCloser) {
+			err = body.Close()
+			if err != nil {
+				log.Println(err)
+			}
+		}(response.Body)
 
 		content, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -647,10 +658,12 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	converter := model.NewMetricsConverter(conf, signer)
 	router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
 	router.ServeHTTP(w, request)
-	actual := w.Result()
+	actual := w.Result() //nolint:bodyclose //github.com/timakin/bodyclose/issues/30
 	result := &callResult{status: actual.StatusCode}
 
-	defer assert.NoError(t, actual.Body.Close())
+	defer func(body io.ReadCloser) {
+		assert.NoError(t, body.Close())
+	}(actual.Body)
 	resBody, _ := io.ReadAll(actual.Body)
 	resultObj := &model.Metrics{}
 	err := json.Unmarshal(resBody, resultObj)
