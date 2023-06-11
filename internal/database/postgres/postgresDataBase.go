@@ -135,12 +135,7 @@ func (p *postgresDataBase) readRecords(ctx context.Context, tx *sql.Tx, command 
 	if err != nil {
 		return nil, logger.WrapError("call query", err)
 	}
-	defer func(rows *sql.Rows) {
-		err = rows.Close()
-		if err != nil {
-			logger.ErrorObj(err)
-		}
-	}(rows)
+	defer logger.ErrorObj(rows.Close())
 
 	result := []*database.DBRecord{}
 	for rows.Next() {

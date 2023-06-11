@@ -164,9 +164,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 
 			assert.Equal(t, tt.expected.status, actual.StatusCode)
 
-			defer func(body io.ReadCloser) {
-				assert.NoError(t, body.Close())
-			}(actual.Body)
+			defer assert.NoError(t, actual.Body.Close())
 			resBody, err := io.ReadAll(actual.Body)
 			if err != nil {
 				t.Fatal(err)
@@ -415,9 +413,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 
 			if tt.expectSuccess {
 				assert.Equal(t, http.StatusOK, actual.StatusCode)
-				defer func(body io.ReadCloser) {
-					assert.NoError(t, body.Close())
-				}(actual.Body)
+				defer assert.NoError(t, actual.Body.Close())
 				body, err := io.ReadAll(actual.Body)
 				if err != nil {
 					t.Fatal(err)
@@ -426,9 +422,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 				assert.Equal(t, "100", string(body))
 			} else {
 				assert.Equal(t, http.StatusNotFound, actual.StatusCode)
-				defer func(body io.ReadCloser) {
-					assert.NoError(t, body.Close())
-				}(actual.Body)
+				defer assert.NoError(t, actual.Body.Close())
 				body, err := io.ReadAll(actual.Body)
 				if err != nil {
 					t.Fatal(err)
@@ -553,12 +547,7 @@ func Example() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer func(body io.ReadCloser) {
-			err = body.Close()
-			if err != nil {
-				log.Print(err)
-			}
-		}(response.Body)
+		defer log.Println(response.Body.Close())
 
 		content, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -661,9 +650,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}
 
-	defer func(body io.ReadCloser) {
-		assert.NoError(t, body.Close())
-	}(actual.Body)
+	defer assert.NoError(t, actual.Body.Close())
 	resBody, _ := io.ReadAll(actual.Body)
 	resultObj := &model.Metrics{}
 	err := json.Unmarshal(resBody, resultObj)

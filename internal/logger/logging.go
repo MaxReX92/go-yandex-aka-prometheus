@@ -32,7 +32,9 @@ func Error(message string) {
 
 // ErrorObj log error object.
 func ErrorObj(err error) {
-	ErrorFormat("%v", err)
+	if err != nil {
+		ErrorFormat("%v", err)
+	}
 }
 
 // ErrorFormat log error message with custom format arguments.
