@@ -24,7 +24,12 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
-var defaultStoreInterval = 300 * time.Second
+var (
+	buildVersion         = "N/A"
+	buildDate            = "N/A"
+	buildCommit          = "N/A"
+	defaultStoreInterval = 300 * time.Second
+)
 
 type config struct {
 	Key           string        `env:"KEY"`
@@ -36,6 +41,10 @@ type config struct {
 }
 
 func main() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"time"
 
 	"github.com/caarlos0/env/v7"
@@ -19,6 +20,9 @@ import (
 )
 
 var (
+	buildVersion                 = "N/A"
+	buildDate                    = "N/A"
+	buildCommit                  = "N/A"
 	defaultPushRateLimit         = 20
 	defaultPushTimeout           = 10 * time.Second
 	defaultSendMetricsInterval   = 10 * time.Second
@@ -36,6 +40,10 @@ type config struct {
 }
 
 func main() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
 	conf, err := createConfig()
 	if err != nil {
 		panic(logger.WrapError("initialize config", err))
