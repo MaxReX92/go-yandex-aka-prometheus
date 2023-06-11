@@ -8,7 +8,7 @@
 //
 // 3. All QF quickfix checks (https://staticcheck.io/docs/checks/#QF);
 //
-// 4. Analyzer to check for unchecked errors in code (https://github.com/kisielk/errcheck);
+// 4. Analyzer to check calls that contain a verb directive that is different than the new %w verb directive (https://github.com/fatih/errwrap);
 //
 // 5. Analyzer to detect magic numbers (https://github.com/tommy-muehle/go-mnd);
 //

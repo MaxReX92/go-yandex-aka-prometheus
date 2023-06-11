@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/kisielk/errcheck/errcheck"
+	"github.com/fatih/errwrap/errwrap"
 	magic_numbers "github.com/tommy-muehle/go-mnd/v2"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
@@ -129,7 +129,7 @@ func staticCheckAnalyzers() []*analysis.Analyzer {
 
 func externalAnalyzers() []*analysis.Analyzer {
 	return []*analysis.Analyzer{
-		errcheck.Analyzer,
+		errwrap.Analyzer,
 		magic_numbers.Analyzer,
 	}
 }

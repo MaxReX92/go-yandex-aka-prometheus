@@ -4,9 +4,9 @@ go 1.19
 
 require (
 	github.com/caarlos0/env/v7 v7.0.0
+	github.com/fatih/errwrap v1.5.0
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/jackc/pgx/v5 v5.3.1
-	github.com/kisielk/errcheck v1.6.3
 	github.com/shirou/gopsutil/v3 v3.23.2
 	github.com/stretchr/testify v1.8.2
 	github.com/tommy-muehle/go-mnd/v2 v2.5.1
