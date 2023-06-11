@@ -58,21 +58,11 @@ func main() {
 
 		backupStorage = db.NewDBStorage(base)
 	}
-	defer func(base database.DataBase) {
-		err = base.Close()
-		if err != nil {
-			logger.ErrorObj(err)
-		}
-	}(base)
+	defer base.Close()
 
 	inMemoryStorage := memory.NewInMemoryStorage()
 	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, backupStorage)
-	defer func(storageStrategy *storage.StorageStrategy) {
-		err = storageStrategy.Close()
-		if err != nil {
-			logger.ErrorObj(err)
-		}
-	}(storageStrategy)
+	defer storageStrategy.Close()
 
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)

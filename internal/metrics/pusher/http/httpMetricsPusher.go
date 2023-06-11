@@ -106,16 +106,11 @@ func (p *httpMetricsPusher) pushMetrics(ctx context.Context, metricsList []metri
 	}
 	request.Header.Add("Content-Type", "application/json")
 
-	response, err := p.client.Do(request) //nolint:bodyclose //github.com/timakin/bodyclose/issues/30
+	response, err := p.client.Do(request)
 	if err != nil {
 		return logger.WrapError("push metrics", err)
 	}
-	defer func(body io.ReadCloser) {
-		err = body.Close()
-		if err != nil {
-			logger.ErrorObj(err)
-		}
-	}(response.Body)
+	defer response.Body.Close()
 
 	content, err := io.ReadAll(response.Body)
 	if err != nil {
