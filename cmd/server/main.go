@@ -24,6 +24,8 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
+var defaultStoreInterval = 300 * time.Second
+
 type config struct {
 	Key           string        `env:"KEY"`
 	ServerURL     string        `env:"ADDRESS"`
@@ -56,11 +58,21 @@ func main() {
 
 		backupStorage = db.NewDBStorage(base)
 	}
-	defer base.Close()
+	defer func(base database.DataBase) {
+		err = base.Close()
+		if err != nil {
+			logger.ErrorObj(err)
+		}
+	}(base)
 
 	inMemoryStorage := memory.NewInMemoryStorage()
 	storageStrategy := storage.NewStorageStrategy(conf, inMemoryStorage, backupStorage)
-	defer storageStrategy.Close()
+	defer func(storageStrategy *storage.StorageStrategy) {
+		err = storageStrategy.Close()
+		if err != nil {
+			logger.ErrorObj(err)
+		}
+	}(storageStrategy)
 
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
@@ -92,7 +104,7 @@ func createConfig() (*config, error) {
 
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.BoolVar(&conf.Restore, "r", true, "Restore metric values from the server backup file")
-	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
+	flag.DurationVar(&conf.StoreInterval, "i", defaultStoreInterval, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-dataBase.json", "Backup storage file path")
 	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")

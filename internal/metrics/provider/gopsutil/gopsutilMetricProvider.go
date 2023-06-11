@@ -15,6 +15,8 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
+var cpuInterval = 100 * time.Millisecond
+
 // GopsutilMetricsProvider is a provider of Gopsutil metrics.
 type GopsutilMetricsProvider struct {
 	totalMetric           metrics.Metric
@@ -75,7 +77,7 @@ func (g *GopsutilMetricsProvider) updateMemoryMetrics(ctx context.Context) error
 }
 
 func (g *GopsutilMetricsProvider) updateCPUMetrics(ctx context.Context) error {
-	cpuStats, err := cpu.PercentWithContext(ctx, time.Millisecond*100, true)
+	cpuStats, err := cpu.PercentWithContext(ctx, cpuInterval, true)
 	if err != nil {
 		return logger.WrapError("get cpu stats", err)
 	}

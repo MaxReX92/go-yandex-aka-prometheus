@@ -201,7 +201,10 @@ func fillSingleJSONContext(next http.Handler) http.Handler {
 		defer func() {
 			closer, ok := reader.(io.Closer)
 			if ok {
-				closer.Close()
+				err := closer.Close()
+				if err != nil {
+					logger.ErrorObj(err)
+				}
 			}
 		}()
 
@@ -248,7 +251,10 @@ func fillMultiJSONContext(next http.Handler) http.Handler {
 		defer func() {
 			closer, ok := reader.(io.Closer)
 			if ok {
-				closer.Close()
+				err := closer.Close()
+				if err != nil {
+					logger.ErrorObj(err)
+				}
 			}
 		}()
 

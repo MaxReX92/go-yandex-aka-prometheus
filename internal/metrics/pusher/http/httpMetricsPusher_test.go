@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"hash"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -104,7 +105,9 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
-				defer r.Body.Close()
+				defer func(Body io.ReadCloser) {
+					assert.NoError(t, Body.Close())
+				}(r.Body)
 				modelRequest := []*model.Metrics{}
 				err := json.NewDecoder(r.Body).Decode(&modelRequest)
 				assert.NoError(t, err)
