@@ -1,0 +1,22 @@
+name: staticlint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  devopstest:
+    runs-on: ubuntu-latest
+    container: golang:1.19
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Build staticlint binary
+        run: |
+          cd cmd/staticlint
+          go build -buildvcs=false -o staticlint
+      - name: Run staticlint
+        run: cmd/staticlint/staticlint ./...
