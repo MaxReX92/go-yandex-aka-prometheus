@@ -27,17 +27,17 @@ import (
 )
 
 type callResult struct {
-	status          int
-	response        string
 	responseObj     *model.Metrics
+	response        string
 	responseObjects []*model.Metrics
+	status          int
 }
 
 type modelRequest struct {
-	ID    string   `json:"id"`
-	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+	ID    string   `json:"id"`
+	MType string   `json:"type"`
 }
 
 type jsonAPIRequest struct {
@@ -201,11 +201,12 @@ func Test_UpdateJsonRequest_MetricName(t *testing.T) {
 			if metricName == "" {
 				expected = expectedBadRequest("metric name is missed\n")
 			} else {
-				if metricType == counterMetricName {
+				switch metricType {
+				case counterMetricName:
 					delta := int64(100)
 					requestObj.Delta = &delta
 					expected = getExpectedObj(requestObj.MType, requestObj.ID, &delta, nil)
-				} else if metricType == gaugeMetricName {
+				case gaugeMetricName:
 					value := float64(100)
 					requestObj.Value = &value
 					expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, &value)
@@ -461,11 +462,12 @@ func Test_GetMetricJsonRequest_MetricName(t *testing.T) {
 			if metricName == "" {
 				expected = expectedBadRequest("metric name is missed\n")
 			} else {
-				if metricType == counterMetricName {
+				switch metricType {
+				case counterMetricName:
 					delta := int64(100)
 					metricList = append(metricList, createCounterMetric(requestObj.ID, float64(delta)))
 					expected = getExpectedObj(requestObj.MType, requestObj.ID, &delta, nil)
-				} else if metricType == gaugeMetricName {
+				case gaugeMetricName:
 					value := float64(100)
 					metricList = append(metricList, createGaugeMetric(requestObj.ID, value))
 					expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, &value)

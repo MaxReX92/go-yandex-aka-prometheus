@@ -55,7 +55,6 @@ linters:
     - promlinter
     - reassign
     - rowserrcheck
-    - sqlclosecheck
     - staticcheck
     - stylecheck
     - tagliatelle

@@ -18,17 +18,31 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 )
 
+var (
+	buildVersion                 = "N/A"
+	buildDate                    = "N/A"
+	buildCommit                  = "N/A"
+	defaultPushRateLimit         = 20
+	defaultPushTimeout           = 10 * time.Second
+	defaultSendMetricsInterval   = 10 * time.Second
+	defaultUpdateMetricsInterval = 2 * time.Second
+)
+
 type config struct {
-	Key                   string        `env:"KEY"`
-	ServerURL             string        `env:"ADDRESS"`
+	Key                   string `env:"KEY"`
+	ServerURL             string `env:"ADDRESS"`
+	CollectMetricsList    []string
 	PushRateLimit         int           `env:"RATE_LIMIT"`
 	PushTimeout           time.Duration `env:"PUSH_TIMEOUT"`
 	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL"`
 	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL"`
-	CollectMetricsList    []string
 }
 
 func main() {
+	logger.InfoFormat("Build version: %s\n", buildVersion)
+	logger.InfoFormat("Build date: %s\n", buildDate)
+	logger.InfoFormat("Build commit: %s\n", buildCommit)
+
 	conf, err := createConfig()
 	if err != nil {
 		panic(logger.WrapError("initialize config", err))
@@ -94,10 +108,10 @@ func createConfig() (*config, error) {
 
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Metrics server URL")
-	flag.IntVar(&conf.PushRateLimit, "l", 20, "Push metrics parallel workers limit")
-	flag.DurationVar(&conf.PushTimeout, "t", time.Second*10, "Push metrics timeout")
-	flag.DurationVar(&conf.SendMetricsInterval, "r", time.Second*10, "Send metrics interval")
-	flag.DurationVar(&conf.UpdateMetricsInterval, "p", time.Second*2, "Update metrics interval")
+	flag.IntVar(&conf.PushRateLimit, "l", defaultPushRateLimit, "Push metrics parallel workers limit")
+	flag.DurationVar(&conf.PushTimeout, "t", defaultPushTimeout, "Push metrics timeout")
+	flag.DurationVar(&conf.SendMetricsInterval, "r", defaultSendMetricsInterval, "Send metrics interval")
+	flag.DurationVar(&conf.UpdateMetricsInterval, "p", defaultUpdateMetricsInterval, "Update metrics interval")
 	flag.Parse()
 
 	err := env.Parse(conf)

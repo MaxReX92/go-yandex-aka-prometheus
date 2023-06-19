@@ -14,9 +14,9 @@ import (
 
 func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 	tests := []struct {
+		expected       map[string]map[string]string
 		name           string
 		counterMetrics []test.KeyValue
-		expected       map[string]map[string]string
 	}{
 		{
 			name: "single_metric",
@@ -80,9 +80,9 @@ func TestInMemoryStorage_AddCounterMetricValue(t *testing.T) {
 
 func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 	tests := []struct {
+		expected     map[string]map[string]string
 		name         string
 		gaugeMetrics []test.KeyValue
-		expected     map[string]map[string]string
 	}{
 		{
 			name: "single_metric",
@@ -146,10 +146,10 @@ func TestInMemoryStorage_AddGaugeMetricValue(t *testing.T) {
 
 func TestInMemoryStorage_GetMetricValues(t *testing.T) {
 	tests := []struct {
+		expected       map[string]map[string]string
 		name           string
 		counterMetrics []test.KeyValue
 		gaugeMetrics   []test.KeyValue
-		expected       map[string]map[string]string
 	}{
 		{
 			name:     "no_metric",
@@ -256,9 +256,9 @@ func TestInMemoryStorage_GetMetricValue(t *testing.T) {
 		name             string
 		counterMetrics   []test.KeyValue
 		gaugeMetrics     []test.KeyValue
-		expectedOk       bool
 		expectedCounters []test.KeyValue
 		expectedGauges   []test.KeyValue
+		expectedOk       bool
 	}{
 		{
 			name:             "empty_metrics",

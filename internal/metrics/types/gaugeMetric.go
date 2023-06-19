@@ -59,7 +59,7 @@ func (m *gaugeMetric) GetHash(hash hash.Hash) ([]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	_, err := hash.Write([]byte(fmt.Sprintf("%s:gauge:%f", m.name, m.value)))
+	_, err := fmt.Fprintf(hash, "%s:gauge:%f", m.name, m.value)
 	if err != nil {
 		return nil, err
 	}

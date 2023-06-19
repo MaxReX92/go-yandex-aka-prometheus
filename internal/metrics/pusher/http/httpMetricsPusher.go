@@ -25,11 +25,11 @@ type metricsPusherConfig interface {
 }
 
 type httpMetricsPusher struct {
-	parallelLimit    int
+	converter        *model.MetricsConverter
 	client           http.Client
 	metricsServerURL string
+	parallelLimit    int
 	pushTimeout      time.Duration
-	converter        *model.MetricsConverter
 }
 
 // NewMetricsPusher create new instance of http metrics pusher.

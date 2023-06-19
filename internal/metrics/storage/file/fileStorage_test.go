@@ -160,8 +160,8 @@ func TestFileStorage_GetMetric(t *testing.T) {
 
 	tests := []struct {
 		name                 string
-		stored               storageRecords
 		expectedErrorMessage string
+		stored               storageRecords
 	}{
 		{
 			name:                 "empty_store",

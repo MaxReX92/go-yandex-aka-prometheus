@@ -7,6 +7,8 @@ import (
 	_ "net/http/pprof"
 	"time"
 
+	"github.com/caarlos0/env/v7"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database/postgres"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database/stub"
@@ -20,19 +22,29 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/file"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/memory"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
-	"github.com/caarlos0/env/v7"
+)
+
+var (
+	buildVersion         = "N/A"
+	buildDate            = "N/A"
+	buildCommit          = "N/A"
+	defaultStoreInterval = 300 * time.Second
 )
 
 type config struct {
 	Key           string        `env:"KEY"`
 	ServerURL     string        `env:"ADDRESS"`
-	StoreInterval time.Duration `env:"STORE_INTERVAL"`
 	StoreFile     string        `env:"STORE_FILE"`
-	Restore       bool          `env:"RESTORE"`
 	DB            string        `env:"DATABASE_DSN"`
+	StoreInterval time.Duration `env:"STORE_INTERVAL"`
+	Restore       bool          `env:"RESTORE"`
 }
 
 func main() {
+	logger.InfoFormat("Build version: %s\n", buildVersion)
+	logger.InfoFormat("Build date: %s\n", buildDate)
+	logger.InfoFormat("Build commit: %s\n", buildCommit)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -91,7 +103,7 @@ func createConfig() (*config, error) {
 
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.BoolVar(&conf.Restore, "r", true, "Restore metric values from the server backup file")
-	flag.DurationVar(&conf.StoreInterval, "i", time.Second*300, "Store backup interval")
+	flag.DurationVar(&conf.StoreInterval, "i", defaultStoreInterval, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-dataBase.json", "Backup storage file path")
 	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")
