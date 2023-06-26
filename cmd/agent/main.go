@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"os"
 	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
@@ -31,14 +33,15 @@ var (
 )
 
 type config struct {
-	CryptoKey             string `env:"CRYPTO_KEY"`
-	Key                   string `env:"KEY"`
-	ServerURL             string `env:"ADDRESS"`
+	ConfigPath            string `env:"CONFIG"`
+	CryptoKey             string `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
+	Key                   string `env:"KEY" json:"key,omitempty"`
+	ServerURL             string `env:"ADDRESS" json:"address,omitempty"`
 	CollectMetricsList    []string
-	PushRateLimit         int           `env:"RATE_LIMIT"`
-	PushTimeout           time.Duration `env:"PUSH_TIMEOUT"`
-	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL"`
-	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL"`
+	PushRateLimit         int           `env:"RATE_LIMIT" json:"rate_limit,omitempty" `
+	PushTimeout           time.Duration `env:"PUSH_TIMEOUT" json:"push_timeout,omitempty"`
+	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL" json:"report_interval,omitempty"`
+	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL" json:"poll_interval,omitempty"`
 }
 
 func main() {
@@ -118,6 +121,8 @@ func createConfig() (*config, error) {
 		"TotalAlloc",
 	}}
 
+	flag.StringVar(&conf.ConfigPath, "c", "", "Json config file path")
+	flag.StringVar(&conf.ConfigPath, "config", "", "Json config file path")
 	flag.StringVar(&conf.CryptoKey, "crypto-key", "", "Agent public crypto key path")
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Metrics server URL")
@@ -128,7 +133,23 @@ func createConfig() (*config, error) {
 	flag.Parse()
 
 	err := env.Parse(conf)
-	return conf, err
+	if err != nil {
+		return nil, logger.WrapError("parse flags", err)
+	}
+
+	if conf.ConfigPath != "" {
+		content, err := os.ReadFile(conf.ConfigPath)
+		if err != nil {
+			return nil, logger.WrapError("read json config file", err)
+		}
+
+		err = json.Unmarshal(content, conf)
+		if err != nil {
+			return nil, logger.WrapError("unmarshal json config file", err)
+		}
+	}
+
+	return conf, nil
 }
 
 func (c *config) MetricsList() []string {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	_ "net/http/pprof"
+	"os"
 	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
@@ -34,13 +36,14 @@ var (
 )
 
 type config struct {
-	CryptoKey     string        `env:"CRYPTO_KEY"`
-	Key           string        `env:"KEY"`
-	ServerURL     string        `env:"ADDRESS"`
-	StoreFile     string        `env:"STORE_FILE"`
-	DB            string        `env:"DATABASE_DSN"`
-	StoreInterval time.Duration `env:"STORE_INTERVAL"`
-	Restore       bool          `env:"RESTORE"`
+	ConfigPath    string        `env:"CONFIG"`
+	CryptoKey     string        `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
+	Key           string        `env:"KEY" json:"key,omitempty"`
+	ServerURL     string        `env:"ADDRESS" json:"address,omitempty"`
+	StoreFile     string        `env:"STORE_FILE" json:"store_file,omitempty"`
+	DB            string        `env:"DATABASE_DSN" json:"database_dsn,omitempty"`
+	StoreInterval time.Duration `env:"STORE_INTERVAL" json:"store_interval,omitempty"`
+	Restore       bool          `env:"RESTORE" json:"restore,omitempty"`
 }
 
 func main() {
@@ -113,6 +116,8 @@ func main() {
 func createConfig() (*config, error) {
 	conf := &config{}
 
+	flag.StringVar(&conf.ConfigPath, "c", "", "Json config file path")
+	flag.StringVar(&conf.ConfigPath, "config", "", "Json config file path")
 	flag.StringVar(&conf.CryptoKey, "crypto-key", "", "Server private crypto key path")
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.BoolVar(&conf.Restore, "r", true, "Restore metric values from the server backup file")
@@ -123,7 +128,23 @@ func createConfig() (*config, error) {
 	flag.Parse()
 
 	err := env.Parse(conf)
-	return conf, err
+	if err != nil {
+		return nil, logger.WrapError("parse flags", err)
+	}
+
+	if conf.ConfigPath != "" {
+		content, err := os.ReadFile(conf.ConfigPath)
+		if err != nil {
+			return nil, logger.WrapError("read json config file", err)
+		}
+
+		err = json.Unmarshal(content, conf)
+		if err != nil {
+			return nil, logger.WrapError("unmarshal json config file", err)
+		}
+	}
+
+	return conf, nil
 }
 
 func (c *config) ListenURL() string {
