@@ -11,11 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/pkg/runner"
 	"github.com/caarlos0/env/v7"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database/postgres"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database/stub"
@@ -29,6 +28,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/file"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/memory"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/pkg/runner"
 )
 
 var (

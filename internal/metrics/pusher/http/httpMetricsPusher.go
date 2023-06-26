@@ -10,9 +10,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
