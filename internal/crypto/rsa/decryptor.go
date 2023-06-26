@@ -24,7 +24,7 @@ func NewDecryptor(privateKeyPAth string) (*rsaDecryptor, error) {
 	}
 
 	privatePem, _ := pem.Decode(privateKeyContent)
-	if privatePem == nil || privatePem.Type != "PRIVATE KEY" {
+	if privatePem == nil || privatePem.Type != "RSA PRIVATE KEY" {
 		return nil, logger.WrapError("decode PEM block containing private key", crypto.ErrInvalidKey)
 	}
 

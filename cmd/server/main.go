@@ -7,6 +7,8 @@ import (
 	_ "net/http/pprof"
 	"time"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
@@ -32,6 +34,7 @@ var (
 )
 
 type config struct {
+	CryptoKey     string        `env:"CRYPTO_KEY"`
 	Key           string        `env:"KEY"`
 	ServerURL     string        `env:"ADDRESS"`
 	StoreFile     string        `env:"STORE_FILE"`
@@ -76,7 +79,16 @@ func main() {
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
 	htmlPageBuilder := html.NewSimplePageBuilder()
-	metricsServer := server.New(conf, storageStrategy, converter, htmlPageBuilder, base)
+
+	var decryptor crypto.Decryptor
+	if conf.CryptoKey != "" {
+		decryptor, err = rsa.NewDecryptor(conf.CryptoKey)
+		if err != nil {
+			panic(logger.WrapError("create decryptor", err))
+		}
+	}
+
+	metricsServer := server.New(conf, storageStrategy, converter, htmlPageBuilder, base, decryptor)
 
 	if conf.Restore {
 		logger.Info("Restore metrics from backup")
@@ -101,6 +113,7 @@ func main() {
 func createConfig() (*config, error) {
 	conf := &config{}
 
+	flag.StringVar(&conf.CryptoKey, "crypto-key", "", "Server private crypto key path")
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.BoolVar(&conf.Restore, "r", true, "Restore metric values from the server backup file")
 	flag.DurationVar(&conf.StoreInterval, "i", defaultStoreInterval, "Store backup interval")

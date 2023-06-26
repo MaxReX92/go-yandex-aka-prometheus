@@ -60,10 +60,11 @@ func New(conf ServerConfig,
 	converter *model.MetricsConverter,
 	htmlPageBuilder html.PageBuilder,
 	dbStorage database.DataBase,
+	decryptor crypto.Decryptor,
 ) *Server {
 	return &Server{
 		listenURL: conf.ListenURL(),
-		mux:       createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage, nil),
+		mux:       createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage, decryptor),
 	}
 }
 

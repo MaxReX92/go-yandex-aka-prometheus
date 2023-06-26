@@ -5,6 +5,8 @@ import (
 	"flag"
 	"time"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
@@ -29,6 +31,7 @@ var (
 )
 
 type config struct {
+	CryptoKey             string `env:"CRYPTO_KEY"`
 	Key                   string `env:"KEY"`
 	ServerURL             string `env:"ADDRESS"`
 	CollectMetricsList    []string
@@ -50,7 +53,16 @@ func main() {
 
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	metricPusher, err := http.NewMetricsPusher(conf, converter, nil)
+
+	var encryptor crypto.Encryptor
+	if conf.CryptoKey != "" {
+		encryptor, err = rsa.NewEncryptor(conf.CryptoKey)
+		if err != nil {
+			panic(logger.WrapError("create encryptor", err))
+		}
+	}
+
+	metricPusher, err := http.NewMetricsPusher(conf, converter, encryptor)
 	if err != nil {
 		panic(logger.WrapError("create new metrics pusher", err))
 	}
@@ -106,6 +118,7 @@ func createConfig() (*config, error) {
 		"TotalAlloc",
 	}}
 
+	flag.StringVar(&conf.CryptoKey, "crypto-key", "", "Agent public crypto key path")
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Metrics server URL")
 	flag.IntVar(&conf.PushRateLimit, "l", defaultPushRateLimit, "Push metrics parallel workers limit")

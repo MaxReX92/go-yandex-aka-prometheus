@@ -28,13 +28,13 @@ func NewEncryptor(publicCertPath string) (*rsaEncryptor, error) {
 		return nil, logger.WrapError("decode PEM block containing public key", crypto.ErrInvalidKey)
 	}
 
-	publicKey, err := x509.ParsePKCS1PublicKey(publicPem.Bytes)
+	publicKey, err := x509.ParsePKIXPublicKey(publicPem.Bytes)
 	if err != nil {
 		return nil, logger.WrapError("parse public key", err)
 	}
 
 	return &rsaEncryptor{
-		publicKey: publicKey,
+		publicKey: publicKey.(*rsa.PublicKey),
 	}, nil
 }
 
