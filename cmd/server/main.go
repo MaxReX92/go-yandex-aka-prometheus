@@ -103,8 +103,8 @@ func main() {
 
 	if !conf.SyncMode() {
 		logger.Info("Start periodic backup serice")
-		backgroundStore := worker.NewPeriodicWorker(func(ctx context.Context) error { return storageStrategy.CreateBackup(ctx) })
-		go backgroundStore.StartWork(ctx, conf.StoreInterval)
+		backgroundStore := worker.NewPeriodicWorker(conf.StoreInterval, func(ctx context.Context) error { return storageStrategy.CreateBackup(ctx) })
+		go backgroundStore.Start(ctx)
 	}
 
 	err = metricsServer.Start()

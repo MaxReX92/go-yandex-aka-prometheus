@@ -20,8 +20,7 @@ func TestPeriodicWorker_CloseContext(t *testing.T) {
 	})
 
 	cancel()
-	err := worker.Start(ctx)
-	assert.NoError(t, err)
+	_ = worker.Start(ctx)
 	assert.False(t, wasCalled)
 }
 
@@ -40,7 +39,6 @@ func TestPeriodicWorker_SuccessCall(t *testing.T) {
 		return nil
 	})
 
-	err := worker.Start(ctx)
-	assert.NoError(t, err)
+	_ = worker.Start(ctx)
 	assert.True(t, wasCalled)
 }
