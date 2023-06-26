@@ -14,13 +14,14 @@ func TestPeriodicWorker_CloseContext(t *testing.T) {
 	wasCalled := false
 	ctx, cancel := context.WithCancel(context.Background())
 
-	worker := NewPeriodicWorker(func(context.Context) error {
+	worker := NewPeriodicWorker(1*time.Millisecond, func(context.Context) error {
 		wasCalled = true
 		return nil
 	})
 
 	cancel()
-	worker.StartWork(ctx, 1*time.Millisecond)
+	err := worker.Start(ctx)
+	assert.NoError(t, err)
 	assert.False(t, wasCalled)
 }
 
@@ -29,7 +30,7 @@ func TestPeriodicWorker_SuccessCall(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	worker := NewPeriodicWorker(func(context.Context) error {
+	worker := NewPeriodicWorker(1*time.Millisecond, func(context.Context) error {
 		if !wasCalled {
 			wasCalled = true
 			return test.ErrTest
@@ -39,6 +40,7 @@ func TestPeriodicWorker_SuccessCall(t *testing.T) {
 		return nil
 	})
 
-	worker.StartWork(ctx, 1*time.Millisecond)
+	err := worker.Start(ctx)
+	assert.NoError(t, err)
 	assert.True(t, wasCalled)
 }

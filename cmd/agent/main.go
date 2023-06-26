@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/pkg/runner"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
@@ -54,6 +57,9 @@ func main() {
 		panic(logger.WrapError("initialize config", err))
 	}
 
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
 
@@ -78,16 +84,29 @@ func main() {
 		customMetricsProvider,
 		gopsutilMetricsProvider,
 	)
-	getMetricsWorker := worker.NewPeriodicWorker(aggregateMetricsProvider.Update)
-	pushMetricsWorker := worker.NewPeriodicWorker(func(workerContext context.Context) error {
+	getMetricsWorker := worker.NewPeriodicWorker(conf.UpdateMetricsInterval, aggregateMetricsProvider.Update)
+	pushMetricsWorker := worker.NewPeriodicWorker(conf.SendMetricsInterval, func(workerContext context.Context) error {
 		return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics())
 	})
+	multiWorker := worker.NewMultiWorker(&getMetricsWorker, &pushMetricsWorker)
+	gracefulRunner := runner.NewGracefulRunner(multiWorker)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go getMetricsWorker.StartWork(ctx, conf.UpdateMetricsInterval)
-	pushMetricsWorker.StartWork(ctx, conf.SendMetricsInterval)
+	gracefulRunner.Start(ctx)
+
+	// shutdown
+	select {
+	case err = <-gracefulRunner.Error():
+		err = logger.WrapError("start application", err)
+	case <-interrupt:
+		err = gracefulRunner.Stop(ctx)
+	}
+
+	if err != nil {
+		logger.ErrorObj(err)
+	}
 }
 
 func createConfig() (*config, error) {
