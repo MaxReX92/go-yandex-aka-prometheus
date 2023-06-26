@@ -7,10 +7,13 @@ import (
 	"fmt"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/pkg/runner"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
@@ -60,6 +63,9 @@ func main() {
 	}
 	logger.InfoFormat("Starting server with the following configuration:%v", conf)
 
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
 	var base database.DataBase
 	var backupStorage storage.MetricsStorage
 	if conf.DB == "" {
@@ -92,6 +98,7 @@ func main() {
 	}
 
 	metricsServer := server.New(conf, storageStrategy, converter, htmlPageBuilder, base, decryptor)
+	runners := []runner.Runner{metricsServer}
 
 	if conf.Restore {
 		logger.Info("Restore metrics from backup")
@@ -104,10 +111,21 @@ func main() {
 	if !conf.SyncMode() {
 		logger.Info("Start periodic backup serice")
 		backgroundStore := worker.NewPeriodicWorker(conf.StoreInterval, func(ctx context.Context) error { return storageStrategy.CreateBackup(ctx) })
-		go backgroundStore.Start(ctx)
+		runners = append(runners, &backgroundStore)
 	}
 
-	err = metricsServer.Start()
+	multiRunner := runner.NewMultiWorker(runners...)
+	gracefulRunner := runner.NewGracefulRunner(multiRunner)
+	gracefulRunner.Start(ctx)
+
+	// shutdown
+	select {
+	case err = <-gracefulRunner.Error():
+		err = logger.WrapError("start application", err)
+	case <-interrupt:
+		err = gracefulRunner.Stop(ctx)
+	}
+
 	if err != nil {
 		logger.ErrorObj(err)
 	}

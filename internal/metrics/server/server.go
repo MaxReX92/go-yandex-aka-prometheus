@@ -51,8 +51,7 @@ type ServerConfig interface {
 }
 
 type Server struct {
-	mux       *chi.Mux
-	listenURL string
+	srv *http.Server
 }
 
 func New(conf ServerConfig,
@@ -63,19 +62,21 @@ func New(conf ServerConfig,
 	decryptor crypto.Decryptor,
 ) *Server {
 	return &Server{
-		listenURL: conf.ListenURL(),
-		mux:       createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage, decryptor),
+		srv: &http.Server{
+			Addr:    conf.ListenURL(),
+			Handler: createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage, decryptor),
+		},
 	}
 }
 
-func (s *Server) Start() error {
-	logger.Info("Start listen " + s.listenURL)
-	err := http.ListenAndServe(s.listenURL, s.mux)
-	if err != nil {
-		return logger.WrapError("start http server", err)
-	}
+func (s *Server) Start(ctx context.Context) error {
+	logger.Info("Start web service")
+	return s.srv.ListenAndServe()
+}
 
-	return nil
+func (s *Server) Stop(ctx context.Context) error {
+	logger.Info("Stopping web service")
+	return s.srv.Shutdown(ctx)
 }
 
 func createRouter(

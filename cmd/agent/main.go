@@ -88,8 +88,8 @@ func main() {
 	pushMetricsWorker := worker.NewPeriodicWorker(conf.SendMetricsInterval, func(workerContext context.Context) error {
 		return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics())
 	})
-	multiWorker := worker.NewMultiWorker(&getMetricsWorker, &pushMetricsWorker)
-	gracefulRunner := runner.NewGracefulRunner(multiWorker)
+	multiRunner := runner.NewMultiWorker(&getMetricsWorker, &pushMetricsWorker)
+	gracefulRunner := runner.NewGracefulRunner(multiRunner)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
