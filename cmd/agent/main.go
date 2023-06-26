@@ -50,7 +50,7 @@ func main() {
 
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	metricPusher, err := http.NewMetricsPusher(conf, converter)
+	metricPusher, err := http.NewMetricsPusher(conf, converter, nil)
 	if err != nil {
 		panic(logger.WrapError("create new metrics pusher", err))
 	}

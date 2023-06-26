@@ -75,7 +75,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 					// json api
 					if metricType == "" && metricName == "" && metricValue == "" {
 						if method == http.MethodPost {
-							expected = expectedBadRequest("failed to unmarhsal json context: EOF\n")
+							expected = expectedBadRequest("failed to unmarhsal json context: unexpected end of JSON input\n")
 						} else {
 							expected = expectedNotAllowed()
 						}
@@ -158,7 +158,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil)
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -407,7 +407,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil)
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -645,7 +645,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	conf := &testConf{}
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{})
+	router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil)
 	router.ServeHTTP(w, request)
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}

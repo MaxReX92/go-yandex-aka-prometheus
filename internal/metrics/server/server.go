@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -40,6 +41,7 @@ type metricInfoContextKey struct {
 }
 
 type metricsRequestContext struct {
+	body           []byte
 	requestMetrics []*model.Metrics
 	resultMetrics  []*model.Metrics
 }
@@ -61,7 +63,7 @@ func New(conf ServerConfig,
 ) *Server {
 	return &Server{
 		listenURL: conf.ListenURL(),
-		mux:       createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage),
+		mux:       createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage, nil),
 	}
 }
 
@@ -80,12 +82,13 @@ func createRouter(
 	converter *model.MetricsConverter,
 	htmlPageBuilder html.PageBuilder,
 	dbStorage database.DataBase,
+	decryptor crypto.Decryptor,
 ) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))
 	router.Route("/update", func(r chi.Router) {
-		r.With(fillSingleJSONContext, updateMetrics(metricsStorage, converter)).
+		r.With(decrypt(decryptor), fillSingleJSONContext, updateMetrics(metricsStorage, converter)).
 			Post("/", successSingleJSONResponse())
 		r.With(fillCommonURLContext, fillGaugeURLContext, updateMetrics(metricsStorage, converter)).
 			Post("/gauge/{metricName}/{metricValue}", successURLResponse())
@@ -99,12 +102,12 @@ func createRouter(
 	})
 
 	router.Route("/updates", func(r chi.Router) {
-		r.With(fillMultiJSONContext, updateMetrics(metricsStorage, converter)).
+		r.With(decrypt(decryptor), fillMultiJSONContext, updateMetrics(metricsStorage, converter)).
 			Post("/", successMultiJSONResponse())
 	})
 
 	router.Route("/value", func(r chi.Router) {
-		r.With(fillSingleJSONContext, fillMetricValues(metricsStorage, converter)).
+		r.With(decrypt(decryptor), fillSingleJSONContext, fillMetricValues(metricsStorage, converter)).
 			Post("/", successSingleJSONResponse())
 
 		r.With(fillCommonURLContext, fillMetricValues(metricsStorage, converter)).
@@ -125,6 +128,49 @@ func createRouter(
 	})
 
 	return router
+}
+
+func decrypt(decryptor crypto.Decryptor) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var reader io.Reader
+			if r.Header.Get(`Content-Encoding`) == `gzip` {
+				gz, err := gzip.NewReader(r.Body)
+				if err != nil {
+					http.Error(w, logger.WrapError("create gzip reader", err).Error(), http.StatusInternalServerError)
+					return
+				}
+				reader = gz
+			} else {
+				reader = r.Body
+			}
+
+			defer func() {
+				closer, ok := reader.(io.Closer)
+				if ok {
+					closer.Close()
+				}
+			}()
+
+			body, err := io.ReadAll(reader)
+			if err != nil {
+				http.Error(w, logger.WrapError("read body data", err).Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if decryptor != nil {
+				body, err = decryptor.Decrypt(body)
+				if err != nil {
+					http.Error(w, logger.WrapError("decrypt body data", err).Error(), http.StatusBadRequest)
+					return
+				}
+			}
+
+			ctx, metricsContext := ensureMetricsContext(r)
+			metricsContext.body = body
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 func fillCommonURLContext(next http.Handler) http.Handler {
@@ -186,29 +232,16 @@ func fillCounterURLContext(next http.Handler) http.Handler {
 func fillSingleJSONContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, metricsContext := ensureMetricsContext(r)
-		var reader io.Reader
-		if r.Header.Get(`Content-Encoding`) == `gzip` {
-			gz, err := gzip.NewReader(r.Body)
-			if err != nil {
-				http.Error(w, logger.WrapError("create gzip reader", err).Error(), http.StatusInternalServerError)
-				return
-			}
-			reader = gz
-		} else {
-			reader = r.Body
+		if metricsContext.body == nil {
+			logger.Error("fillSingleJSONContext: wrong context")
+			http.Error(w, "fillSingleJSONContext: wrong context", http.StatusInternalServerError)
+			return
 		}
-
-		defer func() {
-			closer, ok := reader.(io.Closer)
-			if ok {
-				closer.Close()
-			}
-		}()
 
 		metricContext := &model.Metrics{}
 		metricsContext.requestMetrics = append(metricsContext.requestMetrics, metricContext)
 
-		err := json.NewDecoder(reader).Decode(metricContext)
+		err := json.Unmarshal(metricsContext.body, metricContext)
 		if err != nil {
 			http.Error(w, logger.WrapError("unmarhsal json context", err).Error(), http.StatusBadRequest)
 			return
@@ -233,27 +266,14 @@ func fillSingleJSONContext(next http.Handler) http.Handler {
 func fillMultiJSONContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, metricsContext := ensureMetricsContext(r)
-		var reader io.Reader
-		if r.Header.Get(`Content-Encoding`) == `gzip` {
-			gz, err := gzip.NewReader(r.Body)
-			if err != nil {
-				http.Error(w, logger.WrapError("create gzip reader", err).Error(), http.StatusInternalServerError)
-				return
-			}
-			reader = gz
-		} else {
-			reader = r.Body
+		if metricsContext.body == nil {
+			logger.Error("fillMultiJSONContext: wrong context")
+			http.Error(w, "fillMultiJSONContext: wrong context", http.StatusInternalServerError)
+			return
 		}
 
-		defer func() {
-			closer, ok := reader.(io.Closer)
-			if ok {
-				closer.Close()
-			}
-		}()
-
 		metricsContext.requestMetrics = []*model.Metrics{}
-		err := json.NewDecoder(reader).Decode(&metricsContext.requestMetrics)
+		err := json.Unmarshal(metricsContext.body, &metricsContext.requestMetrics)
 		if err != nil {
 			http.Error(w, logger.WrapError("unmarshal request metrics", err).Error(), http.StatusBadRequest)
 			return

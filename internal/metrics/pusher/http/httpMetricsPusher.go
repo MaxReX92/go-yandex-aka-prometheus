@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
@@ -27,13 +28,14 @@ type metricsPusherConfig interface {
 type httpMetricsPusher struct {
 	converter        *model.MetricsConverter
 	client           http.Client
+	encryptor        crypto.Encryptor
 	metricsServerURL string
 	parallelLimit    int
 	pushTimeout      time.Duration
 }
 
 // NewMetricsPusher create new instance of http metrics pusher.
-func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter) (pusher.MetricsPusher, error) {
+func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
 		return nil, logger.WrapError("normalize url", err)
@@ -42,6 +44,7 @@ func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConver
 	return &httpMetricsPusher{
 		parallelLimit:    config.ParallelLimit(),
 		client:           http.Client{},
+		encryptor:        encryptor,
 		metricsServerURL: serverURL.String(),
 		pushTimeout:      config.PushMetricsTimeout(),
 		converter:        converter,
@@ -94,13 +97,22 @@ func (p *httpMetricsPusher) pushMetrics(ctx context.Context, metricsList []metri
 		modelMetrics[i] = modelMetric
 	}
 
-	var buffer bytes.Buffer
-	err := json.NewEncoder(&buffer).Encode(modelMetrics)
+	buffer := &bytes.Buffer{}
+	err := json.NewEncoder(buffer).Encode(modelMetrics)
 	if err != nil {
 		return logger.WrapError("serialize model request", err)
 	}
 
-	request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, p.metricsServerURL+"/updates", &buffer)
+	if p.encryptor != nil {
+		encrypted, err := p.encryptor.Encrypt(buffer.Bytes())
+		if err != nil {
+			return logger.WrapError("encrypt message", err)
+		}
+
+		buffer = bytes.NewBuffer(encrypted)
+	}
+
+	request, err := http.NewRequestWithContext(pushCtx, http.MethodPost, p.metricsServerURL+"/updates", buffer)
 	if err != nil {
 		return logger.WrapError("create push request", err)
 	}
