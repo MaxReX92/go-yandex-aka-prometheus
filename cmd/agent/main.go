@@ -2,11 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/caarlos0/env/v7"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
@@ -16,6 +22,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/runtime"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/pkg/runner"
 )
 
 var (
@@ -29,13 +36,15 @@ var (
 )
 
 type config struct {
-	Key                   string `env:"KEY"`
-	ServerURL             string `env:"ADDRESS"`
+	ConfigPath            string `env:"CONFIG"`
+	CryptoKey             string `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
+	Key                   string `env:"KEY" json:"key,omitempty"`
+	ServerURL             string `env:"ADDRESS" json:"address,omitempty"`
 	CollectMetricsList    []string
-	PushRateLimit         int           `env:"RATE_LIMIT"`
-	PushTimeout           time.Duration `env:"PUSH_TIMEOUT"`
-	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL"`
-	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL"`
+	PushRateLimit         int           `env:"RATE_LIMIT" json:"rate_limit,omitempty" `
+	PushTimeout           time.Duration `env:"PUSH_TIMEOUT" json:"push_timeout,omitempty"`
+	SendMetricsInterval   time.Duration `env:"REPORT_INTERVAL" json:"report_interval,omitempty"`
+	UpdateMetricsInterval time.Duration `env:"POLL_INTERVAL" json:"poll_interval,omitempty"`
 }
 
 func main() {
@@ -48,9 +57,21 @@ func main() {
 		panic(logger.WrapError("initialize config", err))
 	}
 
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	metricPusher, err := http.NewMetricsPusher(conf, converter)
+
+	var encryptor crypto.Encryptor
+	if conf.CryptoKey != "" {
+		encryptor, err = rsa.NewEncryptor(conf.CryptoKey)
+		if err != nil {
+			panic(logger.WrapError("create encryptor", err))
+		}
+	}
+
+	metricPusher, err := http.NewMetricsPusher(conf, converter, encryptor)
 	if err != nil {
 		panic(logger.WrapError("create new metrics pusher", err))
 	}
@@ -63,16 +84,29 @@ func main() {
 		customMetricsProvider,
 		gopsutilMetricsProvider,
 	)
-	getMetricsWorker := worker.NewPeriodicWorker(aggregateMetricsProvider.Update)
-	pushMetricsWorker := worker.NewPeriodicWorker(func(workerContext context.Context) error {
+	getMetricsWorker := worker.NewPeriodicWorker(conf.UpdateMetricsInterval, aggregateMetricsProvider.Update)
+	pushMetricsWorker := worker.NewPeriodicWorker(conf.SendMetricsInterval, func(workerContext context.Context) error {
 		return metricPusher.Push(workerContext, aggregateMetricsProvider.GetMetrics())
 	})
+	multiRunner := runner.NewMultiWorker(&getMetricsWorker, &pushMetricsWorker)
+	gracefulRunner := runner.NewGracefulRunner(multiRunner)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go getMetricsWorker.StartWork(ctx, conf.UpdateMetricsInterval)
-	pushMetricsWorker.StartWork(ctx, conf.SendMetricsInterval)
+	gracefulRunner.Start(ctx)
+
+	// shutdown
+	select {
+	case err = <-gracefulRunner.Error():
+		err = logger.WrapError("start application", err)
+	case <-interrupt:
+		err = gracefulRunner.Stop(ctx)
+	}
+
+	if err != nil {
+		logger.ErrorObj(err)
+	}
 }
 
 func createConfig() (*config, error) {
@@ -106,6 +140,9 @@ func createConfig() (*config, error) {
 		"TotalAlloc",
 	}}
 
+	flag.StringVar(&conf.ConfigPath, "c", "", "Json config file path")
+	flag.StringVar(&conf.ConfigPath, "config", "", "Json config file path")
+	flag.StringVar(&conf.CryptoKey, "crypto-key", "", "Agent public crypto key path")
 	flag.StringVar(&conf.Key, "k", "", "Signer secret key")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Metrics server URL")
 	flag.IntVar(&conf.PushRateLimit, "l", defaultPushRateLimit, "Push metrics parallel workers limit")
@@ -115,7 +152,23 @@ func createConfig() (*config, error) {
 	flag.Parse()
 
 	err := env.Parse(conf)
-	return conf, err
+	if err != nil {
+		return nil, logger.WrapError("parse flags", err)
+	}
+
+	if conf.ConfigPath != "" {
+		content, err := os.ReadFile(conf.ConfigPath)
+		if err != nil {
+			return nil, logger.WrapError("read json config file", err)
+		}
+
+		err = json.Unmarshal(content, conf)
+		if err != nil {
+			return nil, logger.WrapError("unmarshal json config file", err)
+		}
+	}
+
+	return conf, nil
 }
 
 func (c *config) MetricsList() []string {
