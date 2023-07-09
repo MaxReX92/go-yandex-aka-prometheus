@@ -1,4 +1,4 @@
-package server
+package http
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -158,7 +159,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil, nil)
+			router := createRouter(converter, nil, nil, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -407,7 +408,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
 			converter := model.NewMetricsConverter(conf, signer)
-			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil, nil)
+			router := createRouter(converter, nil, nil, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -428,7 +429,8 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				assert.Equal(t, "Metric not found\n", string(body))
+				assert.Equal(t, fmt.Sprintf("failed to get metric value: failed to get metric with type '%s' and name '%s': metric not found\n",
+					tt.metricType, tt.metricName), string(body))
 			}
 		})
 	}
@@ -509,7 +511,7 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 			metricList = append(metricList, createGaugeMetric(requestObj.ID, value))
 			expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, &value)
 		default:
-			expected = expectedNotFoundMessage("Metric not found\n")
+			expected = expectedNotFoundMessage("failed to get metric value: failed to get metric with type 'test' and name 'testMetricName': metric not found\n")
 		}
 
 		t.Run("json_"+metricType+"_metricType", func(t *testing.T) {
@@ -645,7 +647,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	conf := &testConf{}
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
-	router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil, nil)
+	router := createRouter(converter, nil, nil, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 	router.ServeHTTP(w, request)
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}

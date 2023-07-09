@@ -1,4 +1,4 @@
-package server
+package http
 
 import (
 	"compress/gzip"
@@ -10,16 +10,14 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
@@ -57,16 +55,14 @@ type Server struct {
 }
 
 func New(conf ServerConfig,
-	metricsStorage storage.MetricsStorage,
 	converter *model.MetricsConverter,
-	htmlPageBuilder html.PageBuilder,
-	dbStorage database.DataBase,
 	decryptor crypto.Decryptor,
+	requestHandler server.RequestHandler,
 ) *Server {
 	return &Server{
 		srv: &http.Server{
 			Addr:    conf.ListenURL(),
-			Handler: createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage, decryptor, conf.ClientsTrustedSubnet()),
+			Handler: createRouter(converter, decryptor, conf.ClientsTrustedSubnet(), requestHandler),
 		},
 	}
 }
@@ -82,12 +78,10 @@ func (s *Server) Stop(ctx context.Context) error {
 }
 
 func createRouter(
-	metricsStorage storage.MetricsStorage,
 	converter *model.MetricsConverter,
-	htmlPageBuilder html.PageBuilder,
-	dbStorage database.DataBase,
 	decryptor crypto.Decryptor,
 	clientSubnet *net.IPNet,
+	requestHandler server.RequestHandler,
 ) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
@@ -97,11 +91,11 @@ func createRouter(
 	}
 	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))
 	router.Route("/update", func(r chi.Router) {
-		r.With(decrypt(decryptor), fillSingleJSONContext, updateMetrics(metricsStorage, converter)).
+		r.With(decrypt(decryptor), fillSingleJSONContext, updateMetrics(requestHandler, converter)).
 			Post("/", successSingleJSONResponse())
-		r.With(fillCommonURLContext, fillGaugeURLContext, updateMetrics(metricsStorage, converter)).
+		r.With(fillCommonURLContext, fillGaugeURLContext, updateMetrics(requestHandler, converter)).
 			Post("/gauge/{metricName}/{metricValue}", successURLResponse())
-		r.With(fillCommonURLContext, fillCounterURLContext, updateMetrics(metricsStorage, converter)).
+		r.With(fillCommonURLContext, fillCounterURLContext, updateMetrics(requestHandler, converter)).
 			Post("/counter/{metricName}/{metricValue}", successURLResponse())
 		r.Post("/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
 			message := fmt.Sprintf("unknown metric type: %s", chi.URLParam(r, "metricType"))
@@ -111,20 +105,20 @@ func createRouter(
 	})
 
 	router.Route("/updates", func(r chi.Router) {
-		r.With(decrypt(decryptor), fillMultiJSONContext, updateMetrics(metricsStorage, converter)).
+		r.With(decrypt(decryptor), fillMultiJSONContext, updateMetrics(requestHandler, converter)).
 			Post("/", successMultiJSONResponse())
 	})
 
 	router.Route("/value", func(r chi.Router) {
-		r.With(decrypt(decryptor), fillSingleJSONContext, fillMetricValues(metricsStorage, converter)).
+		r.With(decrypt(decryptor), fillSingleJSONContext, fillMetricValues(requestHandler, converter)).
 			Post("/", successSingleJSONResponse())
 
-		r.With(fillCommonURLContext, fillMetricValues(metricsStorage, converter)).
+		r.With(fillCommonURLContext, fillMetricValues(requestHandler, converter)).
 			Get("/{metricType}/{metricName}", successURLValueResponse(converter))
 	})
 
 	router.Route("/ping", func(r chi.Router) {
-		r.Get("/", handleDBPing(dbStorage))
+		r.Get("/", handleDBPing(requestHandler))
 	})
 
 	router.Route("/debug", func(r chi.Router) {
@@ -132,8 +126,8 @@ func createRouter(
 	})
 
 	router.Route("/", func(r chi.Router) {
-		r.Get("/", handleMetricsPage(htmlPageBuilder, metricsStorage))
-		r.Get("/metrics", handleMetricsPage(htmlPageBuilder, metricsStorage))
+		r.Get("/", handleMetricsPage(requestHandler))
+		r.Get("/metrics", handleMetricsPage(requestHandler))
 	})
 
 	return router
@@ -306,7 +300,7 @@ func fillMultiJSONContext(next http.Handler) http.Handler {
 	})
 }
 
-func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
+func updateMetrics(requestHandler server.RequestHandler, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, metricsContext := ensureMetricsContext(r)
@@ -327,7 +321,7 @@ func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConve
 				metricsList[i] = metric
 			}
 
-			resultMetrics, err := storage.AddMetricValues(ctx, metricsList)
+			resultMetrics, err := requestHandler.UpdateMetricValues(ctx, metricsList)
 			if err != nil {
 				http.Error(w, logger.WrapError("update metric", err).Error(), http.StatusInternalServerError)
 				return
@@ -350,16 +344,22 @@ func updateMetrics(storage storage.MetricsStorage, converter *model.MetricsConve
 	}
 }
 
-func fillMetricValues(storage storage.MetricsStorage, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
+func fillMetricValues(requestHandler server.RequestHandler, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, metricsContext := ensureMetricsContext(r)
 			metricsContext.resultMetrics = make([]*model.Metrics, len(metricsContext.requestMetrics))
 			for i, metricContext := range metricsContext.requestMetrics {
-				metric, err := storage.GetMetric(ctx, metricContext.MType, metricContext.ID)
+				metric, err := requestHandler.GetMetricValue(ctx, metricContext.MType, metricContext.ID)
 				if err != nil {
-					logger.ErrorFormat("Fail to get metric value: %v", err)
-					http.Error(w, "Metric not found", http.StatusNotFound)
+					var status int
+					if errors.Is(err, server.ErrMetricNotFound) {
+						status = http.StatusNotFound
+					} else {
+						status = http.StatusInternalServerError
+					}
+
+					http.Error(w, logger.WrapError("get metric value", err).Error(), status)
 					return
 				}
 
@@ -397,14 +397,14 @@ func successURLValueResponse(converter *model.MetricsConverter) func(w http.Resp
 	}
 }
 
-func handleMetricsPage(builder html.PageBuilder, storage storage.MetricsStorage) func(w http.ResponseWriter, r *http.Request) {
+func handleMetricsPage(requestHandler server.RequestHandler) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		values, err := storage.GetMetricValues(r.Context())
+		page, err := requestHandler.GetReportPage(r.Context())
 		if err != nil {
 			http.Error(w, logger.WrapError("get metric values", err).Error(), http.StatusInternalServerError)
 			return
 		}
-		successResponse(w, "text/html", builder.BuildMetricsPage(values))
+		successResponse(w, "text/html", page)
 	}
 }
 
@@ -466,13 +466,13 @@ func successResponse(w http.ResponseWriter, contentType string, message string) 
 	}
 }
 
-func handleDBPing(dbStorage database.DataBase) func(w http.ResponseWriter, r *http.Request) {
+func handleDBPing(requestHandler server.RequestHandler) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := dbStorage.Ping(r.Context())
+		err := requestHandler.Ping(r.Context())
 		if err == nil {
 			successResponse(w, "text/plain", "ok")
 		} else {
-			http.Error(w, logger.WrapError("ping database", err).Error(), http.StatusInternalServerError)
+			http.Error(w, logger.WrapError("ping", err).Error(), http.StatusInternalServerError)
 		}
 	}
 }

@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/handler"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/http"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
@@ -23,7 +25,6 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/db"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/file"
@@ -90,6 +91,7 @@ func main() {
 	signer := hash.NewSigner(conf)
 	converter := model.NewMetricsConverter(conf, signer)
 	htmlPageBuilder := html.NewSimplePageBuilder()
+	requestHandler := handler.NewHandler(base, htmlPageBuilder, storageStrategy)
 
 	var decryptor crypto.Decryptor
 	if conf.CryptoKey != "" {
@@ -99,8 +101,8 @@ func main() {
 		}
 	}
 
-	metricsServer := server.New(conf, storageStrategy, converter, htmlPageBuilder, base, decryptor)
-	runners := []runner.Runner{metricsServer}
+	httpMetricsServer := http.New(conf, converter, decryptor, requestHandler)
+	runners := []runner.Runner{httpMetricsServer}
 
 	if conf.Restore {
 		logger.Info("Restore metrics from backup")
