@@ -50,7 +50,7 @@ type ServerConfig interface {
 	ClientsTrustedSubnet() *net.IPNet
 }
 
-type Server struct {
+type httpServer struct {
 	srv *http.Server
 }
 
@@ -58,8 +58,8 @@ func New(conf ServerConfig,
 	converter *model.MetricsConverter,
 	decryptor crypto.Decryptor,
 	requestHandler server.RequestHandler,
-) *Server {
-	return &Server{
+) *httpServer {
+	return &httpServer{
 		srv: &http.Server{
 			Addr:    conf.ListenURL(),
 			Handler: createRouter(converter, decryptor, conf.ClientsTrustedSubnet(), requestHandler),
@@ -67,12 +67,12 @@ func New(conf ServerConfig,
 	}
 }
 
-func (s *Server) Start(ctx context.Context) error {
+func (s *httpServer) Start(ctx context.Context) error {
 	logger.Info("Start web service")
 	return s.srv.ListenAndServe()
 }
 
-func (s *Server) Stop(ctx context.Context) error {
+func (s *httpServer) Stop(ctx context.Context) error {
 	logger.Info("Stopping web service")
 	return s.srv.Shutdown(ctx)
 }

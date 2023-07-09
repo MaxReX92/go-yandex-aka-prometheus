@@ -527,7 +527,7 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 }
 
 func Example() {
-	// Server configuration.
+	// httpServer configuration.
 	ctx := context.Background()
 	serverURL := "http://localhost:8080"
 
