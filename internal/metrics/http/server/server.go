@@ -1,4 +1,4 @@
-package http
+package server
 
 import (
 	"compress/gzip"
@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -55,7 +56,7 @@ type httpServer struct {
 }
 
 func New(conf ServerConfig,
-	converter *model.MetricsConverter,
+	converter *metricsHttp.MetricsConverter,
 	decryptor crypto.Decryptor,
 	requestHandler server.RequestHandler,
 ) *httpServer {
@@ -78,7 +79,7 @@ func (s *httpServer) Stop(ctx context.Context) error {
 }
 
 func createRouter(
-	converter *model.MetricsConverter,
+	converter *metricsHttp.MetricsConverter,
 	decryptor crypto.Decryptor,
 	clientSubnet *net.IPNet,
 	requestHandler server.RequestHandler,
@@ -300,7 +301,7 @@ func fillMultiJSONContext(next http.Handler) http.Handler {
 	})
 }
 
-func updateMetrics(requestHandler server.RequestHandler, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
+func updateMetrics(requestHandler server.RequestHandler, converter *metricsHttp.MetricsConverter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, metricsContext := ensureMetricsContext(r)
@@ -344,7 +345,7 @@ func updateMetrics(requestHandler server.RequestHandler, converter *model.Metric
 	}
 }
 
-func fillMetricValues(requestHandler server.RequestHandler, converter *model.MetricsConverter) func(next http.Handler) http.Handler {
+func fillMetricValues(requestHandler server.RequestHandler, converter *metricsHttp.MetricsConverter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, metricsContext := ensureMetricsContext(r)
@@ -377,7 +378,7 @@ func fillMetricValues(requestHandler server.RequestHandler, converter *model.Met
 	}
 }
 
-func successURLValueResponse(converter *model.MetricsConverter) func(w http.ResponseWriter, r *http.Request) {
+func successURLValueResponse(converter *metricsHttp.MetricsConverter) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, metricsContext := ensureMetricsContext(r)
 

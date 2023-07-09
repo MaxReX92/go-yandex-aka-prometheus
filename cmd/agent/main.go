@@ -9,18 +9,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http/client"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/custom"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/gopsutil"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/runtime"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/pkg/runner"
 )
@@ -61,7 +61,7 @@ func main() {
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	signer := hash.NewSigner(conf)
-	converter := model.NewMetricsConverter(conf, signer)
+	converter := http.NewMetricsConverter(conf, signer)
 
 	var encryptor crypto.Encryptor
 	if conf.CryptoKey != "" {
@@ -71,7 +71,7 @@ func main() {
 		}
 	}
 
-	metricPusher, err := http.NewMetricsPusher(conf, converter, encryptor)
+	metricPusher, err := client.NewMetricsPusher(conf, converter, encryptor)
 	if err != nil {
 		panic(logger.WrapError("create new metrics pusher", err))
 	}

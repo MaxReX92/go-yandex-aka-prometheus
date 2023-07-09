@@ -1,4 +1,4 @@
-package http
+package server
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -158,7 +159,7 @@ func Test_UpdateUrlRequest(t *testing.T) {
 
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
-			converter := model.NewMetricsConverter(conf, signer)
+			converter := metricsHttp.NewMetricsConverter(conf, signer)
 			router := createRouter(converter, nil, nil, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 			router.ServeHTTP(w, request)
 			actual := w.Result()
@@ -407,7 +408,7 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
-			converter := model.NewMetricsConverter(conf, signer)
+			converter := metricsHttp.NewMetricsConverter(conf, signer)
 			router := createRouter(converter, nil, nil, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 			router.ServeHTTP(w, request)
 			actual := w.Result()
@@ -646,7 +647,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 
 	conf := &testConf{}
 	signer := hash.NewSigner(conf)
-	converter := model.NewMetricsConverter(conf, signer)
+	converter := metricsHttp.NewMetricsConverter(conf, signer)
 	router := createRouter(converter, nil, nil, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 	router.ServeHTTP(w, request)
 	actual := w.Result()

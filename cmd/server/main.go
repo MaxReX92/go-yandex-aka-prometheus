@@ -12,8 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http/server"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/handler"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/http"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
@@ -24,7 +25,6 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/db"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/file"
@@ -89,7 +89,7 @@ func main() {
 	defer storageStrategy.Close()
 
 	signer := hash.NewSigner(conf)
-	converter := model.NewMetricsConverter(conf, signer)
+	converter := http.NewMetricsConverter(conf, signer)
 	htmlPageBuilder := html.NewSimplePageBuilder()
 	requestHandler := handler.NewHandler(base, htmlPageBuilder, storageStrategy)
 
@@ -101,7 +101,7 @@ func main() {
 		}
 	}
 
-	httpMetricsServer := http.New(conf, converter, decryptor, requestHandler)
+	httpMetricsServer := server.New(conf, converter, decryptor, requestHandler)
 	runners := []runner.Runner{httpMetricsServer}
 
 	if conf.Restore {

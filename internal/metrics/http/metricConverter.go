@@ -1,4 +1,4 @@
-package model
+package http
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
@@ -29,8 +30,8 @@ func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *Metr
 }
 
 // ToModelMetric convert internal dsl metric to model metric.
-func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error) {
-	modelMetric := &Metrics{
+func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*model.Metrics, error) {
+	modelMetric := &model.Metrics{
 		ID:    metric.GetName(),
 		MType: metric.GetType(),
 	}
@@ -59,7 +60,7 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error
 }
 
 // FromModelMetric convert model metric to internal dsl metric.
-func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric, error) {
+func (c *MetricsConverter) FromModelMetric(modelMetric *model.Metrics) (metrics.Metric, error) {
 	var metric metrics.Metric
 	var value float64
 

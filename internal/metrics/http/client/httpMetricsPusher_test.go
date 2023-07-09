@@ -1,4 +1,4 @@
-package http
+package client
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/stretchr/testify/assert"
 
 	internalHash "github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
@@ -126,7 +127,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 				parallelLimit:    10,
 			}
 			signer := internalHash.NewSigner(conf)
-			converter := model.NewMetricsConverter(conf, signer)
+			converter := metricsHttp.NewMetricsConverter(conf, signer)
 			pusher, err := NewMetricsPusher(conf, converter, nil)
 			assert.NoError(t, err)
 

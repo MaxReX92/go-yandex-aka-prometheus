@@ -1,4 +1,4 @@
-package http
+package client
 
 import (
 	"bytes"
@@ -11,13 +11,14 @@ import (
 	"net/url"
 	"time"
 
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 )
 
 type metricsPusherConfig interface {
@@ -27,7 +28,7 @@ type metricsPusherConfig interface {
 }
 
 type httpMetricsPusher struct {
-	converter        *model.MetricsConverter
+	converter        *metricsHttp.MetricsConverter
 	client           http.Client
 	encryptor        crypto.Encryptor
 	metricsServerURL string
@@ -37,7 +38,7 @@ type httpMetricsPusher struct {
 }
 
 // NewMetricsPusher create new instance of http metrics pusher.
-func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
+func NewMetricsPusher(config metricsPusherConfig, converter *metricsHttp.MetricsConverter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
 		return nil, logger.WrapError("normalize url", err)
