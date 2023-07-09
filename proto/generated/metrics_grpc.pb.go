@@ -19,200 +19,200 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	MetricService_GetValue_FullMethodName     = "/com.github.MaxReX92.go_yandex_aka_prometheus.MetricService/GetValue"
-	MetricService_UpdateValues_FullMethodName = "/com.github.MaxReX92.go_yandex_aka_prometheus.MetricService/UpdateValues"
-	MetricService_Ping_FullMethodName         = "/com.github.MaxReX92.go_yandex_aka_prometheus.MetricService/Ping"
-	MetricService_Report_FullMethodName       = "/com.github.MaxReX92.go_yandex_aka_prometheus.MetricService/Report"
+	MetricServer_GetValue_FullMethodName     = "/com.github.MaxReX92.go_yandex_aka_prometheus.MetricServer/GetValue"
+	MetricServer_UpdateValues_FullMethodName = "/com.github.MaxReX92.go_yandex_aka_prometheus.MetricServer/UpdateValues"
+	MetricServer_Ping_FullMethodName         = "/com.github.MaxReX92.go_yandex_aka_prometheus.MetricServer/Ping"
+	MetricServer_Report_FullMethodName       = "/com.github.MaxReX92.go_yandex_aka_prometheus.MetricServer/Report"
 )
 
-// MetricServiceClient is the client API for MetricService service.
+// MetricServerClient is the client API for MetricServer service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type MetricServiceClient interface {
+type MetricServerClient interface {
 	GetValue(ctx context.Context, in *MetricsRequest, opts ...grpc.CallOption) (*MetricsResponse, error)
 	UpdateValues(ctx context.Context, in *MetricsRequest, opts ...grpc.CallOption) (*MetricsResponse, error)
 	Ping(ctx context.Context, in *Nothing, opts ...grpc.CallOption) (*Response, error)
 	Report(ctx context.Context, in *Nothing, opts ...grpc.CallOption) (*ReportResponse, error)
 }
 
-type metricServiceClient struct {
+type metricServerClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewMetricServiceClient(cc grpc.ClientConnInterface) MetricServiceClient {
-	return &metricServiceClient{cc}
+func NewMetricServerClient(cc grpc.ClientConnInterface) MetricServerClient {
+	return &metricServerClient{cc}
 }
 
-func (c *metricServiceClient) GetValue(ctx context.Context, in *MetricsRequest, opts ...grpc.CallOption) (*MetricsResponse, error) {
+func (c *metricServerClient) GetValue(ctx context.Context, in *MetricsRequest, opts ...grpc.CallOption) (*MetricsResponse, error) {
 	out := new(MetricsResponse)
-	err := c.cc.Invoke(ctx, MetricService_GetValue_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, MetricServer_GetValue_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *metricServiceClient) UpdateValues(ctx context.Context, in *MetricsRequest, opts ...grpc.CallOption) (*MetricsResponse, error) {
+func (c *metricServerClient) UpdateValues(ctx context.Context, in *MetricsRequest, opts ...grpc.CallOption) (*MetricsResponse, error) {
 	out := new(MetricsResponse)
-	err := c.cc.Invoke(ctx, MetricService_UpdateValues_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, MetricServer_UpdateValues_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *metricServiceClient) Ping(ctx context.Context, in *Nothing, opts ...grpc.CallOption) (*Response, error) {
+func (c *metricServerClient) Ping(ctx context.Context, in *Nothing, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
-	err := c.cc.Invoke(ctx, MetricService_Ping_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, MetricServer_Ping_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *metricServiceClient) Report(ctx context.Context, in *Nothing, opts ...grpc.CallOption) (*ReportResponse, error) {
+func (c *metricServerClient) Report(ctx context.Context, in *Nothing, opts ...grpc.CallOption) (*ReportResponse, error) {
 	out := new(ReportResponse)
-	err := c.cc.Invoke(ctx, MetricService_Report_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, MetricServer_Report_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// MetricServiceServer is the server API for MetricService service.
-// All implementations must embed UnimplementedMetricServiceServer
+// MetricServerServer is the server API for MetricServer service.
+// All implementations must embed UnimplementedMetricServerServer
 // for forward compatibility
-type MetricServiceServer interface {
+type MetricServerServer interface {
 	GetValue(context.Context, *MetricsRequest) (*MetricsResponse, error)
 	UpdateValues(context.Context, *MetricsRequest) (*MetricsResponse, error)
 	Ping(context.Context, *Nothing) (*Response, error)
 	Report(context.Context, *Nothing) (*ReportResponse, error)
-	mustEmbedUnimplementedMetricServiceServer()
+	mustEmbedUnimplementedMetricServerServer()
 }
 
-// UnimplementedMetricServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedMetricServiceServer struct {
+// UnimplementedMetricServerServer must be embedded to have forward compatible implementations.
+type UnimplementedMetricServerServer struct {
 }
 
-func (UnimplementedMetricServiceServer) GetValue(context.Context, *MetricsRequest) (*MetricsResponse, error) {
+func (UnimplementedMetricServerServer) GetValue(context.Context, *MetricsRequest) (*MetricsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValue not implemented")
 }
-func (UnimplementedMetricServiceServer) UpdateValues(context.Context, *MetricsRequest) (*MetricsResponse, error) {
+func (UnimplementedMetricServerServer) UpdateValues(context.Context, *MetricsRequest) (*MetricsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateValues not implemented")
 }
-func (UnimplementedMetricServiceServer) Ping(context.Context, *Nothing) (*Response, error) {
+func (UnimplementedMetricServerServer) Ping(context.Context, *Nothing) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedMetricServiceServer) Report(context.Context, *Nothing) (*ReportResponse, error) {
+func (UnimplementedMetricServerServer) Report(context.Context, *Nothing) (*ReportResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Report not implemented")
 }
-func (UnimplementedMetricServiceServer) mustEmbedUnimplementedMetricServiceServer() {}
+func (UnimplementedMetricServerServer) mustEmbedUnimplementedMetricServerServer() {}
 
-// UnsafeMetricServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to MetricServiceServer will
+// UnsafeMetricServerServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MetricServerServer will
 // result in compilation errors.
-type UnsafeMetricServiceServer interface {
-	mustEmbedUnimplementedMetricServiceServer()
+type UnsafeMetricServerServer interface {
+	mustEmbedUnimplementedMetricServerServer()
 }
 
-func RegisterMetricServiceServer(s grpc.ServiceRegistrar, srv MetricServiceServer) {
-	s.RegisterService(&MetricService_ServiceDesc, srv)
+func RegisterMetricServerServer(s grpc.ServiceRegistrar, srv MetricServerServer) {
+	s.RegisterService(&MetricServer_ServiceDesc, srv)
 }
 
-func _MetricService_GetValue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MetricServer_GetValue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricServiceServer).GetValue(ctx, in)
+		return srv.(MetricServerServer).GetValue(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MetricService_GetValue_FullMethodName,
+		FullMethod: MetricServer_GetValue_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricServiceServer).GetValue(ctx, req.(*MetricsRequest))
+		return srv.(MetricServerServer).GetValue(ctx, req.(*MetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MetricService_UpdateValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MetricServer_UpdateValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricServiceServer).UpdateValues(ctx, in)
+		return srv.(MetricServerServer).UpdateValues(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MetricService_UpdateValues_FullMethodName,
+		FullMethod: MetricServer_UpdateValues_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricServiceServer).UpdateValues(ctx, req.(*MetricsRequest))
+		return srv.(MetricServerServer).UpdateValues(ctx, req.(*MetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MetricService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MetricServer_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Nothing)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricServiceServer).Ping(ctx, in)
+		return srv.(MetricServerServer).Ping(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MetricService_Ping_FullMethodName,
+		FullMethod: MetricServer_Ping_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricServiceServer).Ping(ctx, req.(*Nothing))
+		return srv.(MetricServerServer).Ping(ctx, req.(*Nothing))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MetricService_Report_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MetricServer_Report_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Nothing)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricServiceServer).Report(ctx, in)
+		return srv.(MetricServerServer).Report(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MetricService_Report_FullMethodName,
+		FullMethod: MetricServer_Report_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricServiceServer).Report(ctx, req.(*Nothing))
+		return srv.(MetricServerServer).Report(ctx, req.(*Nothing))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// MetricService_ServiceDesc is the grpc.ServiceDesc for MetricService service.
+// MetricServer_ServiceDesc is the grpc.ServiceDesc for MetricServer service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var MetricService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "com.github.MaxReX92.go_yandex_aka_prometheus.MetricService",
-	HandlerType: (*MetricServiceServer)(nil),
+var MetricServer_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "com.github.MaxReX92.go_yandex_aka_prometheus.MetricServer",
+	HandlerType: (*MetricServerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "GetValue",
-			Handler:    _MetricService_GetValue_Handler,
+			Handler:    _MetricServer_GetValue_Handler,
 		},
 		{
 			MethodName: "UpdateValues",
-			Handler:    _MetricService_UpdateValues_Handler,
+			Handler:    _MetricServer_UpdateValues_Handler,
 		},
 		{
 			MethodName: "Ping",
-			Handler:    _MetricService_Ping_Handler,
+			Handler:    _MetricServer_Ping_Handler,
 		},
 		{
 			MethodName: "Report",
-			Handler:    _MetricService_Report_Handler,
+			Handler:    _MetricServer_Report_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -44,7 +44,7 @@ message MetricsResponse {
   optional string error = 3;
 }
 
-service MetricService {
+service MetricServer {
   rpc GetValue(MetricsRequest) returns (MetricsResponse) {}
   rpc UpdateValues(MetricsRequest) returns (MetricsResponse) {}
 
