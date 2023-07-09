@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package com.github.MaxReX92.go_yandex_aka_prometheus;
+option go_package = "proto/generated";
+
+enum Status {
+  OK = 0;
+  ERROR = 1;
+}
+
+enum MetricType {
+  GAUGE = 0;
+  COUNTER = 1;
+}
+
+message Nothing {}
+
+message Metric {
+  string name = 1;
+  MetricType type = 2;
+  optional int64 delta  = 3;
+  optional double value = 4;
+  optional bytes hash = 5;
+}
+
+message Response {
+  Status status = 1;
+  optional string error = 2;
+}
+
+message ReportResponse {
+  Status status = 1;
+  optional string report = 2;
+  optional string error = 3;
+}
+
+message MetricsRequest {
+  repeated Metric metrics = 1;
+}
+
+message MetricsResponse {
+  Status status = 1;
+  repeated Metric result = 2;
+  optional string error = 3;
+}
+
+service MetricService {
+  rpc GetValue(MetricsRequest) returns (MetricsResponse) {}
+  rpc UpdateValues(MetricsRequest) returns (MetricsResponse) {}
+
+  rpc Ping(Nothing) returns (Response) {}
+  rpc Report(Nothing) returns (ReportResponse) {}
+}
