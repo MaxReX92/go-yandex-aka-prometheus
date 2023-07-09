@@ -56,7 +56,7 @@ type httpServer struct {
 }
 
 func New(conf ServerConfig,
-	converter *metricsHttp.MetricsConverter,
+	converter *metricsHttp.Converter,
 	decryptor crypto.Decryptor,
 	requestHandler server.RequestHandler,
 ) *httpServer {
@@ -79,7 +79,7 @@ func (s *httpServer) Stop(ctx context.Context) error {
 }
 
 func createRouter(
-	converter *metricsHttp.MetricsConverter,
+	converter *metricsHttp.Converter,
 	decryptor crypto.Decryptor,
 	clientSubnet *net.IPNet,
 	requestHandler server.RequestHandler,
@@ -301,7 +301,7 @@ func fillMultiJSONContext(next http.Handler) http.Handler {
 	})
 }
 
-func updateMetrics(requestHandler server.RequestHandler, converter *metricsHttp.MetricsConverter) func(next http.Handler) http.Handler {
+func updateMetrics(requestHandler server.RequestHandler, converter *metricsHttp.Converter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, metricsContext := ensureMetricsContext(r)
@@ -345,7 +345,7 @@ func updateMetrics(requestHandler server.RequestHandler, converter *metricsHttp.
 	}
 }
 
-func fillMetricValues(requestHandler server.RequestHandler, converter *metricsHttp.MetricsConverter) func(next http.Handler) http.Handler {
+func fillMetricValues(requestHandler server.RequestHandler, converter *metricsHttp.Converter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, metricsContext := ensureMetricsContext(r)
@@ -378,7 +378,7 @@ func fillMetricValues(requestHandler server.RequestHandler, converter *metricsHt
 	}
 }
 
-func successURLValueResponse(converter *metricsHttp.MetricsConverter) func(w http.ResponseWriter, r *http.Request) {
+func successURLValueResponse(converter *metricsHttp.Converter) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, metricsContext := ensureMetricsContext(r)
 

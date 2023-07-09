@@ -28,7 +28,7 @@ type metricsPusherConfig interface {
 }
 
 type httpMetricsPusher struct {
-	converter        *metricsHttp.MetricsConverter
+	converter        *metricsHttp.Converter
 	client           http.Client
 	encryptor        crypto.Encryptor
 	metricsServerURL string
@@ -38,7 +38,7 @@ type httpMetricsPusher struct {
 }
 
 // NewMetricsPusher create new instance of http metrics pusher.
-func NewMetricsPusher(config metricsPusherConfig, converter *metricsHttp.MetricsConverter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
+func NewMetricsPusher(config metricsPusherConfig, converter *metricsHttp.Converter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
 		return nil, logger.WrapError("normalize url", err)

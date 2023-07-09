@@ -15,22 +15,22 @@ type MetricsConverterConfig interface {
 	SignMetrics() bool
 }
 
-// MetricsConverter provides model converter functionality.
-type MetricsConverter struct {
+// Converter provides model converter functionality.
+type Converter struct {
 	signer      *hash.Signer
 	signMetrics bool
 }
 
-// NewMetricsConverter create new instance of MetricsConverter.
-func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *MetricsConverter {
-	return &MetricsConverter{
+// NewMetricsConverter create new instance of Converter.
+func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *Converter {
+	return &Converter{
 		signMetrics: conf.SignMetrics(),
 		signer:      signer,
 	}
 }
 
 // ToModelMetric convert internal dsl metric to model metric.
-func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*model.Metrics, error) {
+func (c *Converter) ToModelMetric(metric metrics.Metric) (*model.Metrics, error) {
 	modelMetric := &model.Metrics{
 		ID:    metric.GetName(),
 		MType: metric.GetType(),
@@ -60,7 +60,7 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*model.Metrics,
 }
 
 // FromModelMetric convert model metric to internal dsl metric.
-func (c *MetricsConverter) FromModelMetric(modelMetric *model.Metrics) (metrics.Metric, error) {
+func (c *Converter) FromModelMetric(modelMetric *model.Metrics) (metrics.Metric, error) {
 	var metric metrics.Metric
 	var value float64
 
