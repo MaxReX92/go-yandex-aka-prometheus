@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -48,6 +49,7 @@ type metricsRequestContext struct {
 
 type ServerConfig interface {
 	ListenURL() string
+	ClientsTrustedSubnet() *net.IPNet
 }
 
 type Server struct {
@@ -64,7 +66,7 @@ func New(conf ServerConfig,
 	return &Server{
 		srv: &http.Server{
 			Addr:    conf.ListenURL(),
-			Handler: createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage, decryptor),
+			Handler: createRouter(metricsStorage, converter, htmlPageBuilder, dbStorage, decryptor, conf.ClientsTrustedSubnet()),
 		},
 	}
 }
@@ -85,9 +87,14 @@ func createRouter(
 	htmlPageBuilder html.PageBuilder,
 	dbStorage database.DataBase,
 	decryptor crypto.Decryptor,
+	clientSubnet *net.IPNet,
 ) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
+	if clientSubnet != nil {
+		router.Use(middleware.RealIP)
+		router.Use(checkClientSubnet(clientSubnet))
+	}
 	router.Use(middleware.Compress(gzip.BestSpeed, compressContentTypes...))
 	router.Route("/update", func(r chi.Router) {
 		r.With(decrypt(decryptor), fillSingleJSONContext, updateMetrics(metricsStorage, converter)).
@@ -480,4 +487,26 @@ func ensureMetricsContext(r *http.Request) (context.Context, *metricsRequestCont
 	}
 
 	return ctx, metricsContext
+}
+
+func checkClientSubnet(clientSubnet *net.IPNet) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			clientIP := net.ParseIP(r.RemoteAddr)
+			if clientIP == nil {
+				logger.Error("failed to receive client ip")
+				http.Error(w, "failed to receive client ip", http.StatusForbidden)
+
+				return
+			}
+
+			if !clientSubnet.Contains(clientIP) {
+				logger.Error("client net not trusted")
+				http.Error(w, "client net not trusted", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

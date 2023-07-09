@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -194,4 +195,17 @@ func (c *config) SignMetrics() bool {
 
 func (c *config) GetConnectionString() string {
 	return c.DB
+}
+
+func (c *config) ClientsTrustedSubnet() *net.IPNet {
+	if c.TrustedSubnet == "" {
+		return nil
+	}
+
+	_, subnet, err := net.ParseCIDR(c.TrustedSubnet)
+	if err != nil {
+		panic(logger.WrapError("parse clients subnet connection string", err))
+	}
+
+	return subnet
 }
