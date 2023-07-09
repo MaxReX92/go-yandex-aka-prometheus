@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -30,6 +31,7 @@ type httpMetricsPusher struct {
 	client           http.Client
 	encryptor        crypto.Encryptor
 	metricsServerURL string
+	clientIP         string
 	parallelLimit    int
 	pushTimeout      time.Duration
 }
@@ -40,12 +42,17 @@ func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConver
 	if err != nil {
 		return nil, logger.WrapError("normalize url", err)
 	}
+	clientIP, err := getClientIP(serverURL)
+	if err != nil {
+		return nil, logger.WrapError("get client ip", err)
+	}
 
 	return &httpMetricsPusher{
 		parallelLimit:    config.ParallelLimit(),
 		client:           http.Client{},
 		encryptor:        encryptor,
 		metricsServerURL: serverURL.String(),
+		clientIP:         clientIP.String(),
 		pushTimeout:      config.PushMetricsTimeout(),
 		converter:        converter,
 	}, nil
@@ -117,6 +124,7 @@ func (p *httpMetricsPusher) pushMetrics(ctx context.Context, metricsList []metri
 		return logger.WrapError("create push request", err)
 	}
 	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-Real-IP", p.clientIP)
 
 	response, err := p.client.Do(request)
 	if err != nil {
@@ -166,4 +174,14 @@ func normalizeURL(urlStr string) (*url.URL, error) {
 	}
 
 	return result, nil
+}
+
+func getClientIP(serverUrl *url.URL) (net.IP, error) {
+	conn, err := net.Dial("udp", fmt.Sprintf("%s:80", serverUrl.Hostname()))
+	if err != nil {
+		return nil, logger.WrapError("open udp connection with server", err)
+	}
+	defer conn.Close()
+
+	return conn.LocalAddr().(*net.UDPAddr).IP, nil
 }
