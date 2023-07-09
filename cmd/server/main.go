@@ -47,6 +47,7 @@ type config struct {
 	DB            string        `env:"DATABASE_DSN" json:"database_dsn,omitempty"`
 	StoreInterval time.Duration `env:"STORE_INTERVAL" json:"store_interval,omitempty"`
 	Restore       bool          `env:"RESTORE" json:"restore,omitempty"`
+	TrustedSubnet string        `env:"TRUSTED_SUBNET" json:"trusted_subnet,omitempty"`
 }
 
 func main() {
@@ -143,6 +144,7 @@ func createConfig() (*config, error) {
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-dataBase.json", "Backup storage file path")
 	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")
+	flag.StringVar(&conf.TrustedSubnet, "t", "", "Clients trusted subnet")
 	flag.Parse()
 
 	err := env.Parse(conf)
