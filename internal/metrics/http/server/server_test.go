@@ -344,13 +344,14 @@ func Test_UpdatesJsonRequest(t *testing.T) {
 
 					var valueString string
 					var expected *callResult
-					if counter.ID == "" || gauge.ID == "" {
+					switch {
+					case counter.ID == "" || gauge.ID == "":
 						valueString = "no_name"
 						expected = expectedBadRequest("metric name is missed\n")
-					} else if counter.MType == "" || gauge.MType == "" {
+					case counter.MType == "" || gauge.MType == "":
 						valueString = "no_type"
 						expected = expectedBadRequest("metric types is missed\n")
-					} else {
+					default:
 						switch {
 						case counterMetricValue == nil && gaugeMetricValue == nil:
 							valueString = "counter_gauge_nil"

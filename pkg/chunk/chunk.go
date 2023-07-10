@@ -16,7 +16,7 @@ func SliceToChunks[T any](array []T, chunkSize int) [][]T {
 
 func ChanToChunks[T any](ch <-chan T, chunkSize int) [][]T {
 	var result [][]T //nolint:prealloc
-	var chunk []T
+	var chunk []T    //nolint:prealloc
 	for item := range ch {
 		chunk = append(chunk, item)
 		if len(chunk) < chunkSize {

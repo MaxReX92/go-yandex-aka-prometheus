@@ -241,7 +241,7 @@ func (t *testSignerConfig) GetKey() []byte {
 func (t *testHashHolder) GetHash(hash hash.Hash) ([]byte, error) {
 	var err error
 	if t.errorMessage != "" {
-		err = errors.New(t.errorMessage)
+		err = errors.New(t.errorMessage) //nolint:goerr113
 	}
 
 	return []byte(t.hash), err

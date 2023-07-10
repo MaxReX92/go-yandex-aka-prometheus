@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/test"
 )
 
 func TestGopsutilMetricsProvider_GetMetrics(t *testing.T) {
@@ -39,7 +40,6 @@ func TestGopsutilMetricsProvider_Update(t *testing.T) {
 
 	cpuChecked := false
 	for _, actualMetric := range actual {
-
 		name := actualMetric.GetName()
 		if name == "FreeMemory" || name == "TotalMemory" {
 			assert.NotEqual(t, actualMetric.GetStringValue(), "0")
