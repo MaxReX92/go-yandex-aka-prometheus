@@ -18,8 +18,8 @@ func ChanToChunks[T any](ch <-chan T, chunkSize int) [][]T {
 	var result [][]T //nolint:prealloc
 	var chunk []T
 	for item := range ch {
+		chunk = append(chunk, item)
 		if len(chunk) < chunkSize {
-			chunk = append(chunk, item)
 			continue
 		}
 
