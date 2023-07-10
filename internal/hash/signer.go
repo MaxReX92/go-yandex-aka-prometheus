@@ -57,17 +57,22 @@ func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 	return holder.GetHash(s.hash)
 }
 
-// CheckSign validate object signature.
-func (s *Signer) CheckSign(holder HashHolder, signature string) (bool, error) {
+// CheckSignString validate object signature string.
+func (s *Signer) CheckSignString(holder HashHolder, signature string) (bool, error) {
 	sign, err := hex.DecodeString(signature)
 	if err != nil {
 		return false, logger.WrapError("decode signature", err)
 	}
 
+	return s.CheckSign(holder, sign)
+}
+
+// CheckSign validate object signature.
+func (s *Signer) CheckSign(holder HashHolder, signature []byte) (bool, error) {
 	holderSign, err := s.GetSign(holder)
 	if err != nil {
 		return false, logger.WrapError("get holder hash", err)
 	}
 
-	return hmac.Equal(holderSign, sign), nil
+	return hmac.Equal(holderSign, signature), nil
 }

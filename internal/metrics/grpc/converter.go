@@ -1,4 +1,4 @@
-package http
+package grpc
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/proto/generated"
 )
 
 // MetricsConverterConfig contains required metrics converter settings.
@@ -30,27 +30,29 @@ func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *Conv
 }
 
 // ToModelMetric convert internal dsl metric to model metric.
-func (c *Converter) ToModelMetric(metric metrics.Metric) (*model.Metrics, error) {
-	modelMetric := &model.Metrics{
-		ID:    metric.GetName(),
-		MType: metric.GetType(),
+func (c *Converter) ToModelMetric(metric metrics.Metric) (*generated.Metric, error) {
+	modelMetric := &generated.Metric{
+		Name: metric.GetName(),
 	}
 
+	metricType := metric.GetType()
 	metricValue := metric.GetValue()
-	switch modelMetric.MType {
+	switch metricType {
 	case "counter":
 		counterValue := int64(metricValue)
 		modelMetric.Delta = &counterValue
+		modelMetric.Type = generated.MetricType_COUNTER
 	case "gauge":
 		modelMetric.Value = &metricValue
+		modelMetric.Type = generated.MetricType_GAUGE
 	default:
-		return nil, logger.WrapError(fmt.Sprintf("convert metric with type %s", modelMetric.MType), metrics.ErrUnknownMetricType)
+		return nil, logger.WrapError(fmt.Sprintf("convert metric with type %s", metricType), metrics.ErrUnknownMetricType)
 	}
 
 	if c.signMetrics {
-		signature, err := c.signer.GetSignString(metric)
+		signature, err := c.signer.GetSign(metric)
 		if err != nil {
-			return nil, logger.WrapError("get signature string", err)
+			return nil, logger.WrapError("get signature", err)
 		}
 
 		modelMetric.Hash = signature
@@ -60,34 +62,34 @@ func (c *Converter) ToModelMetric(metric metrics.Metric) (*model.Metrics, error)
 }
 
 // FromModelMetric convert model metric to internal dsl metric.
-func (c *Converter) FromModelMetric(modelMetric *model.Metrics) (metrics.Metric, error) {
+func (c *Converter) FromModelMetric(modelMetric *generated.Metric) (metrics.Metric, error) {
 	var metric metrics.Metric
 	var value float64
 
-	switch modelMetric.MType {
-	case "counter":
+	switch modelMetric.Type {
+	case generated.MetricType_COUNTER:
 		if modelMetric.Delta == nil {
 			return nil, logger.WrapError("convert metric", metrics.ErrMetricValueMissed)
 		}
 
-		metric = types.NewCounterMetric(modelMetric.ID)
+		metric = types.NewCounterMetric(modelMetric.Name)
 		value = float64(*modelMetric.Delta)
-	case "gauge":
+	case generated.MetricType_GAUGE:
 		if modelMetric.Value == nil {
 			return nil, logger.WrapError("convert metric", metrics.ErrMetricValueMissed)
 		}
 
-		metric = types.NewGaugeMetric(modelMetric.ID)
+		metric = types.NewGaugeMetric(modelMetric.Name)
 		value = *modelMetric.Value
 	default:
 
-		return nil, logger.WrapError(fmt.Sprintf("convert metric with type %s", modelMetric.MType), metrics.ErrUnknownMetricType)
+		return nil, logger.WrapError(fmt.Sprintf("convert metric with type %s", modelMetric.Type), metrics.ErrUnknownMetricType)
 	}
 
 	metric.SetValue(value)
 
-	if c.signMetrics && modelMetric.Hash != "" {
-		ok, err := c.signer.CheckSignString(metric, modelMetric.Hash)
+	if c.signMetrics && modelMetric.Hash != nil {
+		ok, err := c.signer.CheckSign(metric, modelMetric.Hash)
 		if err != nil {
 			return nil, logger.WrapError("check signature", err)
 		}
