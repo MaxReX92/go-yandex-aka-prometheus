@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http/client"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/grpc"
+	grpcClient "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/grpc/client"
+	httpClient "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http/client"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 	"github.com/caarlos0/env/v7"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
@@ -36,6 +40,7 @@ var (
 )
 
 type config struct {
+	ChannelType           string `env:"CHANNEL_TYPE" json:"channel_type,omitempty"`
 	ConfigPath            string `env:"CONFIG"`
 	CryptoKey             string `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
 	Key                   string `env:"KEY" json:"key,omitempty"`
@@ -61,7 +66,6 @@ func main() {
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	signer := hash.NewSigner(conf)
-	converter := http.NewMetricsConverter(conf, signer)
 
 	var encryptor crypto.Encryptor
 	if conf.CryptoKey != "" {
@@ -71,7 +75,15 @@ func main() {
 		}
 	}
 
-	metricPusher, err := client.NewMetricsPusher(conf, converter, encryptor)
+	var metricPusher pusher.MetricsPusher
+	switch conf.ChannelType {
+	case "http":
+		metricPusher, err = httpClient.NewPusher(conf, http.NewMetricsConverter(conf, signer), encryptor)
+	case "grpc":
+		metricPusher, err = grpcClient.NewPusher(conf, grpc.NewMetricsConverter(conf, signer))
+	default:
+		err = fmt.Errorf("unknown metric channel type: %s", conf.ChannelType)
+	}
 	if err != nil {
 		panic(logger.WrapError("create new metrics pusher", err))
 	}
@@ -140,6 +152,7 @@ func createConfig() (*config, error) {
 		"TotalAlloc",
 	}}
 
+	flag.StringVar(&conf.ChannelType, "ch", "http", "Push metrics channel type")
 	flag.StringVar(&conf.ConfigPath, "c", "", "Json config file path")
 	flag.StringVar(&conf.ConfigPath, "config", "", "Json config file path")
 	flag.StringVar(&conf.CryptoKey, "crypto-key", "", "Agent public crypto key path")
@@ -176,6 +189,10 @@ func (c *config) MetricsList() []string {
 }
 
 func (c *config) MetricsServerURL() string {
+	return c.ServerURL
+}
+
+func (c *config) GrpcServerURL() string {
 	return c.ServerURL
 }
 

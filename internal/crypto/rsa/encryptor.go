@@ -42,7 +42,7 @@ func (r *rsaEncryptor) Encrypt(bytes []byte) ([]byte, error) {
 	var result []byte
 	hash := sha256.New()
 	blockSize := r.publicKey.Size()
-	for _, messageChunk := range chunk.Chunk(bytes, blockSize) {
+	for _, messageChunk := range chunk.SliceToChunks(bytes, blockSize) {
 		encryptedBlock, err := rsa.EncryptOAEP(hash, rand.Reader, r.publicKey, messageChunk, nil)
 		if err != nil {
 			return nil, logger.WrapError("encrypt message", err)

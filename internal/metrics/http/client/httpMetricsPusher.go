@@ -37,8 +37,8 @@ type httpMetricsPusher struct {
 	pushTimeout      time.Duration
 }
 
-// NewMetricsPusher create new instance of http metrics pusher.
-func NewMetricsPusher(config metricsPusherConfig, converter *metricsHttp.Converter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
+// NewPusher create new instance of http metrics pusher.
+func NewPusher(config metricsPusherConfig, converter *metricsHttp.Converter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
 		return nil, logger.WrapError("normalize url", err)

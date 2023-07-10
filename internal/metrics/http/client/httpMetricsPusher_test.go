@@ -128,7 +128,7 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 			}
 			signer := internalHash.NewSigner(conf)
 			converter := metricsHttp.NewMetricsConverter(conf, signer)
-			pusher, err := NewMetricsPusher(conf, converter, nil)
+			pusher, err := NewPusher(conf, converter, nil)
 			assert.NoError(t, err)
 
 			err = pusher.Push(ctx, test.ArrayToChan(tt.metricsToPush))

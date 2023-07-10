@@ -64,6 +64,8 @@ func (g *grpcServer) GetValue(ctx context.Context, request *generated.MetricsReq
 	}
 
 	metricsCount := len(request.Metrics)
+	logger.InfoFormat("%d metrics get value request received", metricsCount)
+
 	responseMetrics := make([]*generated.Metric, metricsCount)
 	for i := 0; i < metricsCount; i++ {
 		metric, err := g.converter.FromModelMetric(request.Metrics[i])
@@ -94,6 +96,8 @@ func (g *grpcServer) UpdateValues(ctx context.Context, request *generated.Metric
 	}
 
 	metricsCount := len(request.Metrics)
+	logger.InfoFormat("%d metrics update value request received", metricsCount)
+
 	requestMetrics := make([]metrics.Metric, metricsCount)
 	for i := 0; i < metricsCount; i++ {
 		metric, err := g.converter.FromModelMetric(request.Metrics[i])

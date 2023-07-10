@@ -42,7 +42,7 @@ func (r *rsaDecryptor) Decrypt(bytes []byte) ([]byte, error) {
 	var result []byte
 	hash := sha256.New()
 	blockSize := r.privateKey.Size()
-	for _, messageChunk := range chunk.Chunk(bytes, blockSize) {
+	for _, messageChunk := range chunk.SliceToChunks(bytes, blockSize) {
 		decryptedBlock, err := rsa.DecryptOAEP(hash, rand.Reader, r.privateKey, messageChunk, nil)
 		if err != nil {
 			return nil, logger.WrapError("decrypt message", err)
