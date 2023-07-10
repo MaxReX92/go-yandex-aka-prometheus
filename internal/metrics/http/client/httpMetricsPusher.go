@@ -177,8 +177,8 @@ func normalizeURL(urlStr string) (*url.URL, error) {
 	return result, nil
 }
 
-func getClientIP(serverUrl *url.URL) (net.IP, error) {
-	conn, err := net.Dial("udp", fmt.Sprintf("%s:80", serverUrl.Hostname()))
+func getClientIP(serverURL *url.URL) (net.IP, error) {
+	conn, err := net.Dial("udp", fmt.Sprintf("%s:80", serverURL.Hostname()))
 	if err != nil {
 		return nil, logger.WrapError("open udp connection with server", err)
 	}

@@ -61,8 +61,8 @@ func (g *grpcMetricsPusher) Push(ctx context.Context, metricsChan <-chan metrics
 		}
 
 		if response.Status != generated.Status_OK {
-			return logger.WrapError("update metrics", fmt.Errorf("unexpected response status: %s %s",
-				response.Status, response.Error))
+			logger.ErrorFormat("Unexpected response status code: %s %s", response.Status, *response.Error)
+			return logger.WrapError(fmt.Sprintf("push metrics: %s %s", response.Status, *response.Error), metrics.ErrUnexpectedStatusCode)
 		}
 
 		for _, metric := range metricsChunk {

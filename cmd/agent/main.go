@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -37,6 +38,7 @@ var (
 	defaultPushTimeout           = 10 * time.Second
 	defaultSendMetricsInterval   = 10 * time.Second
 	defaultUpdateMetricsInterval = 2 * time.Second
+	errUnkwnownChannelType       = errors.New("unknown metric channel type")
 )
 
 type config struct {
@@ -82,10 +84,10 @@ func main() {
 	case "grpc":
 		metricPusher, err = grpcClient.NewPusher(conf, grpc.NewMetricsConverter(conf, signer))
 	default:
-		err = fmt.Errorf("unknown metric channel type: %s", conf.ChannelType)
+		err = logger.WrapError(fmt.Sprintf("create new metrics pusher with type %s", conf.ChannelType), errUnkwnownChannelType)
 	}
 	if err != nil {
-		panic(logger.WrapError("create new metrics pusher", err))
+		panic(logger.WrapError("init metrics pusher", err))
 	}
 
 	runtimeMetricsProvider := runtime.NewRuntimeMetricsProvider(conf)
