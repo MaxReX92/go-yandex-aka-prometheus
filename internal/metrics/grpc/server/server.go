@@ -21,12 +21,12 @@ type grpcServer struct {
 	generated.UnimplementedMetricServerServer
 
 	listenTCP      string
-	converter      grpc.Converter
+	converter      *grpc.Converter
 	requestHandler server.RequestHandler
 	server         *rpc.Server
 }
 
-func NewServer(conf GrpcServerConfig, requestHandler server.RequestHandler, converter grpc.Converter) *grpcServer {
+func New(conf GrpcServerConfig, converter *grpc.Converter, requestHandler server.RequestHandler) *grpcServer {
 	return &grpcServer{
 		listenTCP:      conf.ListenTCP(),
 		converter:      converter,
