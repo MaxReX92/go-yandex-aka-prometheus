@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/stretchr/testify/assert"
 
 	internalHash "github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"

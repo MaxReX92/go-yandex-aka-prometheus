@@ -13,8 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -22,7 +20,9 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/handler"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/memory"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"

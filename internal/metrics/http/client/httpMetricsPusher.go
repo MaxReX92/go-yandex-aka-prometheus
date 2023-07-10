@@ -11,14 +11,14 @@ import (
 	"net/url"
 	"time"
 
-	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 )
 
 type metricsPusherConfig interface {

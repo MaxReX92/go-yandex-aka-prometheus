@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	rpc "google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/grpc"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/pkg/chunk"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/proto/generated"
-	rpc "google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const chunkSize int = 10

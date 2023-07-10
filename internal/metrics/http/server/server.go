@@ -10,15 +10,15 @@ import (
 	"net"
 	"net/http"
 
-	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
 )
 
