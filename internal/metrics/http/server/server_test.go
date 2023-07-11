@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -20,7 +21,9 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/handler"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/memory"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
@@ -153,12 +156,15 @@ func Test_UpdateUrlRequest(t *testing.T) {
 			metricsStorage := memory.NewInMemoryStorage()
 			htmlPageBuilder := html.NewSimplePageBuilder()
 			request := httptest.NewRequest(tt.httpMethod, urlBuilder.String(), nil)
+			request.Header.Add("X-Real-IP", "127.0.0.1")
 			w := httptest.NewRecorder()
 
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
-			converter := model.NewMetricsConverter(conf, signer)
-			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil)
+			converter := metricsHttp.NewMetricsConverter(conf, signer)
+			_, subnet, err := net.ParseCIDR("127.0.0.1/8")
+			assert.NoError(t, err)
+			router := createRouter(converter, nil, subnet, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -307,58 +313,80 @@ func Test_UpdatesJsonRequest(t *testing.T) {
 	counterValue := int64(100)
 	gaugeValue := float64(100)
 
-	counterMetric := modelRequest{
-		ID:    "testMetricName",
+	noNameCounterMetric := modelRequest{
 		MType: counterMetricName,
 	}
-	gaugeMetric := modelRequest{
-		ID:    "testMetricName",
+	counterMetric := modelRequest{
+		ID:    "counterMetricName",
+		MType: counterMetricName,
+	}
+	noNameGaugeMetric := modelRequest{
 		MType: gaugeMetricName,
 	}
+	gaugeMetric := modelRequest{
+		ID:    "gaugeMetricName",
+		MType: gaugeMetricName,
+	}
+	noTypeMetric := modelRequest{
+		ID: "testMetricName",
+	}
 
-	for _, counterMetricValue := range []*int64{nil, &counterValue} {
-		for _, gaugeMetricValue := range []*float64{nil, &gaugeValue} {
-			counterMetric.Delta = counterMetricValue
-			gaugeMetric.Value = gaugeMetricValue
-			requestObj := []modelRequest{
-				counterMetric,
-				gaugeMetric,
-			}
+	for _, counter := range []modelRequest{noNameCounterMetric, counterMetric} {
+		for _, gauge := range []modelRequest{noNameGaugeMetric, gaugeMetric, noTypeMetric} {
+			for _, counterMetricValue := range []*int64{nil, &counterValue} {
+				for _, gaugeMetricValue := range []*float64{nil, &gaugeValue} {
+					counter.Delta = counterMetricValue
+					gauge.Value = gaugeMetricValue
+					requestObj := []modelRequest{
+						counter,
+						gauge,
+					}
 
-			var valueString string
-			var expected *callResult
-			switch {
-			case counterMetricValue == nil && gaugeMetricValue == nil:
-				valueString = "counter_gauge_nil"
-				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
-			case counterMetricValue == nil:
-				valueString = "counter_nil"
-				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
-			case gaugeMetricValue == nil:
-				valueString = "gauge_nil"
-				expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
-			default:
-				valueString = parser.IntToString(*counterMetricValue) + parser.FloatToString(*gaugeMetricValue)
-				expected = &callResult{
-					status: 200,
-					responseObjects: []*model.Metrics{
-						{
-							ID:    counterMetric.ID,
-							MType: counterMetric.MType,
-							Delta: counterMetric.Delta,
-						}, {
-							ID:    gaugeMetric.ID,
-							MType: gaugeMetric.MType,
-							Value: gaugeMetric.Value,
-						},
-					},
+					var valueString string
+					var expected *callResult
+					switch {
+					case counter.ID == "" || gauge.ID == "":
+						valueString = "no_name"
+						expected = expectedBadRequest("metric name is missed\n")
+					case counter.MType == "" || gauge.MType == "":
+						valueString = "no_type"
+						expected = expectedBadRequest("metric types is missed\n")
+					default:
+						switch {
+						case counterMetricValue == nil && gaugeMetricValue == nil:
+							valueString = "counter_gauge_nil"
+							expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+						case counterMetricValue == nil:
+							valueString = "counter_nil"
+							expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+						case gaugeMetricValue == nil:
+							valueString = "gauge_nil"
+							expected = expectedBadRequest("failed to convert metric: metric value is missed\n")
+						default:
+							valueString = parser.IntToString(*counterMetricValue) + parser.FloatToString(*gaugeMetricValue)
+							expected = &callResult{
+								status: 200,
+								responseObjects: []*model.Metrics{
+									{
+										ID:    counter.ID,
+										MType: counter.MType,
+										Delta: counter.Delta,
+									}, {
+										ID:    gauge.ID,
+										MType: gauge.MType,
+										Value: gauge.Value,
+									},
+								},
+							}
+						}
+					}
+
+					t.Run("json_"+counter.ID+counter.MType+gauge.ID+gauge.MType+"_"+valueString+"_multiMetricsValue", func(t *testing.T) {
+						actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "updates", multiRequest: requestObj})
+						assert.Equal(t, expected, actual)
+					})
 				}
 			}
-
-			t.Run("json_"+valueString+"_multiMetricsValue", func(t *testing.T) {
-				actual := runJSONTest(t, jsonAPIRequest{httpMethod: http.MethodPost, path: "updates", multiRequest: requestObj})
-				assert.Equal(t, expected, actual)
-			})
 		}
 	}
 }
@@ -402,12 +430,15 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 			assert.NoError(t, err)
 
 			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request.Header.Add("X-Real-IP", "127.0.0.1")
 			w := httptest.NewRecorder()
 
 			conf := &testConf{key: nil, singEnabled: false}
 			signer := hash.NewSigner(conf)
-			converter := model.NewMetricsConverter(conf, signer)
-			router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil)
+			converter := metricsHttp.NewMetricsConverter(conf, signer)
+			_, subnet, err := net.ParseCIDR("127.0.0.1/8")
+			assert.NoError(t, err)
+			router := createRouter(converter, nil, subnet, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 			router.ServeHTTP(w, request)
 			actual := w.Result()
 
@@ -428,7 +459,8 @@ func Test_GetMetricUrlRequest(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				assert.Equal(t, "Metric not found\n", string(body))
+				assert.Equal(t, fmt.Sprintf("failed to get metric value: failed to get metric with type '%s' and name '%s': metric not found\n",
+					tt.metricType, tt.metricName), string(body))
 			}
 		})
 	}
@@ -509,7 +541,7 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 			metricList = append(metricList, createGaugeMetric(requestObj.ID, value))
 			expected = getExpectedObj(requestObj.MType, requestObj.ID, nil, &value)
 		default:
-			expected = expectedNotFoundMessage("Metric not found\n")
+			expected = expectedNotFoundMessage("failed to get metric value: failed to get metric with type 'test' and name 'testMetricName': metric not found\n")
 		}
 
 		t.Run("json_"+metricType+"_metricType", func(t *testing.T) {
@@ -525,7 +557,7 @@ func Test_GetMetricJsonRequest_MetricType(t *testing.T) {
 }
 
 func Example() {
-	// Server configuration.
+	// httpServer configuration.
 	ctx := context.Background()
 	serverURL := "http://localhost:8080"
 
@@ -640,12 +672,15 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	}
 
 	request := httptest.NewRequest(apiRequest.httpMethod, "http://localhost:8080/"+apiRequest.path, &buffer)
+	request.Header.Add("X-Real-IP", "127.0.0.1")
 	w := httptest.NewRecorder()
 
 	conf := &testConf{}
 	signer := hash.NewSigner(conf)
-	converter := model.NewMetricsConverter(conf, signer)
-	router := createRouter(metricsStorage, converter, htmlPageBuilder, &testDBStorage{}, nil)
+	converter := metricsHttp.NewMetricsConverter(conf, signer)
+	_, subnet, err := net.ParseCIDR("127.0.0.1/8")
+	assert.NoError(t, err)
+	router := createRouter(converter, nil, subnet, handler.NewHandler(&testDBStorage{}, htmlPageBuilder, metricsStorage))
 	router.ServeHTTP(w, request)
 	actual := w.Result()
 	result := &callResult{status: actual.StatusCode}
@@ -653,7 +688,7 @@ func runJSONTest(t *testing.T, apiRequest jsonAPIRequest) *callResult {
 	defer actual.Body.Close()
 	resBody, _ := io.ReadAll(actual.Body)
 	resultObj := &model.Metrics{}
-	err := json.Unmarshal(resBody, resultObj)
+	err = json.Unmarshal(resBody, resultObj)
 	if err != nil {
 		resultObjects := []*model.Metrics{}
 		err = json.Unmarshal(resBody, &resultObjects)

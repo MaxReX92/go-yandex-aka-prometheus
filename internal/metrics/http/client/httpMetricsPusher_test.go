@@ -1,4 +1,4 @@
-package http
+package client
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 
 	internalHash "github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/parser"
@@ -126,8 +127,8 @@ func TestHttpMetricsPusher_Push(t *testing.T) {
 				parallelLimit:    10,
 			}
 			signer := internalHash.NewSigner(conf)
-			converter := model.NewMetricsConverter(conf, signer)
-			pusher, err := NewMetricsPusher(conf, converter, nil)
+			converter := metricsHttp.NewMetricsConverter(conf, signer)
+			pusher, err := NewPusher(conf, converter, nil)
 			assert.NoError(t, err)
 
 			err = pusher.Push(ctx, test.ArrayToChan(tt.metricsToPush))

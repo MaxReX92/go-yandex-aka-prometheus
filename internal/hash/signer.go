@@ -38,7 +38,7 @@ func NewSigner(config SignerConfig) *Signer {
 func (s *Signer) GetSignString(holder HashHolder) (string, error) {
 	sign, err := s.GetSign(holder)
 	if err != nil {
-		return "", logger.WrapError("get sign", err)
+		return "", err
 	}
 
 	return hex.EncodeToString(sign), nil
@@ -54,20 +54,30 @@ func (s *Signer) GetSign(holder HashHolder) ([]byte, error) {
 	defer s.lock.Unlock()
 	defer s.hash.Reset()
 
-	return holder.GetHash(s.hash)
+	sign, err := holder.GetHash(s.hash)
+	if err != nil {
+		return nil, logger.WrapError("get signature hash", err)
+	}
+
+	return sign, nil
 }
 
-// CheckSign validate object signature.
-func (s *Signer) CheckSign(holder HashHolder, signature string) (bool, error) {
+// CheckSignString validate object signature string.
+func (s *Signer) CheckSignString(holder HashHolder, signature string) (bool, error) {
 	sign, err := hex.DecodeString(signature)
 	if err != nil {
 		return false, logger.WrapError("decode signature", err)
 	}
 
+	return s.CheckSign(holder, sign)
+}
+
+// CheckSign validate object signature.
+func (s *Signer) CheckSign(holder HashHolder, signature []byte) (bool, error) {
 	holderSign, err := s.GetSign(holder)
 	if err != nil {
 		return false, logger.WrapError("get holder hash", err)
 	}
 
-	return hmac.Equal(holderSign, sign), nil
+	return hmac.Equal(holderSign, signature), nil
 }

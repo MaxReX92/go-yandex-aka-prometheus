@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,12 +17,15 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto/rsa"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/grpc"
+	grpcClient "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/grpc/client"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
+	httpClient "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http/client"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/custom"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/gopsutil"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/provider/runtime"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher/http"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/worker"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/pkg/runner"
 )
@@ -33,9 +38,11 @@ var (
 	defaultPushTimeout           = 10 * time.Second
 	defaultSendMetricsInterval   = 10 * time.Second
 	defaultUpdateMetricsInterval = 2 * time.Second
+	errUnkwnownChannelType       = errors.New("unknown metric channel type")
 )
 
 type config struct {
+	ChannelType           string `env:"CHANNEL_TYPE" json:"channel_type,omitempty"`
 	ConfigPath            string `env:"CONFIG"`
 	CryptoKey             string `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
 	Key                   string `env:"KEY" json:"key,omitempty"`
@@ -61,7 +68,6 @@ func main() {
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	signer := hash.NewSigner(conf)
-	converter := model.NewMetricsConverter(conf, signer)
 
 	var encryptor crypto.Encryptor
 	if conf.CryptoKey != "" {
@@ -71,9 +77,17 @@ func main() {
 		}
 	}
 
-	metricPusher, err := http.NewMetricsPusher(conf, converter, encryptor)
+	var metricPusher pusher.MetricsPusher
+	switch conf.ChannelType {
+	case "http":
+		metricPusher, err = httpClient.NewPusher(conf, http.NewMetricsConverter(conf, signer), encryptor)
+	case "grpc":
+		metricPusher, err = grpcClient.NewPusher(conf, grpc.NewMetricsConverter(conf, signer))
+	default:
+		err = logger.WrapError(fmt.Sprintf("create new metrics pusher with type %s", conf.ChannelType), errUnkwnownChannelType)
+	}
 	if err != nil {
-		panic(logger.WrapError("create new metrics pusher", err))
+		panic(logger.WrapError("init metrics pusher", err))
 	}
 
 	runtimeMetricsProvider := runtime.NewRuntimeMetricsProvider(conf)
@@ -140,6 +154,7 @@ func createConfig() (*config, error) {
 		"TotalAlloc",
 	}}
 
+	flag.StringVar(&conf.ChannelType, "ch", "http", "Push metrics channel type")
 	flag.StringVar(&conf.ConfigPath, "c", "", "Json config file path")
 	flag.StringVar(&conf.ConfigPath, "config", "", "Json config file path")
 	flag.StringVar(&conf.CryptoKey, "crypto-key", "", "Agent public crypto key path")
@@ -176,6 +191,10 @@ func (c *config) MetricsList() []string {
 }
 
 func (c *config) MetricsServerURL() string {
+	return c.ServerURL
+}
+
+func (c *config) GrpcServerURL() string {
 	return c.ServerURL
 }
 

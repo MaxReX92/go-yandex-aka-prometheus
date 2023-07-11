@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -20,9 +21,12 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/database/stub"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/grpc"
+	grpcServer "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/grpc/server"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/html"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
-	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
+	httpServer "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http/server"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/server/handler"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/db"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/storage/file"
@@ -43,10 +47,12 @@ type config struct {
 	CryptoKey     string        `env:"CRYPTO_KEY" json:"crypto_key,omitempty"`
 	Key           string        `env:"KEY" json:"key,omitempty"`
 	ServerURL     string        `env:"ADDRESS" json:"address,omitempty"`
+	GrpcURL       string        `env:"GRPC_ADDRESS" json:"grpc_address,omitempty"`
 	StoreFile     string        `env:"STORE_FILE" json:"store_file,omitempty"`
 	DB            string        `env:"DATABASE_DSN" json:"database_dsn,omitempty"`
 	StoreInterval time.Duration `env:"STORE_INTERVAL" json:"store_interval,omitempty"`
 	Restore       bool          `env:"RESTORE" json:"restore,omitempty"`
+	TrustedSubnet string        `env:"TRUSTED_SUBNET" json:"trusted_subnet,omitempty"`
 }
 
 func main() {
@@ -86,8 +92,10 @@ func main() {
 	defer storageStrategy.Close()
 
 	signer := hash.NewSigner(conf)
-	converter := model.NewMetricsConverter(conf, signer)
+	grpcConverter := grpc.NewMetricsConverter(conf, signer)
+	httpConverter := http.NewMetricsConverter(conf, signer)
 	htmlPageBuilder := html.NewSimplePageBuilder()
+	requestHandler := handler.NewHandler(base, htmlPageBuilder, storageStrategy)
 
 	var decryptor crypto.Decryptor
 	if conf.CryptoKey != "" {
@@ -97,8 +105,9 @@ func main() {
 		}
 	}
 
-	metricsServer := server.New(conf, storageStrategy, converter, htmlPageBuilder, base, decryptor)
-	runners := []runner.Runner{metricsServer}
+	grpcMetricsServer := grpcServer.New(conf, grpcConverter, requestHandler)
+	httpMetricsServer := httpServer.New(conf, httpConverter, decryptor, requestHandler)
+	runners := []runner.Runner{grpcMetricsServer, httpMetricsServer}
 
 	if conf.Restore {
 		logger.Info("Restore metrics from backup")
@@ -141,8 +150,10 @@ func createConfig() (*config, error) {
 	flag.BoolVar(&conf.Restore, "r", true, "Restore metric values from the server backup file")
 	flag.DurationVar(&conf.StoreInterval, "i", defaultStoreInterval, "Store backup interval")
 	flag.StringVar(&conf.ServerURL, "a", "127.0.0.1:8080", "Server listen URL")
+	flag.StringVar(&conf.GrpcURL, "g", "127.0.0.1:3200", "Server grpc URL")
 	flag.StringVar(&conf.StoreFile, "f", "/tmp/devops-metrics-dataBase.json", "Backup storage file path")
 	flag.StringVar(&conf.DB, "d", "", "Database connection stirng")
+	flag.StringVar(&conf.TrustedSubnet, "t", "", "Clients trusted subnet")
 	flag.Parse()
 
 	err := env.Parse(conf)
@@ -169,6 +180,10 @@ func (c *config) ListenURL() string {
 	return c.ServerURL
 }
 
+func (c *config) ListenTCP() string {
+	return c.GrpcURL
+}
+
 func (c *config) StoreFilePath() string {
 	return c.StoreFile
 }
@@ -192,4 +207,17 @@ func (c *config) SignMetrics() bool {
 
 func (c *config) GetConnectionString() string {
 	return c.DB
+}
+
+func (c *config) ClientsTrustedSubnet() *net.IPNet {
+	if c.TrustedSubnet == "" {
+		return nil
+	}
+
+	_, subnet, err := net.ParseCIDR(c.TrustedSubnet)
+	if err != nil {
+		panic(logger.WrapError("parse clients subnet connection string", err))
+	}
+
+	return subnet
 }

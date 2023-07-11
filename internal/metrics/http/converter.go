@@ -1,4 +1,4 @@
-package model
+package http
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/hash"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/types"
 )
 
@@ -14,23 +15,23 @@ type MetricsConverterConfig interface {
 	SignMetrics() bool
 }
 
-// MetricsConverter provides model converter functionality.
-type MetricsConverter struct {
+// Converter provides model converter functionality.
+type Converter struct {
 	signer      *hash.Signer
 	signMetrics bool
 }
 
-// NewMetricsConverter create new instance of MetricsConverter.
-func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *MetricsConverter {
-	return &MetricsConverter{
+// NewMetricsConverter create new instance of Converter.
+func NewMetricsConverter(conf MetricsConverterConfig, signer *hash.Signer) *Converter {
+	return &Converter{
 		signMetrics: conf.SignMetrics(),
 		signer:      signer,
 	}
 }
 
 // ToModelMetric convert internal dsl metric to model metric.
-func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error) {
-	modelMetric := &Metrics{
+func (c *Converter) ToModelMetric(metric metrics.Metric) (*model.Metrics, error) {
+	modelMetric := &model.Metrics{
 		ID:    metric.GetName(),
 		MType: metric.GetType(),
 	}
@@ -59,7 +60,7 @@ func (c *MetricsConverter) ToModelMetric(metric metrics.Metric) (*Metrics, error
 }
 
 // FromModelMetric convert model metric to internal dsl metric.
-func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric, error) {
+func (c *Converter) FromModelMetric(modelMetric *model.Metrics) (metrics.Metric, error) {
 	var metric metrics.Metric
 	var value float64
 
@@ -86,7 +87,7 @@ func (c *MetricsConverter) FromModelMetric(modelMetric *Metrics) (metrics.Metric
 	metric.SetValue(value)
 
 	if c.signMetrics && modelMetric.Hash != "" {
-		ok, err := c.signer.CheckSign(metric, modelMetric.Hash)
+		ok, err := c.signer.CheckSignString(metric, modelMetric.Hash)
 		if err != nil {
 			return nil, logger.WrapError("check signature", err)
 		}

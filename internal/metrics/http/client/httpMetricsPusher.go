@@ -1,4 +1,4 @@
-package http
+package client
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/crypto"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/logger"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics"
+	metricsHttp "github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/http"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/model"
 	"github.com/MaxReX92/go-yandex-aka-prometheus/internal/metrics/pusher"
 )
@@ -26,19 +28,24 @@ type metricsPusherConfig interface {
 }
 
 type httpMetricsPusher struct {
-	converter        *model.MetricsConverter
+	converter        *metricsHttp.Converter
 	client           http.Client
 	encryptor        crypto.Encryptor
 	metricsServerURL string
+	clientIP         string
 	parallelLimit    int
 	pushTimeout      time.Duration
 }
 
-// NewMetricsPusher create new instance of http metrics pusher.
-func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConverter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
+// NewPusher create new instance of http metrics pusher.
+func NewPusher(config metricsPusherConfig, converter *metricsHttp.Converter, encryptor crypto.Encryptor) (pusher.MetricsPusher, error) {
 	serverURL, err := normalizeURL(config.MetricsServerURL())
 	if err != nil {
 		return nil, logger.WrapError("normalize url", err)
+	}
+	clientIP, err := getClientIP(serverURL)
+	if err != nil {
+		return nil, logger.WrapError("get client ip", err)
 	}
 
 	return &httpMetricsPusher{
@@ -46,6 +53,7 @@ func NewMetricsPusher(config metricsPusherConfig, converter *model.MetricsConver
 		client:           http.Client{},
 		encryptor:        encryptor,
 		metricsServerURL: serverURL.String(),
+		clientIP:         clientIP.String(),
 		pushTimeout:      config.PushMetricsTimeout(),
 		converter:        converter,
 	}, nil
@@ -117,6 +125,7 @@ func (p *httpMetricsPusher) pushMetrics(ctx context.Context, metricsList []metri
 		return logger.WrapError("create push request", err)
 	}
 	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("X-Real-IP", p.clientIP)
 
 	response, err := p.client.Do(request)
 	if err != nil {
@@ -166,4 +175,14 @@ func normalizeURL(urlStr string) (*url.URL, error) {
 	}
 
 	return result, nil
+}
+
+func getClientIP(serverURL *url.URL) (net.IP, error) {
+	conn, err := net.Dial("udp", fmt.Sprintf("%s:80", serverURL.Hostname()))
+	if err != nil {
+		return nil, logger.WrapError("open udp connection with server", err)
+	}
+	defer conn.Close()
+
+	return conn.LocalAddr().(*net.UDPAddr).IP, nil
 }
